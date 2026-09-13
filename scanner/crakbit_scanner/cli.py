@@ -40,18 +40,11 @@ def _print_human(findings) -> None:
     print("\nNote: Automated analysis can produce false positives and false negatives.")
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Crakbit AI defensive static-security scanner (early alpha)"
-    )
-    parser.add_argument("path", help="File or directory to scan")
-    parser.add_argument("--json", action="store_true", dest="as_json", help="Output JSON")
-    args = parser.parse_args()
-
+def _run_scan(args: argparse.Namespace) -> int:
     try:
         findings = scan_path(args.path)
     except FileNotFoundError as exc:
-        parser.error(str(exc))
+        raise SystemExit(str(exc)) from exc
 
     if args.as_json:
         print(json.dumps([item.to_dict() for item in findings], indent=2))
@@ -59,6 +52,27 @@ def main() -> int:
         _print_human(findings)
 
     return 1 if any(item.severity in {"critical", "high"} for item in findings) else 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="crak",
+        description="Crakbit AI defensive static-security scanner (early alpha)",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    scan_parser = subparsers.add_parser("scan", help="Scan a file or directory")
+    scan_parser.add_argument("path", help="File or directory to scan")
+    scan_parser.add_argument("--json", action="store_true", dest="as_json", help="Output JSON")
+    scan_parser.set_defaults(handler=_run_scan)
+
+    return parser
+
+
+def main() -> int:
+    parser = build_parser()
+    args = parser.parse_args()
+    return args.handler(args)
 
 
 if __name__ == "__main__":
