@@ -19,10 +19,20 @@ We believe AI should not only help developers write code faster — it should al
 ### Crakbit AI Security Assistant
 Security-focused AI guidance for secure coding, vulnerability understanding, remediation and defensive security workflows.
 
-### Secure Code Analysis
-Planned analysis for insecure coding patterns, exposed secrets, risky configurations, dependencies and common vulnerability classes.
+### Crakbit Scanner — Early Alpha
+A first deterministic static-analysis prototype now exists in [`scanner/`](scanner/).
 
-Initial language targets:
+Current alpha checks include:
+
+- Possible hard-coded credentials with evidence redaction
+- Python `subprocess` usage with `shell=True`
+- Python `eval()`
+- JavaScript/TypeScript `eval()`
+- Potentially unsafe `innerHTML` assignment
+
+The scanner currently performs static checks only and does not execute target code. It is an architecture proof and **not yet a production-grade security scanner**.
+
+Initial language/file targets include:
 
 - Python
 - JavaScript / TypeScript
@@ -49,6 +59,36 @@ Planned developer-facing components include:
 - Git integrations
 - CI/CD integrations
 - Future IDE integrations
+
+## Try the Scanner Alpha
+
+Requires Python 3.10+.
+
+```bash
+git clone https://github.com/navindusasmitha/CrakbitAI.git
+cd CrakbitAI/scanner
+python -m venv .venv
+```
+
+Activate the virtual environment and install:
+
+```bash
+pip install -e ".[dev]"
+```
+
+Then scan a file or directory:
+
+```bash
+crak ../your-project
+```
+
+JSON output:
+
+```bash
+crak ../your-project --json
+```
+
+See [`scanner/README.md`](scanner/README.md) for limitations and details.
 
 ## Architecture Direction
 
@@ -80,8 +120,8 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the evolving technical de
 | Project architecture | In progress |
 | Public website | Active |
 | AI Security Assistant | In development |
-| Secure Code Scanner | Planned / MVP scope |
-| CLI | Planned |
+| Secure Code Scanner | **Early alpha available** |
+| CLI | Early alpha command included with scanner package |
 | Developer API | Planned |
 | Smart Contract Scanner | Planned |
 | Blockchain testnet | Research stage |
