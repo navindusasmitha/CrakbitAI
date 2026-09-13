@@ -65,25 +65,25 @@ pip install -e ".[dev]"
 ## Run a Scan
 
 ```bash
-crak scan-target
+crak scan <path>
 ```
 
 Example:
 
 ```bash
-crak ../example-project
+crak scan ../example-project
 ```
 
 JSON output:
 
 ```bash
-crak ../example-project --json
+crak scan ../example-project --json
 ```
 
 You can also run the module directly:
 
 ```bash
-python -m crakbit_scanner.cli ../example-project
+python -m crakbit_scanner.cli scan ../example-project
 ```
 
 ## Run Tests
