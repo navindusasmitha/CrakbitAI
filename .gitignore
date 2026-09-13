@@ -1,0 +1,55 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.next/
+dist/
+build/
+coverage/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Go
+bin/
+
+# Rust
+target/
+
+# Logs / temp
+*.log
+.tmp/
+tmp/
+.cache/
+
+# Security scan output
+crakbit-report.json
+crakbit-report.sarif
+scan-results/
+
+# Local databases
+*.sqlite
+*.sqlite3
