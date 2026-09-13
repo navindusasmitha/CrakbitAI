@@ -79,13 +79,13 @@ pip install -e ".[dev]"
 Then scan a file or directory:
 
 ```bash
-crak ../your-project
+crak scan ../your-project
 ```
 
 JSON output:
 
 ```bash
-crak ../your-project --json
+crak scan ../your-project --json
 ```
 
 See [`scanner/README.md`](scanner/README.md) for limitations and details.
