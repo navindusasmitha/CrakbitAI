@@ -1,12 +1,12 @@
 # Crakbit Chain Devnet Security Notes
 
-The current Crakbit Chain implementation is a **research/devnet prototype**. It is intentionally not presented as an audited production blockchain.
+The current Crakbit Chain implementation is a **research/devnet prototype**. It is intentionally not presented as an audited production blockchain and must not be used to custody real value.
 
-## Security Goals of v0.1
+## Security Goals of v0.2
 
-The current code attempts to provide basic integrity properties for local development:
+The current code attempts to provide basic integrity and quorum-finality properties for development:
 
-- private-key signatures for transactions and proposed blocks,
+- private-key signatures for transactions and block proposals,
 - sender/public-key binding,
 - nonce-based replay protection,
 - integer balance accounting,
@@ -14,7 +14,11 @@ The current code attempts to provide basic integrity properties for local develo
 - previous-block hash linking,
 - configured proposer validation,
 - genesis fingerprinting,
-- local re-validation of peer blocks before commit.
+- local re-validation of proposals and finalized blocks,
+- signed validator commit votes,
+- strict greater-than-two-thirds validator quorum before commit,
+- duplicate/unknown/invalid vote rejection,
+- an in-memory same-height/same-round double-vote guard.
 
 These properties are useful for development, but they are not sufficient for a public-value network.
 
@@ -32,25 +36,41 @@ Rules:
 
 ## Consensus Risk
 
-The current round-robin PoA mechanism authenticates a configured proposer but does not require a supermajority/quorum certificate.
+v0.2 improves on proposer-only PoA by requiring a signed validator commit certificate with a threshold of:
 
-Consequences include:
+```text
+floor(2N/3) + 1
+```
 
-- no Byzantine-fault-tolerant finality,
-- no robust fork-choice protocol,
-- limited behavior under validator partitions/failures,
-- reliance on the static configured validator set.
+for `N` configured validators.
 
-A production candidate must replace or substantially redesign this layer.
+Each validator re-validates a proposal before voting. Finalized blocks are re-validated, including the commit certificate, before ledger state is changed.
+
+### Remaining consensus weaknesses
+
+This is still **not a complete production BFT implementation**.
+
+The current design does not yet provide:
+
+- proposer/view changes when the scheduled proposer is offline,
+- durable consensus locks across restarts,
+- persistent anti-double-sign state,
+- equivocation evidence and slashing,
+- weighted stake or validator-set changes,
+- formal fork-choice recovery,
+- formal safety/liveness proofs,
+- adversarially reviewed timeout/round logic.
+
+A scheduled proposer failure can halt the chain. A validator restart can also lose its in-memory record of a previous vote. These are acceptable devnet limitations but mainnet blockers.
 
 ## Network Risk
 
-The current peer protocol uses ordinary HTTP and static peer URLs. It does not yet implement:
+The current peer protocol uses ordinary HTTP and static peer URLs. Proposal and block integrity is protected cryptographically, but the transport does not yet implement:
 
-- transport authentication,
 - encrypted validator channels,
+- mutual peer authentication,
 - peer identity handshakes,
-- discovery protections,
+- dynamic discovery protections,
 - connection/rate limits,
 - eclipse/Sybil defenses,
 - signed peer metadata.
@@ -67,6 +87,7 @@ Before public testnet, add explicit limits for:
 - transaction size,
 - memo size,
 - block transaction count/byte size,
+- commit-certificate size,
 - concurrent connections,
 - RPC rate,
 - mempool size,
@@ -74,16 +95,17 @@ Before public testnet, add explicit limits for:
 
 ## State / Storage Risk
 
-SQLite provides convenient local persistence but v0.1 does not yet include:
+SQLite provides convenient local persistence but v0.2 does not yet include:
 
 - state snapshots,
 - snapshot signatures,
 - database integrity recovery procedures,
 - pruning/archival policy,
 - crash-consistency stress testing,
-- fast state sync.
+- fast state sync,
+- persistent consensus vote/lock state.
 
-Nodes should be assumed disposable during early devnet work.
+Nodes should still be treated as disposable during early devnet work.
 
 ## Transaction Risk
 
@@ -114,16 +136,18 @@ No production token economics should be inferred from this implementation. A fut
 
 ## Smart Contracts
 
-No smart-contract virtual machine is included in v0.1. This is deliberate. Adding a VM dramatically increases attack surface and should follow a separate threat model, sandbox design, deterministic execution specification and audit plan.
+No smart-contract virtual machine is included in v0.2. This is deliberate. Adding a VM dramatically increases attack surface and should follow a separate threat model, sandbox design, deterministic execution specification and audit plan.
 
 ## Required Testing Before Public Testnet
 
 - property tests for accounting invariants,
-- fuzzing of transaction/block parsers,
+- fuzzing of transaction/block/vote parsers,
 - malformed signature/public-key tests,
+- quorum and duplicate-vote tests,
+- conflicting proposal tests,
 - multi-node partition tests,
 - validator downtime tests,
-- conflicting-block tests,
+- validator restart/double-vote tests,
 - long-running synchronization tests,
 - database crash/restart tests,
 - load and RPC abuse tests,
