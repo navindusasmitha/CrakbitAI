@@ -52,6 +52,12 @@ class Ledger:
                     height INTEGER NOT NULL,
                     body TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS local_votes (
+                    height INTEGER NOT NULL,
+                    round INTEGER NOT NULL,
+                    block_hash TEXT NOT NULL,
+                    PRIMARY KEY(height, round)
+                );
                 """
             )
             fingerprint = self.genesis.fingerprint()
@@ -90,6 +96,43 @@ class Ledger:
             if row is None:
                 return {"address": address, "balance": 0, "nonce": 0}
             return {"address": address, "balance": int(row["balance"]), "nonce": int(row["nonce"])}
+
+    def local_vote_hash(self, height: int, round_number: int) -> str | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT block_hash FROM local_votes WHERE height=? AND round=?",
+                (height, round_number),
+            ).fetchone()
+            return str(row["block_hash"]) if row else None
+
+    def record_local_vote(self, height: int, round_number: int, block_hash: str) -> None:
+        """Persist anti-double-vote state before a signed vote leaves this node."""
+        with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = conn.execute(
+                    "SELECT block_hash FROM local_votes WHERE height=? AND round=?",
+                    (height, round_number),
+                ).fetchone()
+                if row is not None and str(row["block_hash"]) != block_hash:
+                    raise LedgerError("persistent anti-double-vote check rejected conflicting block")
+                if row is None:
+                    conn.execute(
+                        "INSERT INTO local_votes(height,round,block_hash) VALUES(?,?,?)",
+                        (height, round_number, block_hash),
+                    )
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+
+    def prune_local_votes(self, finalized_height: int) -> None:
+        with self.connect() as conn:
+            conn.execute("DELETE FROM local_votes WHERE height<=?", (finalized_height,))
+
+    def local_vote_count(self) -> int:
+        with self.connect() as conn:
+            return int(conn.execute("SELECT COUNT(*) AS n FROM local_votes").fetchone()["n"])
 
     def _ensure_account(self, conn: sqlite3.Connection, address: str) -> None:
         conn.execute(
@@ -168,9 +211,9 @@ class Ledger:
             raise LedgerError("previous hash mismatch")
         if block.round < 0:
             raise LedgerError("invalid consensus round")
-        expected_validator = self.genesis.proposer_for_height(block.height)
+        expected_validator = self.genesis.proposer_for_height_round(block.height, block.round)
         if block.proposer != expected_validator.address or block.proposer_public_key != expected_validator.public_key:
-            raise LedgerError("unexpected proposer")
+            raise LedgerError("unexpected proposer for consensus round")
         if not block.verify_signature():
             raise LedgerError("invalid block signature")
         expected_tx_root = merkle_root([tx.txid for tx in block.transactions])
