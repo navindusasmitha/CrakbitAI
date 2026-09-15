@@ -1,0 +1,7 @@
+runtime/
+*.sqlite3
+*.db
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
