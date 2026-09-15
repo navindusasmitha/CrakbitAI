@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from .crypto import KeyPair
 from .genesis import Genesis, Validator
-from .models import Block, CommitVote, Transaction, ViewChange, merkle_root, now_ms
+from .models import Block, PhaseVote, Transaction, ViewChange, merkle_root, now_ms
 from .storage import Ledger, LedgerError
 
 
@@ -50,6 +50,10 @@ class Node:
         self.peer_health: dict[str, dict] = {}
         self.view_certificates: dict[tuple[int, int], list[ViewChange]] = {}
 
+    # ------------------------------------------------------------------
+    # Round / timing helpers
+    # ------------------------------------------------------------------
+
     def _sync_round_height(self) -> None:
         next_height = self.ledger.height + 1
         if next_height != self.round_height:
@@ -64,6 +68,12 @@ class Node:
             return
         if round_number != self.current_round:
             self.ledger.record_consensus_round(self.round_height, round_number)
+            self.ledger.record_consensus_event(
+                self.round_height,
+                round_number,
+                "round_change",
+                details={"previous_round": self.current_round},
+            )
             self.current_round = round_number
             self.pending_block = None
             self.round_started_monotonic = time.monotonic()
@@ -75,6 +85,10 @@ class Node:
     @property
     def uptime_seconds(self) -> int:
         return int(time.monotonic() - self.started_monotonic)
+
+    # ------------------------------------------------------------------
+    # Transactions / proposals
+    # ------------------------------------------------------------------
 
     def submit_transaction(self, tx: Transaction) -> str:
         self.ledger.validate_transaction(tx)
@@ -127,13 +141,23 @@ class Node:
             view_changes=view_changes,
         )
         block.signature = self.key.sign(block.signing_bytes())
+        self.ledger.record_consensus_event(
+            block.height,
+            block.round,
+            "proposal_built",
+            block_hash=block.block_hash,
+        )
         return block
 
+    # ------------------------------------------------------------------
+    # Certified view changes
+    # ------------------------------------------------------------------
+
     def _lock_metadata(self, height: int) -> tuple[int, str]:
-        latest = self.ledger.latest_local_vote(height)
-        if latest is None:
+        locked = self.ledger.consensus_lock(height)
+        if locked is None:
             return -1, ""
-        return latest
+        return locked
 
     def sign_view_change(
         self,
@@ -209,15 +233,10 @@ class Node:
             async with httpx.AsyncClient(timeout=3.0) as client:
                 response = await client.post(
                     f"{peer.peer_url.rstrip('/')}/internal/view-change-request",
-                    json={
-                        "height": height,
-                        "from_round": from_round,
-                        "to_round": to_round,
-                    },
+                    json={"height": height, "from_round": from_round, "to_round": to_round},
                 )
                 response.raise_for_status()
-                payload = response.json()
-                change = ViewChange.from_dict(payload["view_change"])
+                change = ViewChange.from_dict(response.json()["view_change"])
                 self.validate_peer_view_change(
                     change,
                     height=height,
@@ -238,7 +257,6 @@ class Node:
         changes: dict[str, ViewChange] = {}
         self_change = self.sign_view_change(height, from_round, target_round, require_timeout=True)
         changes[self_change.voter] = self_change
-
         results = await asyncio.gather(
             *(
                 self._request_view_change(peer, height, from_round, target_round)
@@ -249,7 +267,6 @@ class Node:
         for change in results:
             if change is not None:
                 changes[change.voter] = change
-
         if len(changes) < self.genesis.quorum_size:
             return False
 
@@ -261,12 +278,21 @@ class Node:
                 from_round=from_round,
                 to_round=target_round,
             )
-
         self.view_certificates[(height, target_round)] = certificate
+        self.ledger.record_consensus_event(
+            height,
+            target_round,
+            "view_change_certificate",
+            details={"votes": len(certificate)},
+        )
         self.set_round(target_round)
         return True
 
-    def sign_commit_vote(self, block: Block) -> CommitVote:
+    # ------------------------------------------------------------------
+    # v0.5 prevote / precommit pipeline
+    # ------------------------------------------------------------------
+
+    def _prepare_vote_round(self, block: Block) -> None:
         self._sync_round_height()
         self.ledger.validate_block_proposal(block)
         if block.round < self.current_round:
@@ -281,80 +307,135 @@ class Node:
         if evidence is not None:
             raise LedgerError("validator detected conflicting signed proposals from the same proposer")
 
-        latest_vote = self.ledger.latest_local_vote(block.height)
-        if latest_vote is not None:
-            locked_round, locked_hash = latest_vote
-            if locked_hash != block.block_hash:
-                raise LedgerError(
-                    f"cross-round safety lock prevents conflicting vote; locked at round {locked_round}"
-                )
+    def _enforce_lock(self, block: Block) -> None:
+        locked = self.ledger.consensus_lock(block.height)
+        if locked is None:
+            return
+        locked_round, locked_hash = locked
+        if locked_hash != block.block_hash:
+            raise LedgerError(
+                f"cross-round consensus lock prevents conflicting vote; locked at round {locked_round}"
+            )
 
-        existing_hash = self.ledger.local_vote_hash(block.height, block.round)
+    def _sign_phase_vote(self, block: Block, phase: str) -> PhaseVote:
+        self._prepare_vote_round(block)
+        self._enforce_lock(block)
+        if phase == "precommit":
+            self.ledger.validate_prevote_certificate(block)
+
+        existing_hash = self.ledger.phase_vote_hash(block.height, block.round, phase)
         if existing_hash is not None and existing_hash != block.block_hash:
-            raise LedgerError("validator refuses to double-vote at the same height and round")
+            raise LedgerError(f"validator refuses to double-{phase} at the same height and round")
 
-        vote = CommitVote(
+        vote = PhaseVote(
             chain_id=block.chain_id,
             height=block.height,
             round=block.round,
+            phase=phase,
             block_hash=block.block_hash,
             voter=self.key.address,
             public_key=self.key.public_key_b64,
         )
         vote.signature = self.key.sign(vote.signing_bytes())
-        self.ledger.record_local_vote(block.height, block.round, block.block_hash)
+        self.ledger.record_phase_vote(block.height, block.round, phase, block.block_hash)
+        if phase == "precommit":
+            self.ledger.set_consensus_lock(block.height, block.round, block.block_hash)
         return vote
 
-    def validate_peer_vote(self, vote: CommitVote, block: Block) -> None:
+    def sign_prevote(self, block: Block) -> PhaseVote:
+        return self._sign_phase_vote(block, "prevote")
+
+    def sign_precommit(self, block: Block) -> PhaseVote:
+        return self._sign_phase_vote(block, "precommit")
+
+    def validate_peer_phase_vote(self, vote: PhaseVote, block: Block, phase: str) -> None:
+        if vote.phase != phase:
+            raise LedgerError("peer consensus vote phase mismatch")
         if vote.chain_id != block.chain_id:
-            raise LedgerError("peer vote chain_id mismatch")
+            raise LedgerError("peer consensus vote chain_id mismatch")
         if vote.height != block.height or vote.round != block.round:
-            raise LedgerError("peer vote height/round mismatch")
+            raise LedgerError("peer consensus vote height/round mismatch")
         if vote.block_hash != block.block_hash:
-            raise LedgerError("peer vote block hash mismatch")
+            raise LedgerError("peer consensus vote block hash mismatch")
         validator = self.genesis.validator_by_address(vote.voter)
         if validator is None:
-            raise LedgerError("peer vote from unknown validator")
+            raise LedgerError("peer consensus vote from unknown validator")
         if validator.public_key != vote.public_key:
-            raise LedgerError("peer vote public key mismatch")
+            raise LedgerError("peer consensus vote public key mismatch")
         if not vote.verify_signature():
-            raise LedgerError("invalid peer vote signature")
+            raise LedgerError("invalid peer consensus vote signature")
 
-    async def _request_vote(self, peer: Validator, block: Block) -> CommitVote | None:
+    async def _request_phase_vote(self, peer: Validator, block: Block, phase: str) -> PhaseVote | None:
         if peer.address == self.key.address:
             return None
+        endpoint = "prevote" if phase == "prevote" else "precommit"
         try:
             async with httpx.AsyncClient(timeout=3.0) as client:
                 response = await client.post(
-                    f"{peer.peer_url.rstrip('/')}/internal/proposal",
+                    f"{peer.peer_url.rstrip('/')}/internal/{endpoint}",
                     json={"block": block.to_dict()},
                 )
                 response.raise_for_status()
-                payload = response.json()
-                vote = CommitVote.from_dict(payload["vote"])
-                self.validate_peer_vote(vote, block)
+                vote = PhaseVote.from_dict(response.json()["vote"])
+                self.validate_peer_phase_vote(vote, block, phase)
                 return vote
         except Exception:
             return None
 
-    async def collect_commit_votes(self, block: Block) -> bool:
-        votes: dict[str, CommitVote] = {}
-        self_vote = self.sign_commit_vote(block)
+    async def collect_prevotes(self, block: Block) -> bool:
+        votes: dict[str, PhaseVote] = {}
+        self_vote = self.sign_prevote(block)
         votes[self_vote.voter] = self_vote
-
         results = await asyncio.gather(
-            *(self._request_vote(peer, block) for peer in self.genesis.validators),
+            *(self._request_phase_vote(peer, block, "prevote") for peer in self.genesis.validators),
             return_exceptions=False,
         )
         for vote in results:
             if vote is not None:
                 votes[vote.voter] = vote
-
         if len(votes) < self.genesis.quorum_size:
             return False
-        block.commit_votes = list(votes.values())
-        self.ledger.validate_commit_votes(block)
+        block.prevote_votes = list(votes.values())
+        self.ledger.validate_prevote_certificate(block)
+        self.ledger.record_consensus_event(
+            block.height,
+            block.round,
+            "prevote_certificate",
+            phase="prevote",
+            block_hash=block.block_hash,
+            details={"votes": len(block.prevote_votes)},
+        )
         return True
+
+    async def collect_precommits(self, block: Block) -> bool:
+        self.ledger.validate_prevote_certificate(block)
+        votes: dict[str, PhaseVote] = {}
+        self_vote = self.sign_precommit(block)
+        votes[self_vote.voter] = self_vote
+        results = await asyncio.gather(
+            *(self._request_phase_vote(peer, block, "precommit") for peer in self.genesis.validators),
+            return_exceptions=False,
+        )
+        for vote in results:
+            if vote is not None:
+                votes[vote.voter] = vote
+        if len(votes) < self.genesis.quorum_size:
+            return False
+        block.precommit_votes = list(votes.values())
+        self.ledger.validate_precommit_certificate(block)
+        self.ledger.record_consensus_event(
+            block.height,
+            block.round,
+            "precommit_certificate",
+            phase="precommit",
+            block_hash=block.block_hash,
+            details={"votes": len(block.precommit_votes)},
+        )
+        return True
+
+    # ------------------------------------------------------------------
+    # Finalization / networking / monitoring
+    # ------------------------------------------------------------------
 
     def accept_block(self, block: Block) -> None:
         self.ledger.apply_block(block)
@@ -456,8 +537,14 @@ class Node:
                         or self.pending_block.round != self.current_round
                     ):
                         self.pending_block = self.build_block(self.current_round)
-                    if await self.collect_commit_votes(self.pending_block):
-                        finalized = self.pending_block
+
+                    candidate = self.pending_block
+                    if not candidate.prevote_votes:
+                        await self.collect_prevotes(candidate)
+                    if candidate.prevote_votes and not candidate.precommit_votes:
+                        await self.collect_precommits(candidate)
+                    if candidate.prevote_votes and candidate.precommit_votes:
+                        finalized = candidate
                         self.accept_block(finalized)
                         await self.broadcast_block(finalized)
 
@@ -476,7 +563,7 @@ def create_app() -> FastAPI:
     data_dir = os.environ.get("CRAKBIT_DATA_DIR", "runtime/data")
     node = Node(genesis_path, key_path, data_dir)
 
-    app = FastAPI(title="Crakbit Chain Devnet", version="0.4.0a1")
+    app = FastAPI(title="Crakbit Chain Devnet", version="0.5.0a1")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -511,7 +598,8 @@ def create_app() -> FastAPI:
         next_proposer = node.genesis.proposer_for_height_round(next_height, node.current_round)
         healthy_peers = sum(1 for item in node.peer_health.values() if item.get("healthy"))
         certificate = node.view_certificates.get((next_height, node.current_round), [])
-        latest_lock = node.ledger.latest_local_vote(next_height)
+        consensus_lock = node.ledger.consensus_lock(next_height)
+        candidate = node.pending_block
         return {
             "chain_id": node.genesis.chain_id,
             "network": node.genesis.network_name,
@@ -522,24 +610,24 @@ def create_app() -> FastAPI:
             "validator": node.key.address,
             "validator_count": len(node.genesis.validators),
             "commit_quorum": node.genesis.quorum_size,
-            "consensus": "quorum-finality+certified-view-change+conservative-cross-round-lock",
+            "consensus": "certified-view-change+prevote+precommit+durable-lock",
             "consensus_round": node.current_round,
             "round_elapsed_ms": node.round_elapsed_ms,
             "view_timeout_ms": node.genesis.view_timeout_ms,
             "view_certificate_votes": len(certificate),
-            "next_proposer": {
-                "name": next_proposer.name,
-                "address": next_proposer.address,
-            },
+            "next_proposer": {"name": next_proposer.name, "address": next_proposer.address},
             "local_lock": (
-                {"round": latest_lock[0], "block_hash": latest_lock[1]}
-                if latest_lock is not None
+                {"round": consensus_lock[0], "block_hash": consensus_lock[1]}
+                if consensus_lock is not None
                 else None
             ),
+            "candidate_prevotes": len(candidate.prevote_votes) if candidate else 0,
+            "candidate_precommits": len(candidate.precommit_votes) if candidate else 0,
             "mempool": len(node.mempool),
-            "pending_proposal": node.pending_block.block_hash if node.pending_block else None,
-            "persistent_local_votes": node.ledger.local_vote_count(),
+            "pending_proposal": candidate.block_hash if candidate else None,
+            "persistent_phase_votes": node.ledger.phase_vote_count(),
             "persistent_view_changes": node.ledger.local_view_change_count(),
+            "consensus_events": node.ledger.consensus_event_count(),
             "equivocation_evidence": node.ledger.evidence_count(),
             "healthy_validator_views": healthy_peers,
             "uptime_seconds": node.uptime_seconds,
@@ -562,16 +650,34 @@ def create_app() -> FastAPI:
 
     @app.get("/peers")
     def peers() -> dict:
-        return {
-            "updated_from_consensus_loop": True,
-            "peers": list(node.peer_health.values()),
-        }
+        return {"updated_from_consensus_loop": True, "peers": list(node.peer_health.values())}
 
     @app.get("/evidence")
     def evidence(limit: int = 100) -> dict:
+        return {"count": node.ledger.evidence_count(), "items": node.ledger.list_evidence(limit)}
+
+    @app.get("/consensus/events")
+    def consensus_events(limit: int = 100) -> dict:
         return {
-            "count": node.ledger.evidence_count(),
-            "items": node.ledger.list_evidence(limit),
+            "count": node.ledger.consensus_event_count(),
+            "items": node.ledger.list_consensus_events(limit),
+        }
+
+    @app.get("/metrics")
+    def metrics() -> dict:
+        locked = node.ledger.consensus_lock(node.ledger.height + 1)
+        return {
+            "height": node.ledger.height,
+            "round": node.current_round,
+            "mempool": len(node.mempool),
+            "local_prevotes": node.ledger.phase_vote_count("prevote"),
+            "local_precommits": node.ledger.phase_vote_count("precommit"),
+            "locked": locked is not None,
+            "evidence": node.ledger.evidence_count(),
+            "events": node.ledger.consensus_event_count(),
+            "healthy_validator_views": sum(
+                1 for item in node.peer_health.values() if item.get("healthy")
+            ),
         }
 
     @app.get("/balance/{address}")
@@ -635,12 +741,31 @@ def create_app() -> FastAPI:
         except (KeyError, ValueError, LedgerError) as exc:
             raise HTTPException(400, str(exc)) from exc
 
-    @app.post("/internal/proposal")
-    def proposal(envelope: BlockEnvelope) -> dict:
+    @app.post("/internal/prevote")
+    def prevote(envelope: BlockEnvelope) -> dict:
         try:
             incoming = Block.from_dict(envelope.block)
-            vote = node.sign_commit_vote(incoming)
+            vote = node.sign_prevote(incoming)
             return {"accepted": True, "vote": vote.to_dict()}
+        except (KeyError, ValueError, LedgerError) as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.post("/internal/precommit")
+    def precommit(envelope: BlockEnvelope) -> dict:
+        try:
+            incoming = Block.from_dict(envelope.block)
+            vote = node.sign_precommit(incoming)
+            return {"accepted": True, "vote": vote.to_dict()}
+        except (KeyError, ValueError, LedgerError) as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.post("/internal/proposal")
+    def legacy_proposal_alias(envelope: BlockEnvelope) -> dict:
+        """Compatibility alias: v0.5 proposal voting maps to the prevote phase."""
+        try:
+            incoming = Block.from_dict(envelope.block)
+            vote = node.sign_prevote(incoming)
+            return {"accepted": True, "vote": vote.to_dict(), "phase": "prevote"}
         except (KeyError, ValueError, LedgerError) as exc:
             raise HTTPException(400, str(exc)) from exc
 
