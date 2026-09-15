@@ -28,6 +28,7 @@ class Genesis:
     decimals: int
     max_supply: int
     block_time_ms: int
+    view_timeout_ms: int
     min_fee: int
     validators: tuple[Validator, ...]
     allocations: dict[str, int]
@@ -45,20 +46,36 @@ class Genesis:
         addresses = [v.address for v in validators]
         if len(set(addresses)) != len(addresses):
             raise ValueError("genesis validator addresses must be unique")
+        block_time_ms = int(data.get("block_time_ms", 5000))
+        view_timeout_ms = int(data.get("view_timeout_ms", max(block_time_ms * 2, 1000)))
+        if block_time_ms <= 0:
+            raise ValueError("block_time_ms must be positive")
+        if view_timeout_ms < block_time_ms:
+            raise ValueError("view_timeout_ms must be at least block_time_ms")
         return cls(
             chain_id=str(data["chain_id"]),
             network_name=str(data["network_name"]),
             symbol=str(data["symbol"]),
             decimals=int(data["decimals"]),
             max_supply=max_supply,
-            block_time_ms=int(data.get("block_time_ms", 5000)),
+            block_time_ms=block_time_ms,
+            view_timeout_ms=view_timeout_ms,
             min_fee=int(data.get("min_fee", 1000)),
             validators=validators,
             allocations=allocations,
         )
 
+    def proposer_for_height_round(self, height: int, round_number: int = 0) -> Validator:
+        if height < 1:
+            raise ValueError("height must be at least 1")
+        if round_number < 0:
+            raise ValueError("round must be non-negative")
+        index = (height - 1 + round_number) % len(self.validators)
+        return self.validators[index]
+
     def proposer_for_height(self, height: int) -> Validator:
-        return self.validators[(height - 1) % len(self.validators)]
+        """Backward-compatible round-zero proposer lookup."""
+        return self.proposer_for_height_round(height, 0)
 
     def validator_by_address(self, address: str) -> Validator | None:
         return next((v for v in self.validators if v.address == address), None)
@@ -74,4 +91,6 @@ class Genesis:
             "validators": [v.__dict__ for v in self.validators],
             "allocations": self.allocations,
             "max_supply": self.max_supply,
+            "block_time_ms": self.block_time_ms,
+            "view_timeout_ms": self.view_timeout_ms,
         }))
