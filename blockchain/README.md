@@ -12,6 +12,8 @@ Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosyst
 - Decimals: `8`
 - Proposed maximum genesis supply: `21,000,000 CRKBIT`
 - Development consensus: round-robin PoA proposals + signed >2/3 validator commit quorum + timeout-based round failover
+- Default local validator count: `4`
+- Default local commit quorum: `3 of 4`
 - Transaction/block/vote signatures: Ed25519
 - Address format: `crk1...`
 - Default block interval: 5 seconds
@@ -44,7 +46,7 @@ The 21M cap is encoded in the generated genesis configuration for the devnet. It
 - Basic peer block broadcast and catch-up sync
 - REST endpoints for health, status, peers, validators, balances, blocks and transactions
 - Validator health/height/round telemetry
-- 3-validator Docker Compose devnet
+- 4-validator Docker Compose devnet
 - Simple browser explorer
 - Automated ledger/signature/quorum/failover tests
 
@@ -66,7 +68,7 @@ v0.3 also persists the block hash a local validator voted for at each `(height, 
 
 The persistent guard is **same-round only**. v0.3 does not yet implement a production BFT cross-round lock/precommit protocol or a quorum-certified view-change protocol. Validators can vote in a later round after timeout, so the current round-failover logic remains a research mechanism rather than a formally safe production consensus protocol.
 
-## Quick Start — Fresh Local 3-Validator Devnet
+## Quick Start — Fresh Local 4-Validator Devnet
 
 Requirements: Python 3.11+ and Docker Desktop / Docker Engine.
 
@@ -87,10 +89,10 @@ Generate validator keys and genesis:
 python scripts/bootstrap_devnet.py
 ```
 
-Optional timing parameters:
+The default bootstrap creates four validators. Optional timing/validator parameters:
 
 ```bash
-python scripts/bootstrap_devnet.py --block-time-ms 5000 --view-timeout-ms 10000
+python scripts/bootstrap_devnet.py --validators 4 --block-time-ms 5000 --view-timeout-ms 10000
 ```
 
 Start the nodes:
@@ -104,6 +106,7 @@ RPC endpoints:
 - Node 1: `http://127.0.0.1:9101`
 - Node 2: `http://127.0.0.1:9102`
 - Node 3: `http://127.0.0.1:9103`
+- Node 4: `http://127.0.0.1:9104`
 - API docs: `http://127.0.0.1:9101/docs`
 
 ### Upgrading an older local devnet
@@ -159,19 +162,27 @@ The peer-health data is operational telemetry only. Peer transport is not yet au
 
 ## Test Proposer Failover
 
-With the three-node devnet running, stop whichever validator is the current proposer. After the configured view timeout, the remaining nodes should advance to the next round and select the next configured proposer.
+The default topology has four validators and a quorum of three. This lets the devnet continue with one validator offline while still requiring a strict greater-than-two-thirds commit threshold.
 
-For development testing only:
+With the network running, first inspect the current proposer:
+
+```bash
+curl http://127.0.0.1:9101/status
+```
+
+Stop that validator container. For example, if `node1` is the current proposer:
 
 ```bash
 docker compose stop node1
 ```
 
-Observe another node:
+After the configured view timeout, observe another node:
 
 ```bash
 curl http://127.0.0.1:9102/status
 ```
+
+The consensus round should advance and the next validator becomes proposer. Because three validators remain, the default network can still reach its 3-of-4 quorum.
 
 Restart the validator afterward:
 
@@ -179,7 +190,7 @@ Restart the validator afterward:
 docker compose start node1
 ```
 
-Whether the chain can continue depends on the configured quorum. The default 3-validator configuration uses a strict >2/3 threshold, which is **3 of 3**, so stopping any one validator prevents finalization even though proposer rotation continues. Use a larger validator set if you want to test quorum availability with one validator offline.
+This is a development liveness test, not evidence of production-grade Byzantine fault tolerance.
 
 ## Treasury / Wallet
 
