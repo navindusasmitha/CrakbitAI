@@ -12,6 +12,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Create a local Crakbit devnet")
     parser.add_argument("--output", default="runtime")
     parser.add_argument("--validators", type=int, default=3)
+    parser.add_argument("--block-time-ms", type=int, default=5000)
+    parser.add_argument("--view-timeout-ms", type=int, default=10000)
     parser.add_argument(
         "--treasury",
         default="",
@@ -21,6 +23,10 @@ def main() -> int:
 
     if args.validators < 1:
         raise SystemExit("--validators must be at least 1")
+    if args.block_time_ms <= 0:
+        raise SystemExit("--block-time-ms must be positive")
+    if args.view_timeout_ms < args.block_time_ms:
+        raise SystemExit("--view-timeout-ms must be at least --block-time-ms")
 
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=True)
@@ -56,7 +62,8 @@ def main() -> int:
         "symbol": "CRKBIT",
         "decimals": 8,
         "max_supply": 21_000_000 * ATOMIC_UNITS,
-        "block_time_ms": 5000,
+        "block_time_ms": args.block_time_ms,
+        "view_timeout_ms": args.view_timeout_ms,
         "min_fee": 1000,
         "validators": validators,
         "allocations": allocations,
@@ -67,6 +74,8 @@ def main() -> int:
 
     print(f"Genesis: {genesis_path.resolve()}")
     print(f"Treasury address: {treasury_address}")
+    print(f"Block time: {args.block_time_ms} ms")
+    print(f"View timeout: {args.view_timeout_ms} ms")
     if treasury_key_path:
         print(f"DEVNET treasury key: {treasury_key_path}")
         print("Never use this generated devnet key for production/mainnet funds.")
