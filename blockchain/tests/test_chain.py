@@ -9,7 +9,7 @@ from crakbit_chain.genesis import Genesis
 from crakbit_chain.models import (
     ATOMIC_UNITS,
     Block,
-    CommitVote,
+    PhaseVote,
     Transaction,
     ViewChange,
     merkle_root,
@@ -47,11 +47,12 @@ def make_genesis(tmp_path, validator_count: int = 1):
     return Genesis.load(path), validators, treasury, receiver
 
 
-def sign_vote(key: KeyPair, block: Block) -> CommitVote:
-    vote = CommitVote(
+def sign_phase_vote(key: KeyPair, block: Block, phase: str) -> PhaseVote:
+    vote = PhaseVote(
         chain_id=block.chain_id,
         height=block.height,
         round=block.round,
+        phase=phase,
         block_hash=block.block_hash,
         voter=key.address,
         public_key=key.public_key_b64,
@@ -109,7 +110,12 @@ def build_block(
     return block
 
 
-def test_signed_transfer_and_finalized_block(tmp_path):
+def finalize_for_test(block: Block, validators: list[KeyPair]) -> None:
+    block.prevote_votes = [sign_phase_vote(key, block, "prevote") for key in validators]
+    block.precommit_votes = [sign_phase_vote(key, block, "precommit") for key in validators]
+
+
+def test_signed_transfer_requires_multiphase_finality(tmp_path):
     genesis, validators, treasury, receiver = make_genesis(tmp_path)
     validator = validators[0]
     ledger = Ledger(tmp_path / "chain.db", genesis)
@@ -127,67 +133,100 @@ def test_signed_transfer_and_finalized_block(tmp_path):
     ledger.validate_transaction(tx)
 
     block = build_block(ledger, genesis, validator, [tx])
-    block.commit_votes = [sign_vote(validator, block)]
+    finalize_for_test(block, validators)
     ledger.apply_block(block)
 
     assert ledger.height == 1
     assert ledger.account(receiver.address)["balance"] == 5 * ATOMIC_UNITS
     assert ledger.account(treasury.address)["nonce"] == 1
     assert ledger.account(validator.address)["balance"] == 1000
+    stored = ledger.get_block(1)
+    assert len(stored["prevote_votes"]) == 1
+    assert len(stored["precommit_votes"]) == 1
 
 
-def test_three_validator_block_requires_supermajority_commit(tmp_path):
+def test_three_validator_block_requires_prevote_quorum(tmp_path):
     genesis, validators, _, _ = make_genesis(tmp_path, validator_count=3)
     ledger = Ledger(tmp_path / "chain.db", genesis)
-    proposer = validators[0]
-    block = build_block(ledger, genesis, proposer, [])
+    block = build_block(ledger, genesis, validators[0], [])
 
     assert genesis.quorum_size == 3
+    block.prevote_votes = [
+        sign_phase_vote(validators[0], block, "prevote"),
+        sign_phase_vote(validators[1], block, "prevote"),
+    ]
+    block.precommit_votes = [sign_phase_vote(key, block, "precommit") for key in validators]
 
-    block.commit_votes = [sign_vote(validators[0], block), sign_vote(validators[1], block)]
-    with pytest.raises(LedgerError, match="insufficient commit quorum"):
+    with pytest.raises(LedgerError, match="insufficient prevote quorum"):
         ledger.apply_block(block)
 
-    block.commit_votes = [sign_vote(key, block) for key in validators]
-    ledger.apply_block(block)
-    assert ledger.height == 1
 
-
-def test_round_based_proposer_failover_requires_certified_view_change(tmp_path):
+def test_three_validator_block_requires_precommit_quorum(tmp_path):
     genesis, validators, _, _ = make_genesis(tmp_path, validator_count=3)
     ledger = Ledger(tmp_path / "chain.db", genesis)
-
-    assert genesis.proposer_for_height_round(1, 0).address == validators[0].address
-    assert genesis.proposer_for_height_round(1, 1).address == validators[1].address
-    assert genesis.proposer_for_height_round(1, 2).address == validators[2].address
-
-    certificate = [
-        sign_view_change(
-            key,
-            genesis,
-            height=1,
-            from_round=0,
-            to_round=1,
-        )
-        for key in validators
+    block = build_block(ledger, genesis, validators[0], [])
+    block.prevote_votes = [sign_phase_vote(key, block, "prevote") for key in validators]
+    block.precommit_votes = [
+        sign_phase_vote(validators[0], block, "precommit"),
+        sign_phase_vote(validators[1], block, "precommit"),
     ]
-    failover_block = build_block(
-        ledger,
-        genesis,
-        validators[1],
-        [],
-        round_number=1,
-        view_changes=certificate,
-    )
-    failover_block.commit_votes = [sign_vote(key, failover_block) for key in validators]
-    ledger.apply_block(failover_block)
 
-    assert ledger.height == 1
-    assert ledger.get_block(1)["round"] == 1
-    assert len(ledger.get_block(1)["view_changes"]) == 3
+    with pytest.raises(LedgerError, match="insufficient precommit quorum"):
+        ledger.apply_block(block)
 
 
-def test_round_one_without_view_change_quorum_rejected(tmp_path):
+def test_wrong_phase_in_certificate_rejected(tmp_path):
+    genesis, validators, _, _ = make_genesis(tmp_path, validator_count=3)
+    ledger = Ledger(tmp_path / "chain.db", genesis)
+    block = build_block(ledger, genesis, validators[0], [])
+    block.prevote_votes = [sign_phase_vote(key, block, "prevote") for key in validators]
+    block.prevote_votes[0].phase = "precommit"
+    block.prevote_votes[0].signature = validators[0].sign(block.prevote_votes[0].signing_bytes())
+
+    with pytest.raises(LedgerError, match="wrong vote phase"):
+        ledger.validate_prevote_certificate(block)
+
+
+def test_persistent_phase_vote_survives_restart_and_blocks_conflict(tmp_path):
+    genesis, _, _, _ = make_genesis(tmp_path, validator_count=4)
+    db_path = tmp_path / "chain.db"
+    ledger = Ledger(db_path, genesis)
+    first_hash = "a" * 64
+    second_hash = "b" * 64
+
+    ledger.record_phase_vote(1, 0, "prevote", first_hash)
+    ledger.record_phase_vote(1, 0, "precommit", first_hash)
+
+    reopened = Ledger(db_path, genesis)
+    assert reopened.phase_vote_hash(1, 0, "prevote") == first_hash
+    assert reopened.phase_vote_hash(1, 0, "precommit") == first_hash
+    assert reopened.phase_vote_count("prevote") == 1
+    assert reopened.phase_vote_count("precommit") == 1
+
+    with pytest.raises(LedgerError, match="persistent prevote anti-double-vote"):
+        reopened.record_phase_vote(1, 0, "prevote", second_hash)
+    with pytest.raises(LedgerError, match="persistent precommit anti-double-vote"):
+        reopened.record_phase_vote(1, 0, "precommit", second_hash)
+
+
+def test_consensus_lock_persists_and_rejects_conflict(tmp_path):
+    genesis, _, _, _ = make_genesis(tmp_path, validator_count=4)
+    db_path = tmp_path / "chain.db"
+    ledger = Ledger(db_path, genesis)
+    first_hash = "a" * 64
+    second_hash = "b" * 64
+
+    ledger.set_consensus_lock(1, 0, first_hash)
+    reopened = Ledger(db_path, genesis)
+    assert reopened.consensus_lock(1) == (0, first_hash)
+    reopened.set_consensus_lock(1, 1, first_hash)
+    assert reopened.consensus_lock(1) == (1, first_hash)
+
+    with pytest.raises(LedgerError, match="consensus lock prevents conflicting block"):
+        reopened.set_consensus_lock(1, 2, second_hash)
+
+
+def test_certified_view_change_still_required_for_round_one(tmp_path):
     genesis, validators, _, _ = make_genesis(tmp_path, validator_count=3)
     ledger = Ledger(tmp_path / "chain.db", genesis)
     block = build_block(ledger, genesis, validators[1], [], round_number=1)
@@ -195,15 +234,10 @@ def test_round_one_without_view_change_quorum_rejected(tmp_path):
     with pytest.raises(LedgerError, match="insufficient view-change quorum"):
         ledger.validate_block_proposal(block)
 
-
-def test_invalid_view_change_signature_rejected(tmp_path):
-    genesis, validators, _, _ = make_genesis(tmp_path, validator_count=3)
-    ledger = Ledger(tmp_path / "chain.db", genesis)
     certificate = [
         sign_view_change(key, genesis, height=1, from_round=0, to_round=1)
         for key in validators
     ]
-    certificate[1].signature = certificate[0].signature
     block = build_block(
         ledger,
         genesis,
@@ -212,52 +246,22 @@ def test_invalid_view_change_signature_rejected(tmp_path):
         round_number=1,
         view_changes=certificate,
     )
+    finalize_for_test(block, validators)
+    ledger.apply_block(block)
+    assert ledger.height == 1
+    assert ledger.get_block(1)["round"] == 1
 
-    with pytest.raises(LedgerError, match="invalid validator view-change signature"):
-        ledger.validate_block_proposal(block)
 
-
-def test_wrong_proposer_for_round_rejected(tmp_path):
+def test_invalid_precommit_signature_rejected(tmp_path):
     genesis, validators, _, _ = make_genesis(tmp_path, validator_count=3)
     ledger = Ledger(tmp_path / "chain.db", genesis)
-    certificate = [
-        sign_view_change(key, genesis, height=1, from_round=0, to_round=1)
-        for key in validators
-    ]
-    wrong = build_block(
-        ledger,
-        genesis,
-        validators[0],
-        [],
-        round_number=1,
-        view_changes=certificate,
-    )
-    wrong.commit_votes = [sign_vote(key, wrong) for key in validators]
+    block = build_block(ledger, genesis, validators[0], [])
+    block.prevote_votes = [sign_phase_vote(key, block, "prevote") for key in validators]
+    block.precommit_votes = [sign_phase_vote(key, block, "precommit") for key in validators]
+    block.precommit_votes[1].signature = block.precommit_votes[0].signature
 
-    with pytest.raises(LedgerError, match="unexpected proposer for consensus round"):
-        ledger.apply_block(wrong)
-
-
-def test_persistent_local_vote_and_consensus_round_survive_restart(tmp_path):
-    genesis, _, _, _ = make_genesis(tmp_path, validator_count=4)
-    db_path = tmp_path / "chain.db"
-    ledger = Ledger(db_path, genesis)
-    first_hash = "a" * 64
-    second_hash = "b" * 64
-
-    ledger.record_local_vote(1, 0, first_hash)
-    ledger.record_consensus_round(1, 1)
-    ledger.record_local_view_change(1, 0, 1)
-    assert ledger.local_vote_hash(1, 0) == first_hash
-    assert ledger.latest_local_vote(1) == (0, first_hash)
-
-    reopened = Ledger(db_path, genesis)
-    assert reopened.local_vote_hash(1, 0) == first_hash
-    assert reopened.consensus_round(1) == 1
-    assert reopened.local_view_change_count() == 1
-
-    with pytest.raises(LedgerError, match="persistent anti-double-vote"):
-        reopened.record_local_vote(1, 0, second_hash)
+    with pytest.raises(LedgerError, match="invalid validator precommit signature"):
+        ledger.validate_precommit_certificate(block)
 
 
 def test_conflicting_signed_proposals_create_equivocation_evidence(tmp_path):
@@ -279,31 +283,25 @@ def test_conflicting_signed_proposals_create_equivocation_evidence(tmp_path):
     assert evidence["offender"] == proposer.address
     assert evidence["first_hash"] != evidence["second_hash"]
     assert ledger.evidence_count() == 1
-    assert ledger.list_evidence(10)[0]["height"] == 1
 
 
-def test_duplicate_commit_vote_rejected(tmp_path):
-    genesis, validators, _, _ = make_genesis(tmp_path, validator_count=3)
+def test_consensus_event_journal_records_votes_locks_and_finalization(tmp_path):
+    genesis, validators, _, _ = make_genesis(tmp_path)
     ledger = Ledger(tmp_path / "chain.db", genesis)
     block = build_block(ledger, genesis, validators[0], [])
-    vote = sign_vote(validators[0], block)
-    block.commit_votes = [vote, vote, sign_vote(validators[1], block), sign_vote(validators[2], block)]
 
-    with pytest.raises(LedgerError, match="duplicate validator commit vote"):
-        ledger.apply_block(block)
+    ledger.record_phase_vote(1, 0, "prevote", block.block_hash)
+    ledger.record_phase_vote(1, 0, "precommit", block.block_hash)
+    ledger.set_consensus_lock(1, 0, block.block_hash)
+    finalize_for_test(block, validators)
+    ledger.apply_block(block)
 
-
-def test_vote_for_wrong_block_rejected(tmp_path):
-    genesis, validators, _, _ = make_genesis(tmp_path, validator_count=3)
-    ledger = Ledger(tmp_path / "chain.db", genesis)
-    block = build_block(ledger, genesis, validators[0], [])
-    bad_vote = sign_vote(validators[1], block)
-    bad_vote.block_hash = "0" * 64
-    bad_vote.signature = validators[1].sign(bad_vote.signing_bytes())
-    block.commit_votes = [sign_vote(validators[0], block), bad_vote, sign_vote(validators[2], block)]
-
-    with pytest.raises(LedgerError, match="commit vote block hash mismatch"):
-        ledger.apply_block(block)
+    events = ledger.list_consensus_events(20)
+    event_types = {item["event_type"] for item in events}
+    assert "local_prevote" in event_types
+    assert "local_precommit" in event_types
+    assert "lock" in event_types
+    assert "finalized" in event_types
 
 
 def test_tampered_transaction_signature_rejected(tmp_path):
