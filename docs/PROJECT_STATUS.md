@@ -4,7 +4,7 @@
 
 ## Current Stage
 
-**Early development / Security MVP alpha + Crakbit Chain local devnet alpha**
+**Early development / Security MVP alpha + Crakbit Chain v0.2 local devnet alpha**
 
 Crakbit AI currently has a public website, a Giveth-listed fundraising project, an open GitHub repository, technical documentation, a deterministic security-scanner alpha and a runnable experimental blockchain development network. None of these alpha components should be described as production-ready.
 
@@ -21,7 +21,9 @@ Crakbit AI currently has a public website, a Giveth-listed fundraising project, 
 | Security API | Planned | To follow scanner core |
 | Smart Contract Scanner | Planned | Blockchain-security phase |
 | Open-source rule packs | Started | Initial rules published with scanner alpha |
-| Crakbit Chain local devnet | Early alpha | Runnable PoA research network under `blockchain/` |
+| Crakbit Chain local devnet | **v0.2 alpha** | Runnable 3-validator research network under `blockchain/` |
+| Signed quorum finality | **Implemented for devnet** | >2/3 validator commit certificate required before block commit |
+| Consensus proposer failover | Not implemented | Scheduled proposer failure can still halt the devnet |
 | CRKBIT devnet unit | Test-only | Native unit inside the local devnet; no represented production value |
 | Crakbit Chain public testnet | Not launched | Consensus/network hardening required first |
 | Production CRKBIT | Not launched | No presale or official production token contract |
@@ -44,14 +46,20 @@ Crakbit AI currently has a public website, a Giveth-listed fundraising project, 
 - Ed25519 wallet/key generation implemented for the devnet
 - Signed CRKBIT devnet transfers implemented
 - Nonces, replay protection and transaction fees implemented
-- Signed blocks, transaction Merkle roots and state roots implemented
+- Signed block proposals, transaction Merkle roots and state roots implemented
 - SQLite blockchain/account persistence implemented
-- Round-robin PoA validator prototype implemented
-- Basic peer broadcast/catch-up synchronization implemented
-- REST/RPC endpoints implemented
+- Round-robin validator proposal schedule implemented
+- Signed validator commit votes implemented
+- Strict greater-than-two-thirds commit quorum required before finalization
+- Duplicate/unknown/invalid commit vote rejection implemented
+- In-memory same-height/same-round double-vote protection added
+- Proposal validation includes transaction signature/field validation before voting
+- Basic peer broadcast/catch-up synchronization implemented for finalized blocks
+- REST/RPC status, validator, balance, block and transaction endpoints implemented
 - 3-validator Docker Compose devnet added
 - Simple devnet explorer added
-- Blockchain ledger/signature tests and CI workflow added
+- Blockchain ledger/signature/quorum tests added and passing in CI
+- v0.2 protocol specification and security notes published
 
 ## Immediate Security-Platform Priorities
 
@@ -63,17 +71,18 @@ Crakbit AI currently has a public website, a Giveth-listed fundraising project, 
 6. Publish a simple public Security MVP interface/demo.
 7. Begin security API work after scanner core becomes more stable.
 
-## Immediate Blockchain Priorities
+## Immediate Blockchain Priorities — v0.3
 
-1. Document the current transaction/block/network specification.
-2. Strengthen validation, error reporting and peer protocol behavior.
-3. Replace proposer-only PoA with a reviewed BFT/quorum consensus design before public testnet.
-4. Add authenticated peer transport and peer discovery.
-5. Add state snapshot/sync and restart/recovery testing.
-6. Expand adversarial and multi-node test coverage.
-7. Define wallet/explorer separation and key-management requirements.
-8. Run a long-lived closed devnet before public testnet.
-9. Commission independent review before any production network consideration.
+1. Add proposer/view changes so validator downtime does not permanently halt progress.
+2. Persist validator vote/lock state across restarts.
+3. Add conflicting-proposal/equivocation evidence handling.
+4. Add authenticated/encrypted validator peer transport and peer identity checks.
+5. Add validator monitoring/health dashboard.
+6. Add state snapshots, state sync and restart/recovery testing.
+7. Expand adversarial multi-node and network-partition tests.
+8. Add public-testnet deployment configuration, testnet faucet and improved explorer.
+9. Define validator key-management requirements and operational runbooks.
+10. Run a long-lived closed devnet before any public testnet.
 
 ## What Is Not Yet Production-Ready
 
