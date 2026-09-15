@@ -21,6 +21,7 @@ def make_genesis(tmp_path, validator_count: int = 1):
         "decimals": 8,
         "max_supply": 21_000_000 * ATOMIC_UNITS,
         "block_time_ms": 100,
+        "view_timeout_ms": 200,
         "min_fee": 1000,
         "validators": [
             {
@@ -51,7 +52,13 @@ def sign_vote(key: KeyPair, block: Block) -> CommitVote:
     return vote
 
 
-def build_block(ledger: Ledger, genesis: Genesis, proposer: KeyPair, txs: list[Transaction]) -> Block:
+def build_block(
+    ledger: Ledger,
+    genesis: Genesis,
+    proposer: KeyPair,
+    txs: list[Transaction],
+    round_number: int = 0,
+) -> Block:
     block = Block(
         chain_id=genesis.chain_id,
         height=ledger.height + 1,
@@ -62,7 +69,7 @@ def build_block(ledger: Ledger, genesis: Genesis, proposer: KeyPair, txs: list[T
         transactions=txs,
         tx_root=merkle_root([tx.txid for tx in txs]),
         state_root=ledger.simulate_state_root(txs, proposer.address),
-        round=0,
+        round=round_number,
     )
     block.signature = proposer.sign(block.signing_bytes())
     return block
@@ -110,6 +117,52 @@ def test_three_validator_block_requires_supermajority_commit(tmp_path):
     block.commit_votes = [sign_vote(key, block) for key in validators]
     ledger.apply_block(block)
     assert ledger.height == 1
+
+
+def test_round_based_proposer_failover(tmp_path):
+    genesis, validators, _, _ = make_genesis(tmp_path, validator_count=3)
+    ledger = Ledger(tmp_path / "chain.db", genesis)
+
+    assert genesis.proposer_for_height_round(1, 0).address == validators[0].address
+    assert genesis.proposer_for_height_round(1, 1).address == validators[1].address
+    assert genesis.proposer_for_height_round(1, 2).address == validators[2].address
+    assert genesis.proposer_for_height_round(1, 3).address == validators[0].address
+
+    failover_block = build_block(ledger, genesis, validators[1], [], round_number=1)
+    failover_block.commit_votes = [sign_vote(key, failover_block) for key in validators]
+    ledger.apply_block(failover_block)
+
+    assert ledger.height == 1
+    assert ledger.get_block(1)["round"] == 1
+    assert ledger.get_block(1)["proposer"] == validators[1].address
+
+
+def test_wrong_proposer_for_round_rejected(tmp_path):
+    genesis, validators, _, _ = make_genesis(tmp_path, validator_count=3)
+    ledger = Ledger(tmp_path / "chain.db", genesis)
+    wrong = build_block(ledger, genesis, validators[0], [], round_number=1)
+    wrong.commit_votes = [sign_vote(key, wrong) for key in validators]
+
+    with pytest.raises(LedgerError, match="unexpected proposer for consensus round"):
+        ledger.apply_block(wrong)
+
+
+def test_persistent_local_vote_survives_restart_and_blocks_conflict(tmp_path):
+    genesis, _, _, _ = make_genesis(tmp_path, validator_count=3)
+    db_path = tmp_path / "chain.db"
+    ledger = Ledger(db_path, genesis)
+    first_hash = "a" * 64
+    second_hash = "b" * 64
+
+    ledger.record_local_vote(1, 0, first_hash)
+    assert ledger.local_vote_hash(1, 0) == first_hash
+
+    reopened = Ledger(db_path, genesis)
+    assert reopened.local_vote_hash(1, 0) == first_hash
+    reopened.record_local_vote(1, 0, first_hash)
+
+    with pytest.raises(LedgerError, match="persistent anti-double-vote"):
+        reopened.record_local_vote(1, 0, second_hash)
 
 
 def test_duplicate_commit_vote_rejected(tmp_path):
