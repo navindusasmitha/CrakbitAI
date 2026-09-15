@@ -6,7 +6,7 @@ This roadmap describes the intended development order for Crakbit AI. Dates are 
 
 **Technology first. Security first. Tokens later.**
 
-The immediate product focus remains a useful defensive-security MVP. A local Crakbit Chain devnet now exists as a parallel research prototype, including a v0.2 signed quorum-finality layer. Public testnet/mainnet work still depends on proposer failover, durable consensus state, networking hardening, technical validation and independent security review.
+The immediate product focus remains a useful defensive-security MVP. In parallel, the Crakbit Chain local research network has now progressed through signed quorum finality and a v0.3 round-based proposer-failover prototype. Public testnet/mainnet work still depends on stronger cross-round BFT safety, authenticated networking, state recovery, adversarial testing and independent security review.
 
 ## Phase 1 — Foundation
 **Target: Q3–Q4 2026**
@@ -74,53 +74,56 @@ A developer should be able to submit or scan a small codebase and receive a clea
 ## Phase 6 — Crakbit Chain Research & Local Devnet
 **Prototype started September 2026**
 
-A runnable local devnet has been created to turn network research into testable code. This does **not** mean a production blockchain or public-value CRKBIT asset has launched.
+A runnable local devnet exists to turn network research into testable code. This does **not** mean a production blockchain or public-value CRKBIT asset has launched.
 
-### Completed local-devnet prototype work
+### Completed through v0.3
 
 - [x] Native devnet CRKBIT accounting unit
 - [x] 8-decimal atomic-unit model
 - [x] Proposed 21,000,000 maximum genesis supply encoded for devnet
-- [x] Ed25519 wallet/key generation
-- [x] `crk1...` address derivation
-- [x] Signed transfers
-- [x] Nonce/replay protection
-- [x] Minimum transaction fees
+- [x] Ed25519 wallet/key generation and `crk1...` addresses
+- [x] Signed transfers, nonces/replay protection and minimum fees
 - [x] Signed block proposals
 - [x] Previous-block hash linking
-- [x] Transaction Merkle roots
-- [x] Deterministic state roots
+- [x] Transaction Merkle roots and deterministic state roots
 - [x] SQLite chain/account persistence
-- [x] Round-robin validator proposal schedule
 - [x] Signed validator commit votes
-- [x] Strict greater-than-two-thirds commit quorum before block finalization
+- [x] Strict greater-than-two-thirds commit quorum before finalization
 - [x] Duplicate/unknown/invalid vote rejection
-- [x] In-memory same-height/same-round double-vote guard
-- [x] Basic peer block broadcast and catch-up synchronization
-- [x] REST/RPC endpoints
-- [x] CLI key/balance/send tooling
-- [x] 3-validator Docker Compose devnet
+- [x] Transaction validation before validator voting
+- [x] Round-specific deterministic proposer schedule
+- [x] Timeout-based proposer failover
+- [x] Persistent same-height/same-round anti-double-vote records
+- [x] Basic finalized-block broadcast and catch-up synchronization
+- [x] REST/RPC endpoints and CLI key/balance/send tooling
+- [x] Validator health/height/round telemetry
+- [x] 4-validator Docker Compose devnet with default 3-of-4 quorum
 - [x] Simple development explorer
-- [x] Automated blockchain ledger/signature/quorum tests and CI
-- [x] Network/protocol security notes and v0.2 specification
+- [x] Automated ledger/signature/quorum/failover tests and CI
+- [x] Initial threat model, v0.3 protocol specification and security notes
 
-### Required before public testnet
+### v0.4 consensus/network hardening — next
 
-- [x] Initial network threat model
-- [x] Signed quorum-finality prototype
-- [ ] Add proposer/view changes for validator downtime
-- [ ] Persist consensus vote/lock state across restarts
-- [ ] Add equivocation/conflicting-proposal evidence
-- [ ] Authenticated/encrypted peer-to-peer transport
+- [ ] Quorum-certified view-change messages
+- [ ] Cross-round lock/precommit rules
+- [ ] Durable multi-phase consensus state
+- [ ] Equivocation/conflicting-proposal evidence
+- [ ] Authenticated/encrypted validator transport
+- [ ] Validator identity handshake and certificate/key rotation plan
 - [ ] Peer discovery / bootnode design
 - [ ] Stronger mempool and multi-nonce handling
-- [ ] State snapshots and state sync
+- [ ] State snapshots and fast state sync
 - [ ] Restart/recovery and database-corruption testing
 - [ ] Adversarial multi-validator and network-partition tests
 - [ ] Validator key-management specification
-- [ ] Monitoring/observability dashboard
+- [ ] Dedicated monitoring/metrics dashboard and alerts
+- [ ] Public-testnet deployment configuration
 - [ ] Faucet policy and abuse controls
 - [ ] Economic/incentive design review
+
+### Current consensus warning
+
+v0.3 same-round vote persistence does **not** provide a complete cross-round BFT locking protocol. The chain remains a research devnet and must not be described as production safe or suitable for real-value custody.
 
 ## Phase 7 — Public Testnet
 **Only after Phase 6 security gates are met**
