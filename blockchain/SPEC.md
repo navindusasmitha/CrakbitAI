@@ -1,4 +1,4 @@
-# Crakbit Chain Devnet Specification v0.3
+# Crakbit Chain Devnet Specification v0.4
 
 **Status:** research/devnet specification. Not a production protocol commitment.
 
@@ -18,15 +18,15 @@
 
 ## Cryptography
 
-The current prototype uses Ed25519 signatures through the Python `cryptography` library.
+The prototype uses Ed25519 signatures through Python's `cryptography` library. Transaction, block, commit-vote and view-change messages are signed.
 
-A public key is serialized as raw Ed25519 bytes and Base64 encoded for JSON transport. An account address is derived as:
+Addresses are currently derived as:
 
 ```text
 crk1 + first_40_hex_characters(SHA256(raw_public_key))
 ```
 
-This address format is experimental and may change before public testnet/mainnet.
+The address format remains experimental.
 
 ## Transaction Model
 
@@ -44,11 +44,7 @@ memo
 signature
 ```
 
-The signature covers canonical JSON of every field except `signature`. The transaction ID is SHA-256 over canonical JSON of the complete signed transaction.
-
-A transaction is valid only when chain ID, amount, fee, sender/public-key binding, Ed25519 signature, nonce and balance checks all pass.
-
-The early mempool accepts only one pending transaction per sender.
+Transaction validity includes chain ID, positive amount, minimum fee, sender/public-key binding, signature, exact next nonce and sufficient balance.
 
 ## Block Model
 
@@ -68,9 +64,10 @@ round
 signature
 hash
 commit_votes[]
+view_changes[]
 ```
 
-The proposer signs canonical JSON of the proposal fields excluding `signature`, `hash` and `commit_votes`. Commit votes therefore do not alter the proposal hash.
+The proposal signature and block hash cover the proposal fields but not the later commit certificate or view-change certificate. A non-zero-round block must carry a valid view-change certificate for its round.
 
 ## Commit Vote Model
 
@@ -86,113 +83,122 @@ public_key
 signature
 ```
 
-A vote is counted only when the validator is in genesis, the configured public key matches, the signature verifies, and the vote targets the exact block hash, height and round.
-
-Duplicate validator votes inside a certificate are rejected.
-
-## State Commitments
-
-`tx_root` is a SHA-256 Merkle root over transaction IDs. `state_root` is currently a deterministic SHA-256 commitment over sorted `(address, balance, nonce)` tuples after simulating the proposed block.
-
-This state-root design is a development commitment and is not a Merkleized account trie with account proofs.
-
-## Consensus — Quorum Finality with Round-Based Proposer Failover
-
-For height `H` and round `R`, the expected proposer is:
-
-```text
-validator_index = (H - 1 + R) mod validator_count
-```
-
-Every height starts at round `0`. If a node does not observe finalization before `view_timeout_ms`, it advances to the next round.
-
-A proposal can be finalized only after it receives:
+A commit certificate requires:
 
 ```text
 floor(2 * validator_count / 3) + 1
 ```
 
-valid signed commit votes.
+unique valid validator signatures for the exact block hash, height and round.
 
-For the default four-validator devnet, the commit threshold is `3 of 4`.
+## View-Change Model
 
-### Proposal/finalization flow
-
-1. Nodes determine the expected proposer for the current height and round.
-2. The expected proposer builds and signs a candidate block.
-3. Each validator independently validates the proposal.
-4. A validator signs at most one block hash for a specific `(height, round)`.
-5. The proposer collects signed commit votes.
-6. Once quorum is reached, the commit certificate is attached to the block.
-7. The finalized block is broadcast.
-8. Every receiving node re-validates the proposal and quorum certificate before state transition.
-9. Catch-up synchronization downloads only finalized blocks and re-validates them locally.
-10. If finalization does not occur before the view timeout, nodes advance to the next round and the next configured proposer.
-
-## Persistent Same-Round Anti-Double-Vote State
-
-v0.3 stores each local validator's voted block hash in SQLite keyed by:
+A signed view-change message contains:
 
 ```text
-(height, round)
+chain_id
+height
+from_round
+to_round
+voter
+public_key
+locked_round
+locked_block_hash
+signature
 ```
 
-Before returning a signed vote, the node checks the persistent record. A conflicting hash at the same `(height, round)` is rejected. This means restarting a validator does not erase this same-round anti-double-vote protection.
+The current protocol only permits a one-round transition:
 
-Records for finalized heights may be pruned because the ledger will no longer accept proposals for those heights.
+```text
+to_round = from_round + 1
+```
 
-### Important limitation
+A validator may sign a view change after its local view timeout. The message also publishes the validator's current conservative local lock, if one exists.
 
-This is **not** yet a full BFT locking/precommit protocol.
+A view-change certificate requires the same strict greater-than-two-thirds validator threshold used for block finalization.
 
-The current persistent record prevents conflicting votes only within the same round. It does not establish a cross-round lock or quorum-certified view-change proof. Therefore v0.3 must still be treated as a research/devnet consensus mechanism, not as a production Byzantine-fault-tolerant protocol.
+For a proposal at round `R > 0`, every attached view-change message must target:
 
-## Round Advancement
+```text
+from_round = R - 1
+to_round   = R
+```
 
-A node tracks a local consensus round and a round start time. If the round remains unfinalized for at least `view_timeout_ms`, the local round increments.
+and the certificate must meet quorum.
 
-A validator may accept a valid proposal for the next round and update its local round. Large arbitrary round jumps are rejected by the current node implementation.
+## Consensus — Quorum Finality + Certified View Changes
 
-Timeout coordination is intentionally simple and has not been formally analyzed for adversarial clock/network conditions.
+For height `H` and round `R`, proposer selection is:
 
-## Genesis
+```text
+validator_index = (H - 1 + R) mod validator_count
+```
 
-Genesis defines:
+The v0.4 flow is:
 
-- chain identity
-- native unit metadata
-- max genesis supply
-- block interval
-- view timeout
-- minimum fee
-- validator set and peer URLs
-- initial allocations
+1. Nodes begin an unfinished height at the persisted local round, normally round `0`.
+2. The expected proposer builds and signs a proposal.
+3. Validators validate proposer identity, proposal signature, roots, transactions and any required view-change certificate.
+4. A validator records a valid signed proposal for equivocation detection.
+5. The validator applies its local vote-lock rules and signs a commit vote if allowed.
+6. The proposer collects a strict >2/3 commit quorum.
+7. The finalized block is broadcast with its commit certificate.
+8. Receiving nodes re-validate the proposal and certificate before applying state.
+9. If the round does not finalize before timeout, validators may sign a view-change message to `R+1`.
+10. A node may move to `R+1` only after collecting a strict >2/3 signed view-change certificate.
+11. The next-round proposer includes that certificate in its proposal.
 
-Validator addresses must be unique. The database stores a genesis fingerprint and refuses to open against a different genesis configuration.
+## Persistent Consensus State
 
-## Fees
+SQLite stores:
 
-Transaction fees are credited to the finalized block proposer. There is no post-genesis mint path, inflation system, staking, slashing or governance in v0.3.
+- local commit-vote records by `(height, round)`,
+- the highest local consensus round for unfinished heights,
+- local signed view-change actions,
+- first-seen valid proposal hashes,
+- conflicting-proposal evidence.
 
-This fee model is experimental and does not define final CRKBIT economics.
+This prevents a simple restart from erasing the local same-round vote record or local round advancement.
 
-## Storage
+## Conservative Cross-Round Lock
 
-The current SQLite state includes:
+After a validator signs a commit vote at a height, the node treats the most recent local voted block hash as a conservative lock.
 
-- metadata
-- accounts
-- blocks
-- transactions
-- persistent local same-round vote records
+The validator refuses to sign a different block hash at that height in a later round.
 
-SQLite is suitable for the research devnet but is not a final production storage decision.
+This is a deliberately safety-biased research rule. It does **not** yet implement a mature proof-of-lock/unlock mechanism. As a result, some network-failure patterns can stop liveness rather than permit a conflicting cross-round vote.
 
-## Peer Synchronization and Monitoring
+A future version should replace this with a reviewed multi-phase prevote/precommit or equivalent locking protocol with a formally specified unlock rule.
 
-Configured validators communicate over development HTTP endpoints. Nodes perform finalized-block catch-up and best-effort transaction/block propagation.
+## Equivocation Evidence
 
-Nodes also maintain cached peer telemetry including observed health, height and consensus round. This telemetry is operational only and must not be considered authenticated evidence because the transport is currently unauthenticated.
+After a proposal has passed normal validation, the node persists the first block hash seen for:
+
+```text
+(height, round, proposer)
+```
+
+If the same proposer supplies another valid signed proposal with a different block hash for that same tuple, the node stores evidence and refuses to vote for the conflicting proposal.
+
+v0.4 does not implement automatic slashing or validator removal.
+
+## State Commitments
+
+`tx_root` is a SHA-256 Merkle root over transaction IDs. `state_root` is currently a deterministic SHA-256 commitment over sorted `(address, balance, nonce)` tuples after simulating the proposal.
+
+This is not yet a proof-producing Merkleized account trie.
+
+## Fees / Economics
+
+Transaction fees are credited to the finalized block proposer. There is no post-genesis mint path, inflation system, staking, slashing or on-chain governance in v0.4.
+
+No final CRKBIT economics should be inferred from this devnet.
+
+## Peer Synchronization
+
+Configured validator peers still communicate over ordinary development HTTP. Finalized-block catch-up re-validates blocks and certificates locally.
+
+Peer transport is not authenticated or encrypted and must not be treated as production P2P networking.
 
 ## RPC
 
@@ -202,6 +208,7 @@ Public development endpoints:
 - `GET /status`
 - `GET /validators`
 - `GET /peers`
+- `GET /evidence`
 - `GET /balance/{address}`
 - `GET /blocks/{height}`
 - `GET /transactions/{txid}`
@@ -210,27 +217,29 @@ Public development endpoints:
 Development peer endpoints:
 
 - `POST /internal/transaction`
+- `POST /internal/view-change-request`
 - `POST /internal/proposal`
 - `POST /internal/block`
 
-The `/internal/*` endpoints must not be directly exposed as production peer networking.
+The `/internal/*` API must not be exposed as production peer networking.
 
 ## Known Consensus/Mainnet Gaps
 
-v0.3 does not yet include:
+v0.4 still lacks:
 
-- cross-round locking/precommit rules
-- quorum-certified view-change messages
-- formal safety/liveness proofs
-- equivocation evidence or slashing
-- authenticated/encrypted validator transport
-- validator-set changes or stake weighting
-- dynamic peer discovery
-- state snapshots / fast state sync
-- production DoS controls
-- production key management
-- production governance/upgrade process
+- a mature multi-phase lock/unlock or equivalent reviewed BFT state machine,
+- formal safety/liveness proofs,
+- authenticated/encrypted validator transport,
+- validator identity/certificate rotation,
+- dynamic validator-set changes or stake weighting,
+- automatic slashing/evidence processing,
+- state snapshots and fast state sync,
+- production DoS/rate controls,
+- production key management,
+- governance/upgrade mechanisms,
+- long-running adversarial public testnet evidence,
+- independent security audit.
 
 ## Mainnet Gate
 
-A production candidate requires a mature and independently reviewed consensus implementation, authenticated networking, state recovery, adversarial testing, economic-security review, key-management standards, a long-lived public testnet and external security audits.
+A production candidate requires a mature independently reviewed consensus implementation, authenticated networking, state recovery, adversarial/fuzz/partition testing, economic-security review, production key-management standards, incident response, a long-lived public testnet and external security audits.
