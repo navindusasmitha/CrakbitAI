@@ -227,6 +227,3 @@ def create_app() -> FastAPI:
             raise HTTPException(400, str(exc)) from exc
 
     return app
-
-
-app = create_app()
