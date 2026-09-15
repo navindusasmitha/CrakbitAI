@@ -1,78 +1,93 @@
 # Crakbit AI — Project Status
 
-**Last updated:** 2026-09-13
+**Last updated:** 2026-09-16
 
 ## Current Stage
 
-**Early development / Security MVP alpha**
+**Early development / Security MVP alpha + Crakbit Chain local devnet alpha**
 
-Crakbit AI currently has a public project identity, website, fundraising application, repository, technical documentation and a first deterministic security-scanner alpha. The platform is not yet production-ready.
+Crakbit AI currently has a public website, a Giveth-listed fundraising project, an open GitHub repository, technical documentation, a deterministic security-scanner alpha and a runnable experimental blockchain development network. None of these alpha components should be described as production-ready.
 
 ## Current Snapshot
 
 | Area | Status | Notes |
 | --- | --- | --- |
 | Public website | Active | Project information and funding positioning available |
-| GitHub repository | Active | Documentation, project structure and scanner alpha published |
-| Fundraising | Submitted | Giveth project/review flow in progress |
+| GitHub repository | Active | Documentation, scanner alpha and blockchain devnet code published |
+| Fundraising | Publicly listed on Giveth | GIVbacks verification/review is a separate process |
 | AI Security Assistant | In development | MVP architecture and workflow definition |
 | Secure Code Scanner | Early alpha | Initial deterministic rules and normalized findings implemented |
-| CLI | Early alpha | `crak` command included with scanner package |
-| API | Planned | To follow scanner core |
+| Security CLI | Early alpha | `crak` command included with scanner package |
+| Security API | Planned | To follow scanner core |
 | Smart Contract Scanner | Planned | Blockchain-security phase |
 | Open-source rule packs | Started | Initial rules published with scanner alpha |
-| Crakbit testnet | Research stage | Not part of immediate MVP |
-| CRKBIT | Not launched | No presale or official production token contract |
+| Crakbit Chain local devnet | Early alpha | Runnable PoA research network under `blockchain/` |
+| CRKBIT devnet unit | Test-only | Native unit inside the local devnet; no represented production value |
+| Crakbit Chain public testnet | Not launched | Consensus/network hardening required first |
+| Production CRKBIT | Not launched | No presale or official production token contract |
 
 ## Completed Foundation Work
 
 - Public repository established
 - Project README expanded
 - Roadmap published
-- Contribution guide published
-- Code of Conduct published
+- Contribution guide and Code of Conduct published
 - Vulnerability reporting policy published
-- Architecture overview published
-- Initial security model published
-- Funding/transparency document published
+- Architecture and security-model documentation published
+- Funding/transparency documentation published
 - GitHub issue and pull-request templates added
-- Scanner package architecture created
-- Normalized finding model created
-- Initial Python/JavaScript-oriented rules created
+- Security scanner package architecture created
+- Initial Python/JavaScript-oriented security rules created
 - Secret evidence redaction added
-- CLI alpha created
-- Initial scanner tests added
+- Scanner CLI alpha and tests added
+- Crakbit Chain local devnet package created
+- Ed25519 wallet/key generation implemented for the devnet
+- Signed CRKBIT devnet transfers implemented
+- Nonces, replay protection and transaction fees implemented
+- Signed blocks, transaction Merkle roots and state roots implemented
+- SQLite blockchain/account persistence implemented
+- Round-robin PoA validator prototype implemented
+- Basic peer broadcast/catch-up synchronization implemented
+- REST/RPC endpoints implemented
+- 3-validator Docker Compose devnet added
+- Simple devnet explorer added
+- Blockchain ledger/signature tests and CI workflow added
 
-## Immediate Priorities
+## Immediate Security-Platform Priorities
 
-1. Expand unit tests and rule coverage.
+1. Expand scanner unit tests and rule coverage.
 2. Improve Python and JavaScript/TypeScript rules.
 3. Add structured configuration checks.
 4. Reduce false positives and document rule behavior.
-5. Define richer normalized output/report format.
-6. Build AI-assisted explanation/remediation on top of scanner evidence.
-7. Publish a simple public MVP interface/demo.
-8. Begin API work after scanner core becomes more stable.
+5. Build AI-assisted explanation/remediation on top of deterministic evidence.
+6. Publish a simple public Security MVP interface/demo.
+7. Begin security API work after scanner core becomes more stable.
+
+## Immediate Blockchain Priorities
+
+1. Document the current transaction/block/network specification.
+2. Strengthen validation, error reporting and peer protocol behavior.
+3. Replace proposer-only PoA with a reviewed BFT/quorum consensus design before public testnet.
+4. Add authenticated peer transport and peer discovery.
+5. Add state snapshot/sync and restart/recovery testing.
+6. Expand adversarial and multi-node test coverage.
+7. Define wallet/explorer separation and key-management requirements.
+8. Run a long-lived closed devnet before public testnet.
+9. Commission independent review before any production network consideration.
 
 ## What Is Not Yet Production-Ready
 
-The following should not be described as completed production features yet:
+The following must not be described as completed production systems:
 
 - Full AI security platform
 - Production-grade scanner coverage
-- Production API
-- Production CLI
+- Production security API/CLI
 - Smart-contract security suite
-- Dedicated blockchain network
-- CRKBIT token/coin
+- Production BFT Crakbit blockchain
+- Public Crakbit testnet
+- Production wallet/explorer
+- Production CRKBIT token/coin
 
 ## Evidence and Transparency
 
-Crakbit AI aims to distinguish clearly between:
-
-- completed work,
-- active development,
-- planned features, and
-- long-term research.
-
-This document should be updated as milestones are completed so donors, reviewers and contributors can see the project's real development state.
+Crakbit AI aims to distinguish clearly between completed work, active development, prototypes, planned features and long-term research. Devnet/testnet units and prototype features must not be presented as production assets or guaranteed future functionality.
