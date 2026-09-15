@@ -41,7 +41,7 @@ Planned security tooling includes:
 - Security-focused developer guidance
 - Human-readable security reports
 
-### Crakbit Chain — Devnet v0.4 Alpha
+### Crakbit Chain — Devnet v0.5 Alpha
 A runnable experimental blockchain prototype exists in [`blockchain/`](blockchain/).
 
 The current development network includes:
@@ -50,12 +50,15 @@ The current development network includes:
 - Ed25519 wallets and signed transfers
 - `crk1...` account addresses
 - Nonces, replay protection and transaction fees
-- Signed block proposals and validator commit votes
-- Strict greater-than-two-thirds commit quorum before finalization
+- Signed block proposals
+- Strict greater-than-two-thirds **prevote** quorum
+- Strict greater-than-two-thirds **precommit** quorum
+- Finalization only after both phase certificates validate
 - Round-specific proposer rotation
 - Signed greater-than-two-thirds view-change certificates for non-zero rounds
-- Persistent consensus-round and same-round vote state across restarts
-- Conservative cross-round local vote locking
+- Persistent prevote/precommit anti-double-vote state across restarts
+- Persistent per-height conservative consensus lock
+- Persistent consensus event journal
 - Conflicting signed proposal/equivocation evidence
 - Transaction Merkle roots and deterministic state roots
 - SQLite-backed chain and consensus state
@@ -65,11 +68,11 @@ The current development network includes:
 - CLI wallet/transfer commands
 - 4-validator Docker Compose devnet with a default 3-of-4 quorum
 - Browser development explorer
-- Automated ledger/signature/quorum/view-change/evidence tests and CI
+- Automated ledger/multiphase-consensus/view-change/evidence tests and CI
 
 The proposed devnet parameters use 8 decimals and a 21,000,000 CRKBIT maximum genesis supply. These parameters remain subject to technical, security, economic and legal review before any production network.
 
-**Important:** v0.4 is still not a production BFT protocol. Quorum-certified view changes and a conservative cross-round lock are implemented, but the lock does not yet have a mature proof-of-lock/unlock rule, validator networking is not authenticated/encrypted, and the network has not been independently audited.
+**Important:** v0.5 is still not a production BFT protocol. The prevote/precommit pipeline and durable lock are research implementations. The lock does not yet have a mature proof-based unlock rule, validator networking is not authenticated/encrypted, and the network has not been independently audited.
 
 Test CRKBIT units created by this devnet are not a production token, investment product or public presale.
 
@@ -123,13 +126,15 @@ Default local RPC endpoints:
 - `http://127.0.0.1:9103`
 - `http://127.0.0.1:9104`
 
-Node status and consensus telemetry:
+Consensus/validator telemetry:
 
 ```bash
 curl http://127.0.0.1:9101/status
 curl http://127.0.0.1:9101/peers
 curl http://127.0.0.1:9101/validators
 curl http://127.0.0.1:9101/evidence
+curl http://127.0.0.1:9101/consensus/events
+curl http://127.0.0.1:9101/metrics
 ```
 
 ## Architecture Direction
@@ -150,9 +155,9 @@ Developer / Researcher
    |-- Static analysis    |-- Wallet/signatures
    |-- Secret detection   |-- Transactions/fees
    |-- Dependency checks  |-- Blocks/state
-   |-- Solidity analysis  |-- Commit quorum
-   `-- AI remediation     |-- Certified view changes
-                          |-- Conservative lock/evidence
+   |-- Solidity analysis  |-- Certified view changes
+   `-- AI remediation     |-- Prevote / precommit quorum
+                          |-- Durable lock/evidence
                           `-- Validator/RPC telemetry
 ```
 
@@ -170,11 +175,12 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the evolving platform des
 | Security CLI | Early alpha |
 | Developer API | Planned |
 | Smart Contract Scanner | Planned |
-| Crakbit Chain local devnet | **v0.4 alpha available** |
-| Signed quorum finality | **Devnet prototype implemented** |
+| Crakbit Chain local devnet | **v0.5 alpha available** |
 | Quorum-certified view changes | **Devnet prototype implemented** |
-| Persistent consensus state | **Prototype implemented** |
-| Conservative cross-round local lock | **Research rule implemented** |
+| Prevote/precommit finality | **Devnet prototype implemented** |
+| Persistent phase-vote state | **Prototype implemented** |
+| Conservative per-height consensus lock | **Research rule implemented** |
+| Consensus event journal | **Prototype implemented** |
 | Equivocation evidence | **Prototype implemented** |
 | Validator telemetry | **Prototype implemented** |
 | Chain CLI / wallet key tooling | **Early alpha available** |
@@ -195,12 +201,13 @@ Our development sequence includes:
 5. Developer integrations
 6. Crakbit Chain local devnet
 7. Signed quorum finality
-8. Proposer failover and persistent same-round vote state
-9. Quorum-certified view changes + conservative cross-round lock/evidence
-10. Mature multi-phase BFT lock/unlock + authenticated validator networking
-11. Public testnet preparation
-12. Long-lived public testnet and independent security review
-13. Mainnet consideration only after technical, economic and legal validation
+8. Proposer failover and persistent consensus state
+9. Quorum-certified view changes and equivocation evidence
+10. Multi-phase prevote/precommit finality + durable lock
+11. Authenticated validator networking + state recovery
+12. Public testnet preparation
+13. Long-lived public testnet and independent security review
+14. Mainnet consideration only after technical, economic and legal validation
 
 See [`ROADMAP.md`](ROADMAP.md) for milestones and target phases.
 
@@ -250,15 +257,7 @@ Additional official community links will be added here as they are launched.
 
 ## Transparency
 
-We intend to publish:
-
-- Development milestones
-- Major architecture decisions
-- Public releases
-- Funding allocation updates where practical
-- Open-source components
-- Security and testing progress
-- Devnet/testnet limitations and audit status
+We intend to publish development milestones, major architecture decisions, releases, funding-allocation updates where practical, open-source components, security/testing progress and devnet/testnet limitations.
 
 See [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) for the current development snapshot.
 
