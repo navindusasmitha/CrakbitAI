@@ -6,7 +6,7 @@ This roadmap describes the intended development order for Crakbit AI. Dates are 
 
 **Technology first. Security first. Tokens later.**
 
-The immediate product focus remains a useful defensive-security MVP. In parallel, the Crakbit Chain local research network has now progressed through signed quorum finality and a v0.3 round-based proposer-failover prototype. Public testnet/mainnet work still depends on stronger cross-round BFT safety, authenticated networking, state recovery, adversarial testing and independent security review.
+The immediate product focus remains a useful defensive-security MVP. In parallel, the Crakbit Chain local research network has progressed through signed quorum finality, round-based proposer failover and a v0.4 quorum-certified view-change prototype. Public testnet/mainnet work still depends on a mature multi-phase BFT lock/unlock design, authenticated networking, state recovery, adversarial testing and independent security review.
 
 ## Phase 1 — Foundation
 **Target: Q3–Q4 2026**
@@ -76,7 +76,7 @@ A developer should be able to submit or scan a small codebase and receive a clea
 
 A runnable local devnet exists to turn network research into testable code. This does **not** mean a production blockchain or public-value CRKBIT asset has launched.
 
-### Completed through v0.3
+### Completed through v0.4
 
 - [x] Native devnet CRKBIT accounting unit
 - [x] 8-decimal atomic-unit model
@@ -89,30 +89,35 @@ A runnable local devnet exists to turn network research into testable code. This
 - [x] SQLite chain/account persistence
 - [x] Signed validator commit votes
 - [x] Strict greater-than-two-thirds commit quorum before finalization
-- [x] Duplicate/unknown/invalid vote rejection
+- [x] Duplicate/unknown/invalid commit-vote rejection
 - [x] Transaction validation before validator voting
 - [x] Round-specific deterministic proposer schedule
-- [x] Timeout-based proposer failover
+- [x] Timeout-triggered proposer-failover research flow
 - [x] Persistent same-height/same-round anti-double-vote records
+- [x] Signed quorum-certified view-change messages
+- [x] Later-round proposals require a >2/3 view-change certificate
+- [x] Persistent local consensus-round advancement
+- [x] Persistent local view-change records
+- [x] Conservative cross-round local vote lock
+- [x] Conflicting signed proposal/equivocation evidence persistence
 - [x] Basic finalized-block broadcast and catch-up synchronization
 - [x] REST/RPC endpoints and CLI key/balance/send tooling
 - [x] Validator health/height/round telemetry
 - [x] 4-validator Docker Compose devnet with default 3-of-4 quorum
 - [x] Simple development explorer
-- [x] Automated ledger/signature/quorum/failover tests and CI
-- [x] Initial threat model, v0.3 protocol specification and security notes
+- [x] Automated ledger/signature/quorum/view-change/evidence tests and CI
+- [x] Initial threat model, v0.4 protocol specification and security notes
 
-### v0.4 consensus/network hardening — next
+### v0.5 consensus/network hardening — next
 
-- [ ] Quorum-certified view-change messages
-- [ ] Cross-round lock/precommit rules
-- [ ] Durable multi-phase consensus state
-- [ ] Equivocation/conflicting-proposal evidence
+- [ ] Replace the conservative no-unlock lock with a reviewed multi-phase prevote/precommit or equivalent lock/unlock protocol
+- [ ] Persist full multi-phase consensus event history
+- [ ] Expand equivocation evidence and evidence gossip/processing design
 - [ ] Authenticated/encrypted validator transport
 - [ ] Validator identity handshake and certificate/key rotation plan
 - [ ] Peer discovery / bootnode design
 - [ ] Stronger mempool and multi-nonce handling
-- [ ] State snapshots and fast state sync
+- [ ] State snapshots, snapshot verification and fast state sync
 - [ ] Restart/recovery and database-corruption testing
 - [ ] Adversarial multi-validator and network-partition tests
 - [ ] Validator key-management specification
@@ -123,7 +128,7 @@ A runnable local devnet exists to turn network research into testable code. This
 
 ### Current consensus warning
 
-v0.3 same-round vote persistence does **not** provide a complete cross-round BFT locking protocol. The chain remains a research devnet and must not be described as production safe or suitable for real-value custody.
+v0.4 improves round-change safety by requiring a quorum certificate and adds a conservative cross-round local lock. It is still **not** a complete production BFT protocol because the lock has no mature proof-of-lock/unlock rule, validator transport remains unauthenticated HTTP, and no formal safety/liveness proof or independent audit exists.
 
 ## Phase 7 — Public Testnet
 **Only after Phase 6 security gates are met**
