@@ -11,7 +11,7 @@ from crakbit_chain.models import ATOMIC_UNITS
 def main() -> int:
     parser = argparse.ArgumentParser(description="Create a local Crakbit devnet")
     parser.add_argument("--output", default="runtime")
-    parser.add_argument("--validators", type=int, default=3)
+    parser.add_argument("--validators", type=int, default=4)
     parser.add_argument("--block-time-ms", type=int, default=5000)
     parser.add_argument("--view-timeout-ms", type=int, default=10000)
     parser.add_argument(
@@ -73,6 +73,8 @@ def main() -> int:
     genesis_path.write_text(json.dumps(genesis, indent=2) + "\n", encoding="utf-8")
 
     print(f"Genesis: {genesis_path.resolve()}")
+    print(f"Validators: {args.validators}")
+    print(f"Commit quorum: {(2 * args.validators) // 3 + 1}")
     print(f"Treasury address: {treasury_address}")
     print(f"Block time: {args.block_time_ms} ms")
     print(f"View timeout: {args.view_timeout_ms} ms")
