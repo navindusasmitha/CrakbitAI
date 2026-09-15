@@ -65,7 +65,9 @@ def cmd_node(args: argparse.Namespace) -> int:
     os.environ["CRAKBIT_GENESIS"] = args.genesis
     os.environ["CRAKBIT_VALIDATOR_KEY"] = args.key
     os.environ["CRAKBIT_DATA_DIR"] = args.data
-    uvicorn.run("crakbit_chain.node:app", host=args.host, port=args.port, reload=False)
+    from .node import create_app
+
+    uvicorn.run(create_app(), host=args.host, port=args.port, reload=False)
     return 0
 
 
