@@ -1,0 +1,29 @@
+services:
+  node1:
+    build: .
+    command: ["crakchain", "node", "--genesis", "/runtime/genesis.json", "--key", "/runtime/node1/validator.json", "--data", "/data", "--port", "9101"]
+    volumes:
+      - ./runtime:/runtime:ro
+      - node1-data:/data
+    ports: ["9101:9101"]
+
+  node2:
+    build: .
+    command: ["crakchain", "node", "--genesis", "/runtime/genesis.json", "--key", "/runtime/node2/validator.json", "--data", "/data", "--port", "9101"]
+    volumes:
+      - ./runtime:/runtime:ro
+      - node2-data:/data
+    ports: ["9102:9101"]
+
+  node3:
+    build: .
+    command: ["crakchain", "node", "--genesis", "/runtime/genesis.json", "--key", "/runtime/node3/validator.json", "--data", "/data", "--port", "9101"]
+    volumes:
+      - ./runtime:/runtime:ro
+      - node3-data:/data
+    ports: ["9103:9101"]
+
+volumes:
+  node1-data:
+  node2-data:
+  node3-data:
