@@ -6,7 +6,7 @@ This roadmap describes the intended development order for Crakbit AI. Dates are 
 
 **Technology first. Security first. Tokens later.**
 
-The immediate focus is a useful defensive-security MVP. Blockchain mainnet work and any CRKBIT utility asset are later-stage items that depend on technical validation and security review.
+The immediate product focus remains a useful defensive-security MVP. A local Crakbit Chain devnet now exists as a parallel research prototype, but public testnet/mainnet work still depends on consensus hardening, technical validation and independent security review.
 
 ## Phase 1 — Foundation
 **Target: Q3–Q4 2026**
@@ -15,23 +15,25 @@ The immediate focus is a useful defensive-security MVP. Blockchain mainnet work 
 - [x] Launch public website
 - [x] Create public GitHub repository
 - [x] Publish initial roadmap and project documentation
-- [ ] Publish initial technical architecture
-- [ ] Establish public development/update cadence
-- [ ] Launch official project social/community channels
-- [ ] Link public fundraising profile and transparency information
+- [x] Publish initial technical architecture
+- [x] Publish initial security model
+- [x] Establish public Giveth project listing
+- [ ] Establish consistent public development/update cadence
+- [ ] Launch/complete official project social and community channels
+- [ ] Link final public fundraising URL throughout website/repository
 
 ## Phase 2 — Security MVP
 **Target: Q4 2026**
 
 - [ ] AI Security Assistant prototype
-- [ ] Secure-code scanning pipeline
-- [ ] Initial Python security rules
-- [ ] Initial JavaScript/TypeScript security rules
-- [ ] Secret detection
-- [ ] Basic configuration checks
-- [ ] Human-readable findings and remediation guidance
-- [ ] Security score / severity model
-- [ ] Public demo
+- [x] Initial secure-code scanning pipeline alpha
+- [x] Initial Python security rules
+- [x] Initial JavaScript/TypeScript security rules
+- [x] Initial secret detection
+- [ ] Structured configuration checks
+- [x] Human-readable findings and remediation fields
+- [x] Severity/confidence model
+- [ ] Public web demo
 
 ### MVP success criteria
 
@@ -40,13 +42,14 @@ A developer should be able to submit or scan a small codebase and receive a clea
 ## Phase 3 — Developer Tooling
 **Target: Q1 2027**
 
-- [ ] `crak` CLI alpha
+- [x] `crak` CLI early alpha
 - [ ] Developer API alpha
-- [ ] JSON/SARIF-style output exploration
+- [x] JSON output
+- [ ] SARIF-style output exploration
 - [ ] Repository scan workflow
 - [ ] CI/CD integration prototype
 - [ ] Authentication and rate-limiting design
-- [ ] Documentation and examples
+- [ ] Expanded documentation and examples
 
 ## Phase 4 — Blockchain Security
 **Target: Q2 2027**
@@ -68,65 +71,98 @@ A developer should be able to submit or scan a small codebase and receive a clea
 - [ ] Plugin/extension architecture
 - [ ] Open-source rule contribution framework
 
-## Phase 6 — Crakbit Network Research
-**Target: Q3–Q4 2027**
+## Phase 6 — Crakbit Chain Research & Local Devnet
+**Prototype started early in September 2026**
 
-Research only until the security platform has demonstrated real utility.
+A runnable local devnet has been created to turn network research into testable code. This does **not** mean a production blockchain or public-value CRKBIT asset has launched.
 
-- [ ] Threat model for a dedicated network
-- [ ] Consensus research
-- [ ] Node architecture
-- [ ] Testnet specification
-- [ ] Wallet/explorer requirements
-- [ ] Faucet and test-token design
-- [ ] Validator/miner incentive research
-- [ ] Economic and abuse-resistance analysis
+### Completed local-devnet prototype work
+
+- [x] Native devnet CRKBIT accounting unit
+- [x] 8-decimal atomic-unit model
+- [x] Proposed 21,000,000 maximum genesis supply encoded for devnet
+- [x] Ed25519 wallet/key generation
+- [x] `crk1...` address derivation
+- [x] Signed transfers
+- [x] Nonce/replay protection
+- [x] Minimum transaction fees
+- [x] Signed blocks
+- [x] Previous-block hash linking
+- [x] Transaction Merkle roots
+- [x] Deterministic state roots
+- [x] SQLite chain/account persistence
+- [x] Round-robin Proof-of-Authority research consensus
+- [x] Basic peer block broadcast and catch-up synchronization
+- [x] REST/RPC endpoints
+- [x] CLI key/balance/send tooling
+- [x] 3-validator Docker Compose devnet
+- [x] Simple development explorer
+- [x] Initial automated blockchain tests and CI
+
+### Required before public testnet
+
+- [ ] Formal network threat model
+- [ ] Replace simple proposer-only PoA with reviewed BFT/quorum finality
+- [ ] Authenticated peer-to-peer transport
+- [ ] Peer discovery / bootnode design
+- [ ] Stronger mempool and nonce handling
+- [ ] State snapshots and state sync
+- [ ] Restart/recovery and database-corruption testing
+- [ ] Adversarial multi-validator tests
+- [ ] Validator key-management specification
+- [ ] Monitoring/observability
+- [ ] Faucet policy and abuse controls
+- [ ] Economic/incentive design review
 
 ## Phase 7 — Public Testnet
-**Target: after successful research and implementation**
+**Only after Phase 6 security gates are met**
 
-- [ ] Public node software
-- [ ] Testnet explorer
+- [ ] Public node software release
+- [ ] Testnet genesis ceremony/process
+- [ ] Public testnet explorer
 - [ ] Testnet wallet support
 - [ ] Faucet
-- [ ] Public documentation
+- [ ] Public node/operator documentation
 - [ ] Network monitoring
 - [ ] Stress testing
 - [ ] Community test program
 
-No production-value CRKBIT asset is required for the testnet stage.
+Any CRKBIT units used on testnet are test-only and should have no represented production value.
 
 ## Phase 8 — Security Review
 
 Before any production network launch:
 
 - [ ] Internal security review
-- [ ] Independent security review/audit
-- [ ] Network stress testing
+- [ ] Independent code/security audit
 - [ ] Consensus-failure testing
+- [ ] Network partition/fault testing
 - [ ] Economic-security review
+- [ ] Cryptography/key-management review
 - [ ] Incident-response planning
 - [ ] Legal/regulatory review where applicable
 
 ## Phase 9 — Mainnet Consideration
 
-A production mainnet should only be considered after successful public testing, security review and a clear operational model.
+A production mainnet should only be considered after successful long-lived public testing, independent security review and a clear operational/economic model.
 
 Potential items:
 
+- Final consensus mechanism
 - Genesis process
 - Production explorer
 - Production wallet ecosystem
-- Validator/miner onboarding
+- Validator onboarding
 - CRKBIT utility implementation
-- Developer services
+- Developer/network services
+- Upgrade/governance process
 
 ## CRKBIT Status
 
-**Not launched. No official presale. No production token contract.**
+**Production CRKBIT is not launched. No official presale. No production token contract.**
 
-The proposed CRKBIT maximum supply of 21,000,000 is a design target from early planning and remains subject to technical, security, economic and legal review before any production implementation.
+The local development network now implements test-only CRKBIT accounting with a proposed maximum genesis supply of 21,000,000 and 8 decimals. Those devnet parameters remain subject to technical, security, economic and legal review before any production implementation.
 
 ## Roadmap Updates
 
-Major roadmap changes should be documented in repository commits and project updates so supporters and contributors can distinguish completed work from future plans.
+Major roadmap changes should be documented in repository commits and project updates so supporters and contributors can distinguish completed work from prototypes, public testnets and production systems.
