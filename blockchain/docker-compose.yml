@@ -23,7 +23,16 @@ services:
       - node3-data:/data
     ports: ["9103:9101"]
 
+  node4:
+    build: .
+    command: ["crakchain", "node", "--genesis", "/runtime/genesis.json", "--key", "/runtime/node4/validator.json", "--data", "/data", "--port", "9101"]
+    volumes:
+      - ./runtime:/runtime:ro
+      - node4-data:/data
+    ports: ["9104:9101"]
+
 volumes:
   node1-data:
   node2-data:
   node3-data:
+  node4-data:
