@@ -123,6 +123,60 @@ class CommitVote:
 
 
 @dataclass
+class ViewChange:
+    """Signed validator message requesting a move to a later consensus round."""
+
+    chain_id: str
+    height: int
+    from_round: int
+    to_round: int
+    voter: str
+    public_key: str
+    locked_round: int = -1
+    locked_block_hash: str = ""
+    signature: str = ""
+
+    def unsigned_dict(self) -> dict[str, Any]:
+        return {
+            "chain_id": self.chain_id,
+            "height": int(self.height),
+            "from_round": int(self.from_round),
+            "to_round": int(self.to_round),
+            "voter": self.voter,
+            "public_key": self.public_key,
+            "locked_round": int(self.locked_round),
+            "locked_block_hash": self.locked_block_hash,
+        }
+
+    def signing_bytes(self) -> bytes:
+        return canonical_json(self.unsigned_dict())
+
+    def verify_signature(self) -> bool:
+        if self.voter != address_from_public_key(self.public_key):
+            return False
+        return bool(self.signature) and verify_signature(self.public_key, self.signing_bytes(), self.signature)
+
+    def to_dict(self) -> dict[str, Any]:
+        data = self.unsigned_dict()
+        data["signature"] = self.signature
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ViewChange":
+        return cls(
+            chain_id=str(data["chain_id"]),
+            height=int(data["height"]),
+            from_round=int(data["from_round"]),
+            to_round=int(data["to_round"]),
+            voter=str(data["voter"]),
+            public_key=str(data["public_key"]),
+            locked_round=int(data.get("locked_round", -1)),
+            locked_block_hash=str(data.get("locked_block_hash", "")),
+            signature=str(data.get("signature", "")),
+        )
+
+
+@dataclass
 class Block:
     chain_id: str
     height: int
@@ -136,6 +190,7 @@ class Block:
     round: int = 0
     signature: str = ""
     commit_votes: list[CommitVote] = field(default_factory=list)
+    view_changes: list[ViewChange] = field(default_factory=list)
 
     def unsigned_dict(self) -> dict[str, Any]:
         txids = [tx.txid for tx in self.transactions]
@@ -173,6 +228,7 @@ class Block:
         data["signature"] = self.signature
         data["hash"] = self.block_hash
         data["commit_votes"] = [vote.to_dict() for vote in self.commit_votes]
+        data["view_changes"] = [change.to_dict() for change in self.view_changes]
         return data
 
     @classmethod
@@ -190,6 +246,7 @@ class Block:
             round=int(data.get("round", 0)),
             signature=str(data.get("signature", "")),
             commit_votes=[CommitVote.from_dict(item) for item in data.get("commit_votes", [])],
+            view_changes=[ViewChange.from_dict(item) for item in data.get("view_changes", [])],
         )
 
 
