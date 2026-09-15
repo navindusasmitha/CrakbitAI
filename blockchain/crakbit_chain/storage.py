@@ -124,6 +124,18 @@ class Ledger:
             if owns_conn:
                 conn.close()
 
+    def _validate_transaction_fields(self, tx: Transaction) -> None:
+        if tx.chain_id != self.genesis.chain_id:
+            raise LedgerError("wrong chain_id")
+        if tx.amount <= 0:
+            raise LedgerError("amount must be positive")
+        if tx.fee < self.genesis.min_fee:
+            raise LedgerError("fee below network minimum")
+        if tx.sender == tx.recipient:
+            raise LedgerError("sender and recipient must differ")
+        if not tx.verify_signature():
+            raise LedgerError("invalid transaction signature")
+
     def simulate_state_root(self, txs: list[Transaction], fee_recipient: str) -> str:
         with self.connect() as conn:
             state = {
@@ -131,11 +143,14 @@ class Ledger:
                 for row in conn.execute("SELECT address,balance,nonce FROM accounts")
             }
         for tx in txs:
+            self._validate_transaction_fields(tx)
             sender = state.setdefault(tx.sender, [0, 0])
             recipient = state.setdefault(tx.recipient, [0, 0])
             fees = state.setdefault(fee_recipient, [0, 0])
-            if tx.nonce != sender[1] + 1 or sender[0] < tx.amount + tx.fee:
-                raise LedgerError("transaction invalid against simulated state")
+            if tx.nonce != sender[1] + 1:
+                raise LedgerError(f"invalid nonce in simulated state: expected {sender[1] + 1}")
+            if sender[0] < tx.amount + tx.fee:
+                raise LedgerError("insufficient balance in simulated state")
             sender[0] -= tx.amount + tx.fee
             sender[1] += 1
             recipient[0] += tx.amount
