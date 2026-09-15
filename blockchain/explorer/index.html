@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crakbit Chain Devnet Explorer</title>
+  <style>
+    body{font-family:system-ui,sans-serif;background:#071018;color:#eaf6ff;margin:0;padding:32px}main{max-width:900px;margin:auto}.card{background:#0d1b28;border:1px solid #1b3a4e;border-radius:16px;padding:20px;margin:16px 0}input,button{padding:12px;border-radius:10px;border:1px solid #2b5872;background:#071018;color:#fff}button{cursor:pointer}code,pre{white-space:pre-wrap;word-break:break-all}.muted{color:#91a8b8}
+  </style>
+</head>
+<body><main>
+  <h1>Crakbit Chain Devnet Explorer</h1>
+  <p class="muted">Development network only — not a production mainnet.</p>
+  <div class="card"><label>RPC URL <input id="rpc" value="http://127.0.0.1:9101" size="40"></label> <button onclick="loadStatus()">Refresh</button><pre id="status"></pre></div>
+  <div class="card"><label>Block height <input id="height" type="number" value="1"></label> <button onclick="loadBlock()">Get block</button><pre id="block"></pre></div>
+  <div class="card"><label>Address <input id="address" size="48"></label> <button onclick="loadBalance()">Balance</button><pre id="balance"></pre></div>
+</main><script>
+const rpc=()=>document.getElementById('rpc').value.replace(/\/$/,'');
+async function j(url){const r=await fetch(url);if(!r.ok)throw new Error(await r.text());return r.json()}
+async function loadStatus(){try{document.getElementById('status').textContent=JSON.stringify(await j(rpc()+'/status'),null,2)}catch(e){document.getElementById('status').textContent=e}}
+async function loadBlock(){try{document.getElementById('block').textContent=JSON.stringify(await j(rpc()+'/blocks/'+document.getElementById('height').value),null,2)}catch(e){document.getElementById('block').textContent=e}}
+async function loadBalance(){try{document.getElementById('balance').textContent=JSON.stringify(await j(rpc()+'/balance/'+document.getElementById('address').value),null,2)}catch(e){document.getElementById('balance').textContent=e}}
+loadStatus();
+</script></body></html>
