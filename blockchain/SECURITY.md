@@ -2,25 +2,27 @@
 
 The current Crakbit Chain implementation is a **research/devnet prototype**. It is intentionally not presented as an audited production blockchain and must not be used to custody real value.
 
-## Security Goals of v0.3
+## Security Goals of v0.4
 
-The current code attempts to provide useful integrity, quorum-finality and validator-restart protections for development:
+The current code provides development-stage protections including:
 
-- Ed25519 signatures for transactions, block proposals and commit votes,
+- Ed25519 signatures for transactions, block proposals, commit votes and view-change messages,
 - sender/public-key binding,
 - nonce-based replay protection,
 - integer balance accounting,
 - deterministic transaction/state commitments,
 - previous-block hash linking,
 - round-specific proposer validation,
-- signed greater-than-two-thirds commit quorum,
-- duplicate/unknown/invalid vote rejection,
-- persistent same-height/same-round anti-double-vote state,
-- timeout-based proposer rotation,
+- strict greater-than-two-thirds commit quorum,
+- strict greater-than-two-thirds signed view-change quorum for non-zero rounds,
+- persistent same-round anti-double-vote state,
+- persistent local consensus-round advancement,
+- conservative cross-round local vote locking,
+- conflicting signed proposal/equivocation evidence,
 - local re-validation of finalized blocks during sync,
 - validator health/height/round telemetry.
 
-These properties improve the devnet but are **not sufficient for a production-value network**.
+These controls improve the devnet but remain **insufficient for a public-value production network**.
 
 ## Private Keys
 
@@ -32,50 +34,61 @@ Rules:
 2. Never reuse bootstrap/devnet keys for a future public testnet or mainnet.
 3. Do not expose validator key files through HTTP/static hosting.
 4. Production validator key backups require encrypted, access-controlled storage.
-5. Hardware-backed signing/HSM/remote-signer options should be evaluated before production.
+5. Hardware-backed signing, HSMs or a reviewed remote-signer design should be evaluated before production.
 
 ## Consensus Risk
 
-v0.3 requires a signed validator commit certificate with threshold:
+v0.4 uses a strict greater-than-two-thirds validator threshold for both commit certificates and view-change certificates.
 
-```text
-floor(2N/3) + 1
-```
+The default four-validator topology therefore requires `3 of 4` signatures.
 
-for `N` configured validators. The default local topology uses four validators, giving a `3 of 4` quorum.
+### Certified view changes
 
-The expected proposer rotates by both height and round. If a height is not finalized before the configured view timeout, nodes advance rounds and select the next validator.
+A validator may request movement from round `R` to `R+1` only after the local timeout. A later-round proposal must carry a quorum certificate of signed view-change messages for that exact transition.
 
-### Persistent anti-double-vote protection
+This is safer than independent unilateral round advancement because every validator can verify why the later round exists.
 
-Before a vote is returned, a node stores the selected block hash for that exact `(height, round)` in SQLite. A conflicting block hash for the same `(height, round)` is rejected after restart as well as during the original process lifetime.
+### Persistent consensus state
+
+The node persists local vote records, local round advancement and local view-change actions in SQLite. A restart therefore does not automatically erase the validator's prior same-round voting decision or return an unfinished height to round zero.
+
+### Conservative cross-round lock
+
+After a validator signs a commit vote at a height, v0.4 refuses to sign a different block hash at the same height in a later round.
+
+This improves safety, but the rule is intentionally conservative and has **no mature unlock/proof-of-lock mechanism**. If enough validators become locked on a proposal that never finalizes, the chain can halt.
+
+That liveness tradeoff is preferable for this research phase to silently allowing potentially conflicting cross-round signatures, but it is not a complete production BFT design.
+
+### Equivocation evidence
+
+A node stores the first valid signed proposal observed for `(height, round, proposer)`. A second different valid signed proposal from the same proposer for that same tuple is recorded as conflicting-proposal evidence and rejected for voting.
+
+There is currently no automatic slashing, validator removal or evidence gossip protocol.
 
 ### Remaining consensus weaknesses
 
-This is still **not a complete production BFT protocol**.
+v0.4 still lacks:
 
-The current design does not yet provide:
-
-- cross-round lock/precommit safety,
-- quorum-certified view-change messages,
-- durable multi-phase consensus state,
+- a mature prevote/precommit or equivalent multi-phase lock/unlock state machine,
+- a formally reviewed cross-round unlock rule,
 - formal safety/liveness proofs,
-- equivocation evidence and slashing,
-- weighted stake or dynamic validator-set changes,
+- weighted stake or validator-set changes,
+- automatic evidence/slashing processing,
 - adversarially reviewed timeout/clock assumptions,
-- robust fork-choice recovery under arbitrary partitions.
+- robust recovery under arbitrary partitions.
 
-Because validators may vote again in a later round, same-round persistence alone does not prove that two conflicting blocks can never receive certificates under all adversarial network schedules. A production network must use a mature reviewed BFT/PoS design or formally specified equivalent.
+A production chain should use a mature reviewed BFT/PoS design or a formally specified equivalent before real value is placed at risk.
 
 ## Network Risk
 
-The current peer protocol uses ordinary HTTP and static peer URLs. Cryptographic signatures protect transaction/block/vote integrity, but transport does not yet provide:
+Validator communication still uses ordinary HTTP and static peer URLs. Message signatures protect consensus-object integrity, but transport does not yet provide:
 
 - encryption,
 - mutual validator authentication,
 - peer identity handshakes,
 - certificate/key rotation,
-- discovery protections,
+- dynamic discovery protections,
 - connection/rate limits,
 - eclipse/Sybil defenses,
 - authenticated peer-health telemetry.
@@ -84,29 +97,29 @@ The `/internal/*` endpoints are development-only and should be firewalled from t
 
 ## Monitoring Limitations
 
-`/health`, `/status` and `/peers` provide operational visibility into validator uptime, height and round progress. This helps detect stalls during local testing, but the peer-health data is not authenticated and must not be treated as a trust or security oracle.
+`/health`, `/status`, `/peers` and `/evidence` provide operational visibility. They are useful for development and testing, but current peer-health data is unauthenticated and must not be treated as a security oracle.
 
-A public testnet should add metrics export, alerting, authenticated validator identity and independent network observers.
+A public testnet should add authenticated validator identity, metrics export, alerting and independent observer nodes.
 
 ## Denial-of-Service Risk
 
-The development RPC does not yet include production-grade request-size limits, per-IP limits, mempool quotas or resource accounting.
+The development RPC still lacks production-grade request-size limits, per-IP limits, connection quotas and resource accounting.
 
-Before public testnet, add explicit limits for:
+Before public testnet, explicitly limit:
 
 - request body size,
 - transaction and memo size,
 - block transaction count/byte size,
-- commit-certificate size,
+- commit/view-change certificate size,
 - concurrent connections,
-- RPC rate,
+- RPC request rate,
 - mempool size,
-- peer synchronization bandwidth,
+- synchronization bandwidth,
 - consensus request frequency.
 
 ## State / Storage Risk
 
-SQLite provides convenient local persistence. v0.3 now persists same-round local vote records, but it still does not include:
+SQLite is convenient for the devnet. v0.4 persists more consensus metadata, but the implementation still lacks:
 
 - state snapshots,
 - snapshot signatures,
@@ -114,42 +127,43 @@ SQLite provides convenient local persistence. v0.3 now persists same-round local
 - pruning/archival policy,
 - database integrity recovery procedures,
 - crash-consistency stress testing,
-- durable cross-round lock/precommit state.
+- complete multi-phase consensus event history.
 
-Nodes should still be treated as disposable during early development.
+Nodes should still be treated as disposable during early research.
 
 ## Transaction Risk
 
-Current validation checks signatures, nonces, balances, fees and chain ID. Future work should also consider:
+Current validation checks signatures, nonces, balances, fees and chain ID. Future work should add stronger bounds and fuzzing for:
 
-- strict field and memo size limits,
+- memo/field sizes,
 - canonical address parsing,
-- integer overflow assumptions across implementations,
-- mempool replacement policy,
-- multiple pending nonces per account,
-- transaction expiration/time bounds,
-- malformed encoding fuzzing,
-- duplicate/rebroadcast handling.
+- integer boundary assumptions across implementations,
+- multiple pending nonces,
+- transaction replacement policy,
+- expiration/time bounds,
+- malformed encodings,
+- rebroadcast/duplicate handling.
 
 ## Economic Security
 
-The current prototype has no staking, slashing, inflation or on-chain governance. Fees are credited to the finalized block proposer.
+The prototype has no staking, slashing, inflation or on-chain governance. Fees are credited to the finalized block proposer.
 
-No production token economics should be inferred from the implementation. A future public network requires separate analysis of validator incentives, attack cost, authority/stake concentration, fee-market behavior, spam resistance, issuance policy and governance risk.
+No production token economics should be inferred from this implementation. A future public network requires separate analysis of validator incentives, attack cost, authority/stake concentration, fee-market behavior, spam resistance, issuance policy and governance risk.
 
 ## Smart Contracts
 
-No smart-contract virtual machine is included in v0.3. Adding a VM would substantially increase the attack surface and should follow a separate threat model, deterministic execution specification, sandbox design and independent review.
+No smart-contract virtual machine is included in v0.4. Adding a VM would substantially increase attack surface and should follow a separate threat model, deterministic execution specification, sandbox design and independent review.
 
 ## Required Testing Before Public Testnet
 
 - accounting/property tests,
-- fuzzing of transaction/block/vote parsers,
+- fuzzing of transaction/block/vote/view-change parsers,
 - malformed signature/public-key tests,
 - quorum and duplicate-vote tests,
 - cross-round conflicting proposal tests,
+- certified view-change tests,
 - proposer downtime/failover tests,
-- validator restart/double-vote tests,
+- validator restart/consensus-state tests,
 - network partition tests,
 - long-running synchronization tests,
 - database crash/restart tests,
