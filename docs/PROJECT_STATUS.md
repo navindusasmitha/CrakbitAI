@@ -4,7 +4,7 @@
 
 ## Current Stage
 
-**Early development / Security MVP alpha + Crakbit Chain v0.2 local devnet alpha**
+**Early development / Security MVP alpha + Crakbit Chain v0.3 local devnet alpha**
 
 Crakbit AI currently has a public website, a Giveth-listed fundraising project, an open GitHub repository, technical documentation, a deterministic security-scanner alpha and a runnable experimental blockchain development network. None of these alpha components should be described as production-ready.
 
@@ -20,46 +20,35 @@ Crakbit AI currently has a public website, a Giveth-listed fundraising project, 
 | Security CLI | Early alpha | `crak` command included with scanner package |
 | Security API | Planned | To follow scanner core |
 | Smart Contract Scanner | Planned | Blockchain-security phase |
-| Open-source rule packs | Started | Initial rules published with scanner alpha |
-| Crakbit Chain local devnet | **v0.2 alpha** | Runnable 3-validator research network under `blockchain/` |
+| Crakbit Chain local devnet | **v0.3 alpha** | Runnable 4-validator research network under `blockchain/` |
 | Signed quorum finality | **Implemented for devnet** | >2/3 validator commit certificate required before block commit |
-| Consensus proposer failover | Not implemented | Scheduled proposer failure can still halt the devnet |
+| Round-based proposer failover | **Implemented for devnet** | Timeout advances consensus round and proposer |
+| Persistent same-round anti-double-vote | **Implemented** | Local vote hash stored in SQLite across restart |
+| Validator telemetry | **Prototype implemented** | `/health`, `/status`, `/peers`, `/validators` |
 | CRKBIT devnet unit | Test-only | Native unit inside the local devnet; no represented production value |
-| Crakbit Chain public testnet | Not launched | Consensus/network hardening required first |
+| Crakbit Chain public testnet | Not launched | Cross-round BFT safety and network hardening still required |
 | Production CRKBIT | Not launched | No presale or official production token contract |
 
-## Completed Foundation Work
+## Completed Blockchain Work Through v0.3
 
-- Public repository established
-- Project README expanded
-- Roadmap published
-- Contribution guide and Code of Conduct published
-- Vulnerability reporting policy published
-- Architecture and security-model documentation published
-- Funding/transparency documentation published
-- GitHub issue and pull-request templates added
-- Security scanner package architecture created
-- Initial Python/JavaScript-oriented security rules created
-- Secret evidence redaction added
-- Scanner CLI alpha and tests added
-- Crakbit Chain local devnet package created
-- Ed25519 wallet/key generation implemented for the devnet
-- Signed CRKBIT devnet transfers implemented
-- Nonces, replay protection and transaction fees implemented
-- Signed block proposals, transaction Merkle roots and state roots implemented
-- SQLite blockchain/account persistence implemented
-- Round-robin validator proposal schedule implemented
-- Signed validator commit votes implemented
-- Strict greater-than-two-thirds commit quorum required before finalization
-- Duplicate/unknown/invalid commit vote rejection implemented
-- In-memory same-height/same-round double-vote protection added
-- Proposal validation includes transaction signature/field validation before voting
-- Basic peer broadcast/catch-up synchronization implemented for finalized blocks
-- REST/RPC status, validator, balance, block and transaction endpoints implemented
-- 3-validator Docker Compose devnet added
-- Simple devnet explorer added
-- Blockchain ledger/signature/quorum tests added and passing in CI
-- v0.2 protocol specification and security notes published
+- Ed25519 wallet/key generation and `crk1...` addresses
+- Signed CRKBIT devnet transfers
+- Nonces, replay protection and transaction fees
+- Signed block proposals, transaction Merkle roots and deterministic state roots
+- SQLite blockchain/account persistence
+- Signed validator commit votes and strict >2/3 quorum finality
+- Duplicate/unknown/invalid vote rejection
+- Transaction validation before validator voting
+- Round-specific proposer selection
+- Timeout-based consensus-round advancement
+- Proposer failover to the next validator
+- Persistent same-height/same-round anti-double-vote records
+- Basic finalized-block broadcast and catch-up sync
+- Validator health/height/round telemetry
+- 4-validator Docker Compose topology with default 3-of-4 quorum
+- REST/RPC endpoints, CLI tooling and development explorer
+- Automated ledger/signature/quorum/failover tests and CI
+- v0.3 protocol specification and security notes
 
 ## Immediate Security-Platform Priorities
 
@@ -71,18 +60,22 @@ Crakbit AI currently has a public website, a Giveth-listed fundraising project, 
 6. Publish a simple public Security MVP interface/demo.
 7. Begin security API work after scanner core becomes more stable.
 
-## Immediate Blockchain Priorities — v0.3
+## Immediate Blockchain Priorities — v0.4
 
-1. Add proposer/view changes so validator downtime does not permanently halt progress.
-2. Persist validator vote/lock state across restarts.
-3. Add conflicting-proposal/equivocation evidence handling.
-4. Add authenticated/encrypted validator peer transport and peer identity checks.
-5. Add validator monitoring/health dashboard.
-6. Add state snapshots, state sync and restart/recovery testing.
-7. Expand adversarial multi-node and network-partition tests.
-8. Add public-testnet deployment configuration, testnet faucet and improved explorer.
-9. Define validator key-management requirements and operational runbooks.
-10. Run a long-lived closed devnet before any public testnet.
+1. Add quorum-certified view-change messages rather than local timeout-only round movement.
+2. Add cross-round lock/precommit rules to prevent unsafe conflicting finalization paths.
+3. Persist richer consensus state and equivocation evidence.
+4. Add authenticated/encrypted validator transport and peer identity checks.
+5. Add state snapshots, fast state sync and recovery testing.
+6. Add a dedicated validator dashboard/metrics pipeline and alerts.
+7. Add public-testnet deployment configuration and operational runbooks.
+8. Add faucet abuse controls and improve the explorer for testnet users.
+9. Run long-lived multi-node, partition, restart and load tests.
+10. Commission independent consensus/network review before public-value use.
+
+## Important v0.3 Limitation
+
+v0.3 persistent vote protection is same-round only. It does not yet provide a formally reviewed cross-round BFT lock/precommit protocol. The network therefore remains a research devnet and is not suitable for real-value custody or mainnet claims.
 
 ## What Is Not Yet Production-Ready
 
