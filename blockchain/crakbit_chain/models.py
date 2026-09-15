@@ -77,6 +77,52 @@ class Transaction:
 
 
 @dataclass
+class CommitVote:
+    chain_id: str
+    height: int
+    round: int
+    block_hash: str
+    voter: str
+    public_key: str
+    signature: str = ""
+
+    def unsigned_dict(self) -> dict[str, Any]:
+        return {
+            "chain_id": self.chain_id,
+            "height": int(self.height),
+            "round": int(self.round),
+            "block_hash": self.block_hash,
+            "voter": self.voter,
+            "public_key": self.public_key,
+        }
+
+    def signing_bytes(self) -> bytes:
+        return canonical_json(self.unsigned_dict())
+
+    def verify_signature(self) -> bool:
+        if self.voter != address_from_public_key(self.public_key):
+            return False
+        return bool(self.signature) and verify_signature(self.public_key, self.signing_bytes(), self.signature)
+
+    def to_dict(self) -> dict[str, Any]:
+        data = self.unsigned_dict()
+        data["signature"] = self.signature
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "CommitVote":
+        return cls(
+            chain_id=str(data["chain_id"]),
+            height=int(data["height"]),
+            round=int(data.get("round", 0)),
+            block_hash=str(data["block_hash"]),
+            voter=str(data["voter"]),
+            public_key=str(data["public_key"]),
+            signature=str(data.get("signature", "")),
+        )
+
+
+@dataclass
 class Block:
     chain_id: str
     height: int
@@ -87,7 +133,9 @@ class Block:
     transactions: list[Transaction] = field(default_factory=list)
     tx_root: str = ""
     state_root: str = ""
+    round: int = 0
     signature: str = ""
+    commit_votes: list[CommitVote] = field(default_factory=list)
 
     def unsigned_dict(self) -> dict[str, Any]:
         txids = [tx.txid for tx in self.transactions]
@@ -101,6 +149,7 @@ class Block:
             "transactions": [tx.to_dict() for tx in self.transactions],
             "tx_root": self.tx_root or merkle_root(txids),
             "state_root": self.state_root,
+            "round": int(self.round),
         }
 
     def signing_bytes(self) -> bytes:
@@ -123,6 +172,7 @@ class Block:
         data = self.unsigned_dict()
         data["signature"] = self.signature
         data["hash"] = self.block_hash
+        data["commit_votes"] = [vote.to_dict() for vote in self.commit_votes]
         return data
 
     @classmethod
@@ -137,7 +187,9 @@ class Block:
             transactions=[Transaction.from_dict(item) for item in data.get("transactions", [])],
             tx_root=str(data.get("tx_root", "")),
             state_root=str(data.get("state_root", "")),
+            round=int(data.get("round", 0)),
             signature=str(data.get("signature", "")),
+            commit_votes=[CommitVote.from_dict(item) for item in data.get("commit_votes", [])],
         )
 
 
