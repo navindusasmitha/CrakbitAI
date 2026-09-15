@@ -41,7 +41,7 @@ Planned security tooling includes:
 - Security-focused developer guidance
 - Human-readable security reports
 
-### Crakbit Chain — Devnet v0.2 Alpha
+### Crakbit Chain — Devnet v0.3 Alpha
 A runnable experimental blockchain prototype exists in [`blockchain/`](blockchain/).
 
 The current development network includes:
@@ -51,23 +51,23 @@ The current development network includes:
 - `crk1...` account addresses
 - Nonces and replay protection
 - Transaction fees
-- Deterministic round-robin block proposal
-- Signed block proposals
-- Signed validator commit votes
-- Strict greater-than-two-thirds commit quorum before block finalization
-- Duplicate/unknown/invalid vote rejection
+- Signed block proposals and validator commit votes
+- Strict greater-than-two-thirds commit quorum before finalization
+- Round-based proposer rotation and timeout-based proposer failover
+- Persistent same-height/same-round anti-double-vote records across restarts
 - Transaction Merkle roots and deterministic state roots
 - SQLite-backed chain state
-- Peer block broadcast and catch-up synchronization
+- Peer block broadcast and finalized-block catch-up synchronization
+- Validator health/height/round telemetry
 - REST/RPC API
 - CLI wallet/transfer commands
-- 3-validator Docker Compose devnet
+- 4-validator Docker Compose devnet with a default 3-of-4 quorum
 - Browser-based development explorer
-- Automated ledger/signature/quorum tests and CI
+- Automated ledger/signature/quorum/failover tests and CI
 
 The proposed devnet parameters use 8 decimals and a 21,000,000 CRKBIT maximum genesis supply. These parameters remain subject to technical, security, economic and legal review before any production network.
 
-**Important:** v0.2 improves finality safety over the original proposer-only PoA prototype, but it is still not a production BFT protocol. There is no proposer/view-change mechanism yet, durable consensus lock state is not implemented, peer transport is not production hardened, and the network has not been independently audited.
+**Important:** v0.3 is still not a production BFT protocol. Same-round vote persistence is implemented, but cross-round locking/precommit safety, quorum-certified view changes, authenticated validator networking and independent audit are still missing.
 
 Test CRKBIT units created by this devnet are not a production token, investment product or public presale.
 
@@ -119,6 +119,7 @@ Default local RPC endpoints:
 - `http://127.0.0.1:9101`
 - `http://127.0.0.1:9102`
 - `http://127.0.0.1:9103`
+- `http://127.0.0.1:9104`
 
 Node status:
 
@@ -126,9 +127,10 @@ Node status:
 curl http://127.0.0.1:9101/status
 ```
 
-Validator/quorum information:
+Peer/validator monitoring:
 
 ```bash
+curl http://127.0.0.1:9101/peers
 curl http://127.0.0.1:9101/validators
 ```
 
@@ -151,7 +153,8 @@ Developer / Researcher
    |-- Secret detection   |-- Transactions/fees
    |-- Dependency checks  |-- Blocks/state
    |-- Solidity analysis  |-- Commit votes/quorum
-   `-- AI remediation     `-- Validator/RPC layer
+   `-- AI remediation     |-- Round failover
+                          `-- Validator/RPC telemetry
 ```
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the evolving platform design.
@@ -168,8 +171,11 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the evolving platform des
 | Security CLI | Early alpha |
 | Developer API | Planned |
 | Smart Contract Scanner | Planned |
-| Crakbit Chain local devnet | **v0.2 alpha available** |
+| Crakbit Chain local devnet | **v0.3 alpha available** |
 | Signed quorum finality | **Devnet prototype implemented** |
+| Proposer failover | **Devnet prototype implemented** |
+| Persistent same-round vote guard | **Implemented** |
+| Validator telemetry | **Prototype implemented** |
 | Chain CLI / wallet key tooling | **Early alpha available** |
 | Devnet explorer | **Prototype available** |
 | Public blockchain testnet | Not launched |
@@ -187,11 +193,12 @@ Our development sequence includes:
 4. Blockchain-security tooling
 5. Developer integrations
 6. Crakbit Chain local devnet
-7. Quorum finality and consensus hardening
-8. Proposer failover, durable consensus state and authenticated networking
-9. Public testnet preparation
-10. Long-lived public testnet and independent security review
-11. Mainnet consideration only after technical, economic and legal validation
+7. Signed quorum finality
+8. Round-based proposer failover and persistent same-round vote safety
+9. Cross-round BFT safety + authenticated validator networking
+10. Public testnet preparation
+11. Long-lived public testnet and independent security review
+12. Mainnet consideration only after technical, economic and legal validation
 
 See [`ROADMAP.md`](ROADMAP.md) for milestones and target phases.
 
