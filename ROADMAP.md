@@ -6,7 +6,7 @@ This roadmap describes the intended development order for Crakbit AI. Dates are 
 
 **Technology first. Security first. Tokens later.**
 
-The immediate product focus remains a useful defensive-security MVP. In parallel, the Crakbit Chain local research network has progressed through signed quorum finality, round-based proposer failover and a v0.4 quorum-certified view-change prototype. Public testnet/mainnet work still depends on a mature multi-phase BFT lock/unlock design, authenticated networking, state recovery, adversarial testing and independent security review.
+The immediate product focus remains a useful defensive-security MVP. In parallel, the Crakbit Chain local research network has progressed through signed quorum finality, certified view changes and a v0.5 two-phase prevote/precommit prototype. Public testnet/mainnet work still depends on safer cross-round unlock behavior or a mature BFT core, authenticated networking, state recovery, adversarial testing and independent security review.
 
 ## Phase 1 — Foundation
 **Target: Q3–Q4 2026**
@@ -76,7 +76,7 @@ A developer should be able to submit or scan a small codebase and receive a clea
 
 A runnable local devnet exists to turn network research into testable code. This does **not** mean a production blockchain or public-value CRKBIT asset has launched.
 
-### Completed through v0.4
+### Completed through v0.5
 
 - [x] Native devnet CRKBIT accounting unit
 - [x] 8-decimal atomic-unit model
@@ -87,48 +87,48 @@ A runnable local devnet exists to turn network research into testable code. This
 - [x] Previous-block hash linking
 - [x] Transaction Merkle roots and deterministic state roots
 - [x] SQLite chain/account persistence
-- [x] Signed validator commit votes
-- [x] Strict greater-than-two-thirds commit quorum before finalization
-- [x] Duplicate/unknown/invalid commit-vote rejection
-- [x] Transaction validation before validator voting
 - [x] Round-specific deterministic proposer schedule
-- [x] Timeout-triggered proposer-failover research flow
-- [x] Persistent same-height/same-round anti-double-vote records
-- [x] Signed quorum-certified view-change messages
+- [x] Signed quorum-certified view changes
 - [x] Later-round proposals require a >2/3 view-change certificate
-- [x] Persistent local consensus-round advancement
-- [x] Persistent local view-change records
-- [x] Conservative cross-round local vote lock
+- [x] Signed prevote phase
+- [x] Signed precommit phase
+- [x] >2/3 prevote certificate required before precommit
+- [x] >2/3 precommit certificate required before finalization
+- [x] Persistent same-phase anti-double-vote records
+- [x] Persistent per-height conservative consensus lock
+- [x] Persistent local consensus-round/view-change state
+- [x] Persistent consensus event journal
 - [x] Conflicting signed proposal/equivocation evidence persistence
-- [x] Basic finalized-block broadcast and catch-up synchronization
+- [x] Finalized-block broadcast and catch-up synchronization
 - [x] REST/RPC endpoints and CLI key/balance/send tooling
 - [x] Validator health/height/round telemetry
+- [x] Development metrics and consensus-event endpoints
 - [x] 4-validator Docker Compose devnet with default 3-of-4 quorum
 - [x] Simple development explorer
-- [x] Automated ledger/signature/quorum/view-change/evidence tests and CI
-- [x] Initial threat model, v0.4 protocol specification and security notes
+- [x] Automated multiphase consensus/persistence/evidence tests and CI
+- [x] v0.5 protocol specification and security notes
 
-### v0.5 consensus/network hardening — next
+### v0.6 consensus/network/recovery hardening — next
 
-- [ ] Replace the conservative no-unlock lock with a reviewed multi-phase prevote/precommit or equivalent lock/unlock protocol
-- [ ] Persist full multi-phase consensus event history
-- [ ] Expand equivocation evidence and evidence gossip/processing design
-- [ ] Authenticated/encrypted validator transport
-- [ ] Validator identity handshake and certificate/key rotation plan
+- [ ] Define/review a proof-based cross-round unlock rule or migrate to a mature BFT core
+- [ ] Authenticated validator identity handshake
+- [ ] Encrypted validator transport / deployment TLS requirements
+- [ ] Validator certificate/key rotation plan
 - [ ] Peer discovery / bootnode design
 - [ ] Stronger mempool and multi-nonce handling
-- [ ] State snapshots, snapshot verification and fast state sync
+- [ ] Signed state snapshots and verified fast state sync
 - [ ] Restart/recovery and database-corruption testing
 - [ ] Adversarial multi-validator and network-partition tests
 - [ ] Validator key-management specification
-- [ ] Dedicated monitoring/metrics dashboard and alerts
-- [ ] Public-testnet deployment configuration
+- [ ] Prometheus-style metrics, dashboard and alerts
+- [ ] Public-testnet deployment configuration and operator runbooks
 - [ ] Faucet policy and abuse controls
 - [ ] Economic/incentive design review
+- [ ] External consensus/network review
 
 ### Current consensus warning
 
-v0.4 improves round-change safety by requiring a quorum certificate and adds a conservative cross-round local lock. It is still **not** a complete production BFT protocol because the lock has no mature proof-of-lock/unlock rule, validator transport remains unauthenticated HTTP, and no formal safety/liveness proof or independent audit exists.
+v0.5 adds a genuine two-phase prevote/precommit research pipeline and durable local locks, but it is still **not** a complete production BFT protocol. The lock has no mature proof-based unlock rule, validator transport remains unauthenticated HTTP, and no formal safety/liveness proof or independent audit exists.
 
 ## Phase 7 — Public Testnet
 **Only after Phase 6 security gates are met**
