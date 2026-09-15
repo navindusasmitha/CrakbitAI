@@ -6,7 +6,7 @@ This roadmap describes the intended development order for Crakbit AI. Dates are 
 
 **Technology first. Security first. Tokens later.**
 
-The immediate product focus remains a useful defensive-security MVP. A local Crakbit Chain devnet now exists as a parallel research prototype, but public testnet/mainnet work still depends on consensus hardening, technical validation and independent security review.
+The immediate product focus remains a useful defensive-security MVP. A local Crakbit Chain devnet now exists as a parallel research prototype, including a v0.2 signed quorum-finality layer. Public testnet/mainnet work still depends on proposer failover, durable consensus state, networking hardening, technical validation and independent security review.
 
 ## Phase 1 — Foundation
 **Target: Q3–Q4 2026**
@@ -72,7 +72,7 @@ A developer should be able to submit or scan a small codebase and receive a clea
 - [ ] Open-source rule contribution framework
 
 ## Phase 6 — Crakbit Chain Research & Local Devnet
-**Prototype started early in September 2026**
+**Prototype started September 2026**
 
 A runnable local devnet has been created to turn network research into testable code. This does **not** mean a production blockchain or public-value CRKBIT asset has launched.
 
@@ -86,31 +86,39 @@ A runnable local devnet has been created to turn network research into testable 
 - [x] Signed transfers
 - [x] Nonce/replay protection
 - [x] Minimum transaction fees
-- [x] Signed blocks
+- [x] Signed block proposals
 - [x] Previous-block hash linking
 - [x] Transaction Merkle roots
 - [x] Deterministic state roots
 - [x] SQLite chain/account persistence
-- [x] Round-robin Proof-of-Authority research consensus
+- [x] Round-robin validator proposal schedule
+- [x] Signed validator commit votes
+- [x] Strict greater-than-two-thirds commit quorum before block finalization
+- [x] Duplicate/unknown/invalid vote rejection
+- [x] In-memory same-height/same-round double-vote guard
 - [x] Basic peer block broadcast and catch-up synchronization
 - [x] REST/RPC endpoints
 - [x] CLI key/balance/send tooling
 - [x] 3-validator Docker Compose devnet
 - [x] Simple development explorer
-- [x] Initial automated blockchain tests and CI
+- [x] Automated blockchain ledger/signature/quorum tests and CI
+- [x] Network/protocol security notes and v0.2 specification
 
 ### Required before public testnet
 
-- [ ] Formal network threat model
-- [ ] Replace simple proposer-only PoA with reviewed BFT/quorum finality
-- [ ] Authenticated peer-to-peer transport
+- [x] Initial network threat model
+- [x] Signed quorum-finality prototype
+- [ ] Add proposer/view changes for validator downtime
+- [ ] Persist consensus vote/lock state across restarts
+- [ ] Add equivocation/conflicting-proposal evidence
+- [ ] Authenticated/encrypted peer-to-peer transport
 - [ ] Peer discovery / bootnode design
-- [ ] Stronger mempool and nonce handling
+- [ ] Stronger mempool and multi-nonce handling
 - [ ] State snapshots and state sync
 - [ ] Restart/recovery and database-corruption testing
-- [ ] Adversarial multi-validator tests
+- [ ] Adversarial multi-validator and network-partition tests
 - [ ] Validator key-management specification
-- [ ] Monitoring/observability
+- [ ] Monitoring/observability dashboard
 - [ ] Faucet policy and abuse controls
 - [ ] Economic/incentive design review
 
@@ -161,7 +169,7 @@ Potential items:
 
 **Production CRKBIT is not launched. No official presale. No production token contract.**
 
-The local development network now implements test-only CRKBIT accounting with a proposed maximum genesis supply of 21,000,000 and 8 decimals. Those devnet parameters remain subject to technical, security, economic and legal review before any production implementation.
+The local development network implements test-only CRKBIT accounting with a proposed maximum genesis supply of 21,000,000 and 8 decimals. Those devnet parameters remain subject to technical, security, economic and legal review before any production implementation.
 
 ## Roadmap Updates
 
