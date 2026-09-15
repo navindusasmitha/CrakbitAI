@@ -1,4 +1,4 @@
-# Crakbit Chain Devnet Specification v0.1
+# Crakbit Chain Devnet Specification v0.2
 
 **Status:** research/devnet specification. Not a production protocol commitment.
 
@@ -86,13 +86,40 @@ proposer_public_key
 transactions
 tx_root
 state_root
+round
 signature
 hash
+commit_votes[]
 ```
 
-The block proposer signs canonical JSON of the block fields excluding `signature` and `hash`.
+The block proposer signs canonical JSON of the block fields excluding `signature`, `hash` and `commit_votes`.
 
-The block hash is SHA-256 over the canonical signed block payload.
+The block hash is SHA-256 over the signed proposal payload. Commit votes do not change the block hash.
+
+## Commit Vote Model
+
+Each validator commit vote contains:
+
+```text
+chain_id
+height
+round
+block_hash
+voter
+public_key
+signature
+```
+
+The signature covers all vote fields except `signature`.
+
+A vote is valid only when:
+
+1. the voter is present in the genesis validator set,
+2. the supplied public key matches that configured validator,
+3. the voter address is derived from the supplied public key,
+4. the Ed25519 signature verifies,
+5. `chain_id`, `height`, `round` and `block_hash` match the proposed block,
+6. a validator is counted at most once in a commit certificate.
 
 ## Transaction Root
 
@@ -112,21 +139,63 @@ The root is calculated after simulating all block transactions and proposer fee 
 
 This is a development commitment mechanism, not a Merkleized account trie and does not currently provide account proofs.
 
-## Consensus — Development PoA
+## Consensus — Round-Robin PoA + Signed Quorum Finality
 
-The local devnet uses deterministic round-robin Proof of Authority:
+The v0.2 devnet keeps deterministic round-robin proposal selection:
 
 ```text
 validator_index = (height - 1) mod validator_count
 ```
 
-Only the configured validator for that height may sign the next block.
+Only the configured validator for a height may propose and sign the block proposal.
 
-Nodes validate proposer identity, proposer public key, signature, height, previous hash, transaction root, state root and all transactions before committing a block.
+Before a proposal can be committed, validators independently validate the proposal and sign a commit vote for its block hash.
 
-### Consensus limitation
+The commit threshold is:
 
-This mechanism does **not** provide BFT quorum voting/finality. It is intended for local development only. A public Crakbit network requires a reviewed BFT/PoS consensus design and adversarial testing.
+```text
+floor(2 * validator_count / 3) + 1
+```
+
+This is a strict greater-than-two-thirds validator threshold.
+
+For the default three-validator devnet, all three validator signatures are therefore required to finalize a block.
+
+### Proposal flow
+
+1. The deterministic proposer constructs and signs a candidate block.
+2. The proposer validates and signs its own commit vote.
+3. The proposer submits the candidate to configured validator peers.
+4. Each peer re-validates height, previous hash, proposer identity, block signature, transaction root, state root and transactions.
+5. A peer that accepts the proposal signs a commit vote.
+6. The proposer verifies returned votes.
+7. Once quorum is reached, the block is finalized with the commit certificate attached.
+8. Finalized blocks are broadcast to peers.
+9. Receiving peers re-validate both the proposal and commit certificate before applying state changes.
+10. Catch-up synchronization downloads only finalized blocks that include a valid quorum certificate.
+
+### Double-vote guard
+
+A running validator records the block hash it voted for at a given `(height, round)` and refuses to sign a conflicting proposal at that same height and round.
+
+This protection is currently in-memory only. Validator restart safety, durable consensus state and evidence/slashing are later work.
+
+### Important consensus limitations
+
+v0.2 is **not a complete production BFT consensus protocol**.
+
+It does not yet implement:
+
+- view/round changes when a proposer is unavailable,
+- a durable lock/precommit state machine,
+- evidence and slashing,
+- weighted stake voting,
+- fork-choice recovery from arbitrary partitions,
+- validator-set changes,
+- durable double-vote prevention across restarts,
+- formal safety/liveness proofs.
+
+The chain may halt if the scheduled proposer or enough validators are unavailable. The v0.2 change improves finality safety over proposer-only PoA but is still a development step.
 
 ## Genesis
 
@@ -140,11 +209,13 @@ Genesis defines:
 - validator set and peer URLs
 - initial account allocations
 
+Validator addresses must be unique.
+
 The database stores a genesis fingerprint and refuses to open against a different genesis configuration.
 
 ## Fees
 
-Transaction fees are credited to the block proposer in the current prototype. There is no inflation, mint transaction or post-genesis issuance path implemented in v0.1.
+Transaction fees are credited to the block proposer in the current prototype. There is no inflation, mint transaction or post-genesis issuance path implemented in v0.2.
 
 This fee model is experimental and not final token economics.
 
@@ -157,6 +228,8 @@ The local implementation uses SQLite with tables for:
 - blocks
 - transactions
 
+Finalized blocks are stored with their commit vote certificate.
+
 SQLite is suitable for the current research prototype but the production storage architecture remains open.
 
 ## Peer Synchronization
@@ -164,19 +237,20 @@ SQLite is suitable for the current research prototype but the production storage
 Configured validator peers expose development HTTP endpoints. Nodes:
 
 1. query peer status,
-2. compare chain heights,
-3. request missing blocks sequentially,
-4. validate each block locally before applying it.
+2. compare finalized chain heights,
+3. request missing finalized blocks sequentially,
+4. validate the proposal and quorum certificate locally before applying it.
 
-New blocks and transactions are also best-effort broadcast to configured peers.
+New transactions and finalized blocks are also best-effort broadcast to configured peers.
 
-The current transport is not authenticated and must not be treated as production P2P networking.
+The current transport is not authenticated or encrypted and must not be treated as production P2P networking.
 
 ## RPC
 
 Public development endpoints:
 
 - `GET /status`
+- `GET /validators`
 - `GET /balance/{address}`
 - `GET /blocks/{height}`
 - `GET /transactions/{txid}`
@@ -185,9 +259,10 @@ Public development endpoints:
 Development peer endpoints:
 
 - `POST /internal/transaction`
+- `POST /internal/proposal`
 - `POST /internal/block`
 
-The `/internal/*` API must not be publicly exposed in a production design.
+The `/internal/*` API must not be directly exposed to the public internet in a production design.
 
 ## Upgrade Policy
 
@@ -195,9 +270,10 @@ There is currently no on-chain governance or protocol upgrade mechanism. Devnet 
 
 ## Mainnet Gate
 
-This specification is insufficient for mainnet. At minimum, a production candidate requires:
+This specification remains insufficient for mainnet. At minimum, a production candidate requires:
 
-- BFT/quorum finality
+- mature/reviewed BFT or PoS consensus with proposer failover
+- durable consensus state and equivocation handling
 - authenticated/encrypted P2P transport
 - peer discovery and eclipse/Sybil mitigations
 - state snapshot and recovery design
