@@ -42,6 +42,9 @@ class Genesis:
             raise ValueError("genesis allocations exceed max supply")
         if not validators:
             raise ValueError("genesis requires at least one validator")
+        addresses = [v.address for v in validators]
+        if len(set(addresses)) != len(addresses):
+            raise ValueError("genesis validator addresses must be unique")
         return cls(
             chain_id=str(data["chain_id"]),
             network_name=str(data["network_name"]),
@@ -59,6 +62,11 @@ class Genesis:
 
     def validator_by_address(self, address: str) -> Validator | None:
         return next((v for v in self.validators if v.address == address), None)
+
+    @property
+    def quorum_size(self) -> int:
+        """Return the >2/3 commit threshold for the configured validator set."""
+        return (2 * len(self.validators)) // 3 + 1
 
     def fingerprint(self) -> str:
         return sha256_hex(canonical_json({
