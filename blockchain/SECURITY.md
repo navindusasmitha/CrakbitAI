@@ -1,178 +1,142 @@
 # Crakbit Chain Devnet Security Notes
 
-The current Crakbit Chain implementation is a **research/devnet prototype**. It is intentionally not presented as an audited production blockchain and must not be used to custody real value.
+The current Crakbit Chain implementation is a **research/devnet prototype**. It is not an audited production blockchain and must not be used to custody real value.
 
-## Security Goals of v0.4
+## Security Goals of v0.5
 
-The current code provides development-stage protections including:
+v0.5 adds development-stage protections including:
 
-- Ed25519 signatures for transactions, block proposals, commit votes and view-change messages,
+- Ed25519 signatures for transactions, proposals, prevotes, precommits and view changes,
 - sender/public-key binding,
 - nonce-based replay protection,
-- integer balance accounting,
 - deterministic transaction/state commitments,
-- previous-block hash linking,
-- round-specific proposer validation,
-- strict greater-than-two-thirds commit quorum,
-- strict greater-than-two-thirds signed view-change quorum for non-zero rounds,
-- persistent same-round anti-double-vote state,
-- persistent local consensus-round advancement,
-- conservative cross-round local vote locking,
-- conflicting signed proposal/equivocation evidence,
-- local re-validation of finalized blocks during sync,
+- strict greater-than-two-thirds prevote quorum,
+- strict greater-than-two-thirds precommit quorum,
+- certified non-zero-round view changes,
+- persistent same-phase anti-double-vote records,
+- persistent per-height consensus locks,
+- persistent consensus event history,
+- conflicting signed-proposal evidence,
+- finalized-block revalidation during sync,
 - validator health/height/round telemetry.
 
-These controls improve the devnet but remain **insufficient for a public-value production network**.
+These controls improve the research network but remain **insufficient for a public-value production chain**.
 
-## Private Keys
+## Consensus Safety Model
 
-`runtime/` contains generated validator and treasury private keys and is intentionally git-ignored.
+The v0.5 finalization path is:
 
-Rules:
+```text
+signed proposal
+→ >2/3 signed prevotes
+→ >2/3 signed precommits
+→ finalized block
+```
 
-1. Never commit private keys, seed phrases or production secrets.
-2. Never reuse bootstrap/devnet keys for a future public testnet or mainnet.
-3. Do not expose validator key files through HTTP/static hosting.
-4. Production validator key backups require encrypted, access-controlled storage.
-5. Hardware-backed signing, HSMs or a reviewed remote-signer design should be evaluated before production.
+A validator does not sign a precommit until it has locally validated the prevote certificate for the exact proposal hash, height and round.
 
-## Consensus Risk
+Before/while precommitting, it persists a local lock on that block hash. A restart does not erase the lock or phase-vote record.
 
-v0.4 uses a strict greater-than-two-thirds validator threshold for both commit certificates and view-change certificates.
+### Conservative lock limitation
 
-The default four-validator topology therefore requires `3 of 4` signatures.
+The current lock has **no proof-based unlock rule**. Once locked on a block hash at a height, a validator refuses to vote for another block hash at that height.
+
+This is intentionally safety-biased, but it can hurt liveness. Under some failure/partition sequences the devnet may halt rather than unlock.
+
+This is not a complete Tendermint/HotStuff-style or otherwise formally reviewed BFT implementation.
 
 ### Certified view changes
 
-A validator may request movement from round `R` to `R+1` only after the local timeout. A later-round proposal must carry a quorum certificate of signed view-change messages for that exact transition.
-
-This is safer than independent unilateral round advancement because every validator can verify why the later round exists.
-
-### Persistent consensus state
-
-The node persists local vote records, local round advancement and local view-change actions in SQLite. A restart therefore does not automatically erase the validator's prior same-round voting decision or return an unfinished height to round zero.
-
-### Conservative cross-round lock
-
-After a validator signs a commit vote at a height, v0.4 refuses to sign a different block hash at the same height in a later round.
-
-This improves safety, but the rule is intentionally conservative and has **no mature unlock/proof-of-lock mechanism**. If enough validators become locked on a proposal that never finalizes, the chain can halt.
-
-That liveness tradeoff is preferable for this research phase to silently allowing potentially conflicting cross-round signatures, but it is not a complete production BFT design.
+Later proposal rounds still require >2/3 signed view-change messages. View changes carry local lock metadata but do not override a local v0.5 lock.
 
 ### Equivocation evidence
 
-A node stores the first valid signed proposal observed for `(height, round, proposer)`. A second different valid signed proposal from the same proposer for that same tuple is recorded as conflicting-proposal evidence and rejected for voting.
+The node records the first valid signed proposal for `(height, round, proposer)`. A conflicting valid signed proposal from the same proposer is stored as evidence and rejected for voting.
 
-There is currently no automatic slashing, validator removal or evidence gossip protocol.
+There is no automatic slashing, validator removal or evidence gossip/consensus processing.
 
-### Remaining consensus weaknesses
+## Persistent Consensus State
 
-v0.4 still lacks:
+SQLite persists:
 
-- a mature prevote/precommit or equivalent multi-phase lock/unlock state machine,
-- a formally reviewed cross-round unlock rule,
-- formal safety/liveness proofs,
-- weighted stake or validator-set changes,
-- automatic evidence/slashing processing,
-- adversarially reviewed timeout/clock assumptions,
-- robust recovery under arbitrary partitions.
+- local prevotes,
+- local precommits,
+- local consensus locks,
+- consensus round advancement,
+- local view-change actions,
+- proposal/equivocation records,
+- consensus event journal entries.
 
-A production chain should use a mature reviewed BFT/PoS design or a formally specified equivalent before real value is placed at risk.
+This improves restart safety, but SQLite remains a development storage choice and is not a production storage architecture decision.
 
 ## Network Risk
 
-Validator communication still uses ordinary HTTP and static peer URLs. Message signatures protect consensus-object integrity, but transport does not yet provide:
+Validator communication still uses ordinary HTTP and static peer URLs. Consensus objects are signed, but the transport does **not** yet provide:
 
 - encryption,
 - mutual validator authentication,
 - peer identity handshakes,
 - certificate/key rotation,
-- dynamic discovery protections,
 - connection/rate limits,
 - eclipse/Sybil defenses,
-- authenticated peer-health telemetry.
+- authenticated peer telemetry.
 
-The `/internal/*` endpoints are development-only and should be firewalled from the public internet.
+The `/internal/*` endpoints are development-only and should not be publicly exposed.
 
-## Monitoring Limitations
+## Private Keys
 
-`/health`, `/status`, `/peers` and `/evidence` provide operational visibility. They are useful for development and testing, but current peer-health data is unauthenticated and must not be treated as a security oracle.
+`runtime/` contains generated devnet validator/treasury keys and is git-ignored.
 
-A public testnet should add authenticated validator identity, metrics export, alerting and independent observer nodes.
+Rules:
 
-## Denial-of-Service Risk
+1. Never commit private keys, seed phrases or production secrets.
+2. Never reuse bootstrap/devnet keys on future public testnet/mainnet networks.
+3. Do not expose validator key files through HTTP/static hosting.
+4. Production key backups require encrypted, access-controlled storage.
+5. Evaluate HSM/remote-signer designs before production.
 
-The development RPC still lacks production-grade request-size limits, per-IP limits, connection quotas and resource accounting.
+## Monitoring / DoS Limitations
 
-Before public testnet, explicitly limit:
+`/health`, `/status`, `/peers`, `/metrics`, `/consensus/events` and `/evidence` are useful development diagnostics, but they are not production observability/security infrastructure.
 
-- request body size,
-- transaction and memo size,
-- block transaction count/byte size,
-- commit/view-change certificate size,
-- concurrent connections,
-- RPC request rate,
-- mempool size,
-- synchronization bandwidth,
-- consensus request frequency.
+Before public testnet, add explicit controls for request size, transaction/memo size, certificate size, RPC rate, mempool size, concurrent connections, sync bandwidth and consensus-request frequency.
 
-## State / Storage Risk
+## State / Recovery Risk
 
-SQLite is convenient for the devnet. v0.4 persists more consensus metadata, but the implementation still lacks:
+v0.5 still lacks:
 
-- state snapshots,
-- snapshot signatures,
-- fast state sync,
+- signed state snapshots,
+- verified fast state sync,
 - pruning/archival policy,
-- database integrity recovery procedures,
+- corruption recovery procedures,
 - crash-consistency stress testing,
-- complete multi-phase consensus event history.
-
-Nodes should still be treated as disposable during early research.
-
-## Transaction Risk
-
-Current validation checks signatures, nonces, balances, fees and chain ID. Future work should add stronger bounds and fuzzing for:
-
-- memo/field sizes,
-- canonical address parsing,
-- integer boundary assumptions across implementations,
-- multiple pending nonces,
-- transaction replacement policy,
-- expiration/time bounds,
-- malformed encodings,
-- rebroadcast/duplicate handling.
+- long-running restart/partition tests.
 
 ## Economic Security
 
-The prototype has no staking, slashing, inflation or on-chain governance. Fees are credited to the finalized block proposer.
+The devnet has no staking, slashing, inflation or on-chain governance. Fees are credited to the finalized block proposer.
 
-No production token economics should be inferred from this implementation. A future public network requires separate analysis of validator incentives, attack cost, authority/stake concentration, fee-market behavior, spam resistance, issuance policy and governance risk.
+No production economics or investment value should be inferred from the devnet implementation.
 
 ## Smart Contracts
 
-No smart-contract virtual machine is included in v0.4. Adding a VM would substantially increase attack surface and should follow a separate threat model, deterministic execution specification, sandbox design and independent review.
+No smart-contract VM is included. Adding one should require a separate threat model, deterministic execution specification, sandbox design, resource/gas model and independent review.
 
-## Required Testing Before Public Testnet
+## Required Before Public Testnet
 
-- accounting/property tests,
-- fuzzing of transaction/block/vote/view-change parsers,
-- malformed signature/public-key tests,
-- quorum and duplicate-vote tests,
-- cross-round conflicting proposal tests,
-- certified view-change tests,
-- proposer downtime/failover tests,
-- validator restart/consensus-state tests,
-- network partition tests,
-- long-running synchronization tests,
-- database crash/restart tests,
-- RPC/load abuse tests,
+- reviewed cross-round unlock/mature BFT design,
+- authenticated validator identity,
+- encrypted validator transport,
+- state snapshot/recovery design,
+- parser fuzzing and malformed-message testing,
+- partition/restart/load testing,
+- RPC abuse controls,
+- key-management runbook,
 - reproducible build/container review,
-- dependency/security scanning.
+- external consensus/network review.
 
-## Required Testing Before Mainnet
+## Required Before Mainnet
 
-A production-value network should not launch without a long-lived public testnet and independent review of consensus, cryptography, P2P networking, storage, key management, RPC exposure, incident response and economic design.
+A production-value launch should require a long-lived public testnet and independent review of consensus, cryptography, P2P networking, storage, key management, RPC exposure, incident response and economic design.
 
-Security findings should be reported through the repository-level [`SECURITY.md`](../SECURITY.md) process rather than disclosed publicly before maintainers have a reasonable opportunity to respond.
+Security findings should be reported through the repository-level [`SECURITY.md`](../SECURITY.md) process.
