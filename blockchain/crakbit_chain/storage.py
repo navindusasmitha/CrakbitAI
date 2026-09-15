@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
 from .crypto import canonical_json, sha256_hex
 from .genesis import Genesis
-from .models import Block, CommitVote, Transaction, merkle_root
+from .models import Block, Transaction, merkle_root
 
 
 class LedgerError(ValueError):
@@ -58,6 +59,33 @@ class Ledger:
                     block_hash TEXT NOT NULL,
                     PRIMARY KEY(height, round)
                 );
+                CREATE TABLE IF NOT EXISTS consensus_rounds (
+                    height INTEGER PRIMARY KEY,
+                    round INTEGER NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS local_view_changes (
+                    height INTEGER NOT NULL,
+                    from_round INTEGER NOT NULL,
+                    to_round INTEGER NOT NULL,
+                    PRIMARY KEY(height, to_round)
+                );
+                CREATE TABLE IF NOT EXISTS seen_proposals (
+                    height INTEGER NOT NULL,
+                    round INTEGER NOT NULL,
+                    proposer TEXT NOT NULL,
+                    block_hash TEXT NOT NULL,
+                    PRIMARY KEY(height, round, proposer)
+                );
+                CREATE TABLE IF NOT EXISTS equivocation_evidence (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    height INTEGER NOT NULL,
+                    round INTEGER NOT NULL,
+                    offender TEXT NOT NULL,
+                    first_hash TEXT NOT NULL,
+                    second_hash TEXT NOT NULL,
+                    observed_at_ms INTEGER NOT NULL,
+                    UNIQUE(height, round, offender, first_hash, second_hash)
+                );
                 """
             )
             fingerprint = self.genesis.fingerprint()
@@ -97,6 +125,36 @@ class Ledger:
                 return {"address": address, "balance": 0, "nonce": 0}
             return {"address": address, "balance": int(row["balance"]), "nonce": int(row["nonce"])}
 
+    def consensus_round(self, height: int) -> int:
+        with self.connect() as conn:
+            row = conn.execute("SELECT round FROM consensus_rounds WHERE height=?", (height,)).fetchone()
+            return int(row["round"]) if row else 0
+
+    def record_consensus_round(self, height: int, round_number: int) -> None:
+        if height < 1 or round_number < 0:
+            raise LedgerError("invalid consensus height/round")
+        with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = conn.execute(
+                    "SELECT round FROM consensus_rounds WHERE height=?",
+                    (height,),
+                ).fetchone()
+                if row is None:
+                    conn.execute(
+                        "INSERT INTO consensus_rounds(height,round) VALUES(?,?)",
+                        (height, round_number),
+                    )
+                elif round_number > int(row["round"]):
+                    conn.execute(
+                        "UPDATE consensus_rounds SET round=? WHERE height=?",
+                        (round_number, height),
+                    )
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+
     def local_vote_hash(self, height: int, round_number: int) -> str | None:
         with self.connect() as conn:
             row = conn.execute(
@@ -105,8 +163,18 @@ class Ledger:
             ).fetchone()
             return str(row["block_hash"]) if row else None
 
+    def latest_local_vote(self, height: int) -> tuple[int, str] | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT round, block_hash FROM local_votes WHERE height=? ORDER BY round DESC LIMIT 1",
+                (height,),
+            ).fetchone()
+            if row is None:
+                return None
+            return int(row["round"]), str(row["block_hash"])
+
     def record_local_vote(self, height: int, round_number: int, block_hash: str) -> None:
-        """Persist anti-double-vote state before a signed vote leaves this node."""
+        """Persist same-height/same-round anti-double-vote state before signing."""
         with self.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             try:
@@ -126,9 +194,119 @@ class Ledger:
                 conn.execute("ROLLBACK")
                 raise
 
-    def prune_local_votes(self, finalized_height: int) -> None:
+    def record_local_view_change(self, height: int, from_round: int, to_round: int) -> None:
+        if to_round != from_round + 1:
+            raise LedgerError("view change must advance exactly one round")
         with self.connect() as conn:
-            conn.execute("DELETE FROM local_votes WHERE height<=?", (finalized_height,))
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = conn.execute(
+                    "SELECT from_round FROM local_view_changes WHERE height=? AND to_round=?",
+                    (height, to_round),
+                ).fetchone()
+                if row is not None and int(row["from_round"]) != from_round:
+                    raise LedgerError("conflicting local view-change record")
+                if row is None:
+                    conn.execute(
+                        "INSERT INTO local_view_changes(height,from_round,to_round) VALUES(?,?,?)",
+                        (height, from_round, to_round),
+                    )
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+
+    def local_view_change_count(self) -> int:
+        with self.connect() as conn:
+            return int(conn.execute("SELECT COUNT(*) AS n FROM local_view_changes").fetchone()["n"])
+
+    def record_seen_proposal(self, block: Block) -> dict | None:
+        """Record a valid signed proposal and persist evidence if the proposer equivocates."""
+        with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = conn.execute(
+                    "SELECT block_hash FROM seen_proposals WHERE height=? AND round=? AND proposer=?",
+                    (block.height, block.round, block.proposer),
+                ).fetchone()
+                if row is None:
+                    conn.execute(
+                        "INSERT INTO seen_proposals(height,round,proposer,block_hash) VALUES(?,?,?,?)",
+                        (block.height, block.round, block.proposer, block.block_hash),
+                    )
+                    conn.execute("COMMIT")
+                    return None
+
+                first_hash = str(row["block_hash"])
+                if first_hash == block.block_hash:
+                    conn.execute("COMMIT")
+                    return None
+
+                first, second = sorted((first_hash, block.block_hash))
+                observed_at_ms = int(time.time() * 1000)
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO equivocation_evidence(
+                        height,round,offender,first_hash,second_hash,observed_at_ms
+                    ) VALUES(?,?,?,?,?,?)
+                    """,
+                    (block.height, block.round, block.proposer, first, second, observed_at_ms),
+                )
+                conn.execute("COMMIT")
+                return {
+                    "kind": "conflicting_block_proposal",
+                    "height": block.height,
+                    "round": block.round,
+                    "offender": block.proposer,
+                    "first_hash": first,
+                    "second_hash": second,
+                    "observed_at_ms": observed_at_ms,
+                }
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+
+    def evidence_count(self) -> int:
+        with self.connect() as conn:
+            return int(conn.execute("SELECT COUNT(*) AS n FROM equivocation_evidence").fetchone()["n"])
+
+    def list_evidence(self, limit: int = 100) -> list[dict]:
+        limit = max(1, min(int(limit), 1000))
+        with self.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT height,round,offender,first_hash,second_hash,observed_at_ms
+                FROM equivocation_evidence
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+            return [
+                {
+                    "kind": "conflicting_block_proposal",
+                    "height": int(row["height"]),
+                    "round": int(row["round"]),
+                    "offender": str(row["offender"]),
+                    "first_hash": str(row["first_hash"]),
+                    "second_hash": str(row["second_hash"]),
+                    "observed_at_ms": int(row["observed_at_ms"]),
+                }
+                for row in rows
+            ]
+
+    def prune_consensus_state(self, finalized_height: int) -> None:
+        with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                conn.execute("DELETE FROM local_votes WHERE height<=?", (finalized_height,))
+                conn.execute("DELETE FROM local_view_changes WHERE height<=?", (finalized_height,))
+                conn.execute("DELETE FROM consensus_rounds WHERE height<=?", (finalized_height,))
+                conn.execute("DELETE FROM seen_proposals WHERE height<=?", (finalized_height,))
+                conn.execute("COMMIT")
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
 
     def local_vote_count(self) -> int:
         with self.connect() as conn:
@@ -200,6 +378,44 @@ class Ledger:
             fees[0] += tx.fee
         return sha256_hex(canonical_json(sorted((addr, bal, nonce) for addr, (bal, nonce) in state.items())))
 
+    def validate_view_change_certificate(self, block: Block) -> None:
+        if block.round == 0:
+            if block.view_changes:
+                raise LedgerError("round-zero block must not include a view-change certificate")
+            return
+
+        seen: set[str] = set()
+        valid = 0
+        for change in block.view_changes:
+            if change.voter in seen:
+                raise LedgerError("duplicate validator view-change message")
+            seen.add(change.voter)
+            if change.chain_id != block.chain_id:
+                raise LedgerError("view-change chain_id mismatch")
+            if change.height != block.height:
+                raise LedgerError("view-change height mismatch")
+            if change.from_round != block.round - 1 or change.to_round != block.round:
+                raise LedgerError("view-change round transition mismatch")
+            validator = self.genesis.validator_by_address(change.voter)
+            if validator is None:
+                raise LedgerError("view-change from unknown validator")
+            if validator.public_key != change.public_key:
+                raise LedgerError("view-change public key mismatch")
+            if change.locked_round < -1 or change.locked_round >= change.to_round:
+                raise LedgerError("invalid view-change lock round")
+            if change.locked_round == -1 and change.locked_block_hash:
+                raise LedgerError("unlocked view-change must not carry a block hash")
+            if change.locked_round >= 0 and len(change.locked_block_hash) != 64:
+                raise LedgerError("locked view-change must carry a 64-character block hash")
+            if not change.verify_signature():
+                raise LedgerError("invalid validator view-change signature")
+            valid += 1
+
+        if valid < self.genesis.quorum_size:
+            raise LedgerError(
+                f"insufficient view-change quorum: have {valid}, need {self.genesis.quorum_size}"
+            )
+
     def validate_block_proposal(self, block: Block) -> None:
         """Validate a proposed block before a validator signs a commit vote."""
         expected_height = self.height + 1
@@ -216,6 +432,7 @@ class Ledger:
             raise LedgerError("unexpected proposer for consensus round")
         if not block.verify_signature():
             raise LedgerError("invalid block signature")
+        self.validate_view_change_certificate(block)
         expected_tx_root = merkle_root([tx.txid for tx in block.transactions])
         if block.tx_root != expected_tx_root:
             raise LedgerError("transaction Merkle root mismatch")
