@@ -8,7 +8,7 @@ from typing import Iterator
 
 from .crypto import canonical_json, sha256_hex
 from .genesis import Genesis
-from .models import Block, Transaction, merkle_root
+from .models import Block, CommitVote, Transaction, merkle_root
 
 
 class LedgerError(ValueError):
@@ -142,7 +142,8 @@ class Ledger:
             fees[0] += tx.fee
         return sha256_hex(canonical_json(sorted((addr, bal, nonce) for addr, (bal, nonce) in state.items())))
 
-    def apply_block(self, block: Block) -> None:
+    def validate_block_proposal(self, block: Block) -> None:
+        """Validate a proposed block before a validator signs a commit vote."""
         expected_height = self.height + 1
         if block.chain_id != self.genesis.chain_id:
             raise LedgerError("wrong block chain_id")
@@ -150,6 +151,8 @@ class Ledger:
             raise LedgerError(f"unexpected block height: expected {expected_height}")
         if block.previous_hash != self.last_hash:
             raise LedgerError("previous hash mismatch")
+        if block.round < 0:
+            raise LedgerError("invalid consensus round")
         expected_validator = self.genesis.proposer_for_height(block.height)
         if block.proposer != expected_validator.address or block.proposer_public_key != expected_validator.public_key:
             raise LedgerError("unexpected proposer")
@@ -161,6 +164,36 @@ class Ledger:
         expected_root = self.simulate_state_root(block.transactions, block.proposer)
         if block.state_root != expected_root:
             raise LedgerError("state root mismatch")
+
+    def validate_commit_votes(self, block: Block) -> None:
+        seen: set[str] = set()
+        valid_votes = 0
+        for vote in block.commit_votes:
+            if vote.voter in seen:
+                raise LedgerError("duplicate validator commit vote")
+            seen.add(vote.voter)
+            if vote.chain_id != block.chain_id:
+                raise LedgerError("commit vote chain_id mismatch")
+            if vote.height != block.height or vote.round != block.round:
+                raise LedgerError("commit vote height/round mismatch")
+            if vote.block_hash != block.block_hash:
+                raise LedgerError("commit vote block hash mismatch")
+            validator = self.genesis.validator_by_address(vote.voter)
+            if validator is None:
+                raise LedgerError("commit vote from unknown validator")
+            if vote.public_key != validator.public_key:
+                raise LedgerError("commit vote public key mismatch")
+            if not vote.verify_signature():
+                raise LedgerError("invalid validator commit signature")
+            valid_votes += 1
+        if valid_votes < self.genesis.quorum_size:
+            raise LedgerError(
+                f"insufficient commit quorum: have {valid_votes}, need {self.genesis.quorum_size}"
+            )
+
+    def apply_block(self, block: Block) -> None:
+        self.validate_block_proposal(block)
+        self.validate_commit_votes(block)
 
         with self.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
