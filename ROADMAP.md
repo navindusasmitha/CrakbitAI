@@ -68,168 +68,102 @@ Crakbit AI remains primarily a defensive-security and secure-development project
 ## Phase 6 — Crakbit Chain Research → Public-Testnet Candidate
 **Prototype started September 2026**
 
-A runnable research/devnet exists. It does **not** mean a production blockchain or production-value CRKBIT asset has launched.
+A runnable research/devnet and external CometBFT application path exist. This does **not** mean a production blockchain or production-value CRKBIT asset has launched.
 
-### Completed foundation through v0.10
+### Completed foundation through v0.14
 
-- [x] Native test-only CRKBIT accounting
-- [x] Ed25519 wallets and `crk1...` addresses
-- [x] Signed transfers, nonce/replay protection and fees
-- [x] Signed block proposals, Merkle/state roots and SQLite persistence
-- [x] Research prevote/precommit + certified view changes
-- [x] Persistent anti-double-vote/lock/event/evidence state
-- [x] Authenticated validator requests and durable replay protection
-- [x] Quorum snapshots, resumable transfer and state bootstrap
-- [x] Integrity verification, backups and restore drills
-- [x] RPC/mempool/block resource bounds
-- [x] Prometheus/Grafana development observability
-- [x] Public-testnet operator scaffold
-
-### v0.11 — validator transport hardening
-
-- [x] Record architecture decision not to market bespoke Python consensus as production BFT
-- [x] Make independently reviewed external BFT evaluation a release gate
-- [x] Operator-managed mTLS trust configuration
-- [x] Inbound mutual-TLS launcher
-- [x] TLS certificate pinning and rotation runbook
-- [x] Toxiproxy fault harness
-- [x] Public-testnet reverse-proxy example
-
-### v0.12 — archive/recovery/testnet hardening
-
-- [x] Genesis-anchored full-history archive export/verify/import
-- [x] Snapshot-node history backfill without mutating current state
-- [x] Consensus/execution boundary groundwork
-- [x] Dual TLS pin overlap
-- [x] Authenticated operator monitoring option
-- [x] Byzantine vote fixtures
-- [x] Multi-node soak/divergence monitor
-- [x] Deny-by-default firewall example
-
-### v0.13 — external-consensus protocol/tooling
-
-- [x] Deterministic `crakbit-execution/1` preview boundary
-- [x] Deterministic application hash
-- [x] Authenticated loopback execution-service PoC
-- [x] Signed release/genesis artifact manifests
-- [x] Multi-host validator provisioning scaffold
-- [x] Test faucet foundation
-- [x] Read-only explorer APIs
-- [x] Soak evidence summarizer
-- [x] External BFT evaluation/review package
-
-### v0.14 — CometBFT bridge + crash-safe application commit
-
-- [x] Select/pin CometBFT `v0.40.0` for integration PoC
-- [x] Add `crakbit-execution/2` mutating application protocol
-- [x] Persist deterministic application hashes at commit boundaries
-- [x] Persist non-mutating FinalizeBlock staging
-- [x] Atomic crash-safe SQLite Commit
-- [x] Finalize replay/idempotency handling
-- [x] Separate external application DB ownership
-- [x] Go ABCI bridge: Info/CheckTx/PrepareProposal/ProcessProposal/FinalizeBlock/Commit
-- [x] Signed strict >2/3 genesis ceremony tooling
+- [x] Native test-only CRKBIT accounting, Ed25519 wallets and signed transfers
+- [x] Research consensus experiments, authenticated validator networking, snapshots, recovery and archives
+- [x] Integrity verification, backups, metrics and resource controls
+- [x] Deterministic external application protocol boundary
+- [x] Signed release/genesis tooling
+- [x] CometBFT `v0.40.0` ABCI integration PoC
+- [x] `crakbit-execution/2` crash-safe FinalizeBlock → Commit path
+- [x] Strict >2/3 signed application-genesis ceremony tooling
 - [x] Combined Python + Go CI
-- [x] Local CometBFT integration runbook
 
-### v0.15 — wallet/public gateway/mining-lab large phase
+### v0.15 — wallet/public gateway/Mining Lab
 
-- [x] Bump chain package to `0.15.0a1`
-- [x] Responsive Web UI for overview, wallet, explorer, validators and services
-- [x] Browser-generated Ed25519 wallet compatible with Crakbit addresses
-- [x] PBKDF2-SHA256 + AES-GCM encrypted local wallet vault
-- [x] Client-side canonical transaction signing and broadcast
-- [x] Encrypted wallet backup/import flow
-- [x] Embedded same-origin wallet API/UI on research nodes
-- [x] Standalone public gateway with `research` and `cometbft` modes
-- [x] CometBFT `broadcast_tx_sync` transaction path
-- [x] Authenticated external-state read APIs for accounts/transactions/commits
-- [x] Persistent SQLite faucet distribution/cooldown records
-- [x] Faucet broadcasting through research or CometBFT gateway path
-- [x] Opt-in browser proof-of-work Mining Lab
-- [x] Persistent mining challenge/solution/cooldown/daily-limit state
-- [x] Dedicated non-validator mining-reward wallet model
-- [x] Explicitly document that Mining Lab is **not** consensus block mining
-- [x] Publish explicit production mainnet release gates
-- [x] Add automated v0.15 wallet/mining/read-API tests
+- [x] Responsive browser wallet/explorer UI
+- [x] Browser-generated Ed25519 wallet and encrypted local vault
+- [x] Client-side canonical transaction signing
+- [x] Public gateway with research + CometBFT modes
+- [x] Persistent faucet controls
+- [x] Test-only browser proof-of-work reward Mining Lab
+- [x] Explicit production-mainnet release gates
 
-### v0.16 — public-testnet evidence, checkpoint recovery and web hardening
+### v0.16 — public-testnet recovery and web hardening
 
-- [x] Bump package/CLI to `0.16.0a1`
-- [x] Add one-command local multi-node CometBFT lab generation
-- [x] Generate shared CometBFT consensus genesis + persistent-peer inventory from independent validator homes
-- [x] Generate separate per-node external application state locations and execution-service tokens
-- [x] Add deterministic external-application checkpoint export/verification/import
-- [x] Bind checkpoint to chain ID, genesis fingerprint, state root, fixed supply and deterministic application hash
-- [x] Support trusted expected consensus height/application hash checks before restore
-- [x] Track checkpoint base explicitly and continue committing after restore
-- [x] Add dedicated indexed explorer database/service for external-consensus state
-- [x] Add restart-persistent SQLite write-rate limiting for public gateway paths
-- [x] Add durable faucet and Mining Lab request limiting
-- [x] Replace wildcard CORS default with same-origin + explicit allow-list
-- [x] Add production-style CSP and browser security headers
-- [x] Add browser-wallet threat model
-- [x] Add validator remote-signer/HSM-equivalent custody guidance
-- [x] Add multi-host health/divergence inventory checker
-- [x] Add isolated FinalizeBlock/Commit restart/replay/checkpoint matrix
-- [x] Add v0.16 automated tests and keep Python + Go bridge CI green
-- [ ] Complete native CometBFT state-sync protocol wiring for the application checkpoint format
-- [ ] Operate validators continuously across independently managed hosts/providers
-- [ ] Execute and publish real partition/latency/packet-loss/restart/load campaign results
-- [ ] Deploy shared/horizontally consistent upstream abuse controls
-- [ ] Deploy/test protected remote-signer or HSM-equivalent validator custody
-- [ ] Complete independent browser-wallet/consensus/application/network review
+- [x] One-command multi-node CometBFT lab generator
+- [x] Deterministic external-application checkpoint export/verify/restore
+- [x] Trusted expected-height/application-hash verification
+- [x] Snapshot-base-aware restore without invented historical commits
+- [x] Dedicated indexed external explorer database/service
+- [x] Durable SQLite public write/faucet/mining rate limits
+- [x] Same-origin gateway defaults and production-style browser security headers
+- [x] Multi-host health/divergence checker
+- [x] FinalizeBlock/Commit crash/replay/checkpoint matrix
+- [x] Browser-wallet threat model
+- [x] Remote-signer/HSM-equivalent custody guidance
 
-### v0.17 — next major phase: independent-host public-testnet evidence
+### v0.17 — native state sync and operational evidence tooling
 
-- [ ] Integrate application checkpoints into reviewed CometBFT snapshot/state-sync lifecycle
-- [ ] Run generated 4-validator topology across independent VPS/providers for an extended period
-- [ ] Automate and execute packet-loss, partition, latency, process-kill and sustained-load campaigns
-- [ ] Publish raw fault/soak/recovery evidence tied to exact source commit and CometBFT version
-- [ ] Add explorer reconciliation and clean-host rebuild drills
-- [ ] Deploy shared upstream rate limiting, reverse-proxy/load-balancer and TLS profiles
-- [ ] Integrate a remote-signer/HSM-compatible validator path and run recovery/double-sign drills
-- [ ] Produce a reproducible signed public-testnet release bundle
-- [ ] Run documented multi-operator genesis ceremony with independently held keys
-- [ ] Freeze and hand off an independent consensus/application/network/wallet review candidate
+- [x] Bump package/CLI to `0.17.0a1`
+- [x] Implement deterministic CometBFT state-sync snapshots
+- [x] Wire ABCI `ListSnapshots`, `OfferSnapshot`, `LoadSnapshotChunk`, `ApplySnapshotChunk`
+- [x] Bind snapshot acceptance to CometBFT-supplied trusted application hash
+- [x] Add per-chunk + complete artifact hash verification
+- [x] Restrict restore to pristine application state and preserve snapshot-base semantics
+- [x] Add authenticated v0.17 execution-service state-sync endpoints
+- [x] Add signed exact-commit/CometBFT-version public-testnet evidence bundles
+- [x] Add dry-run-by-default controlled fault-campaign evidence runner
+- [x] Add single-edge TLS/rate-limit public-testnet NGINX profile
+- [x] Add guarded CometBFT remote-signer configuration helper
+- [x] Add Python + Go state-sync/evidence/operations tests
+- [x] Publish `blockchain/V0.17.md`
 
-### Current warning
+### External evidence still required after v0.17
 
-v0.16 materially improves repeatability, recovery, indexing and browser/public-service hardening, but it is still not production mainnet software. Source-code features are not substitutes for sustained independent-host operation, published fault evidence, protected production key custody, DDoS architecture or independent review.
+- [ ] Run four validators continuously on independently managed VPS/providers
+- [ ] Demonstrate live clean-host state sync against that network
+- [ ] Execute real partition, packet-loss, latency, process-kill and sustained-load campaigns
+- [ ] Publish raw signed health/fault/recovery/soak evidence tied to exact source and CometBFT version
+- [ ] Rebuild/reconcile explorer indexes from clean hosts
+- [ ] Deploy and drill a real remote-signer/HSM-compatible validator flow
+- [ ] Perform a multi-operator genesis ceremony with independently held validator keys
+- [ ] Deploy/review multi-edge shared rate limiting, WAF/DDoS and TLS automation
+- [ ] Freeze an independent-review candidate and commission consensus/application/network/wallet review
 
-The Mining Lab remains a test-reward service only; external block consensus remains CometBFT-based and no new CRKBIT supply is minted by the Mining Lab.
+## Phase 7 — Long-Lived Public Testnet / v0.18 Evidence Freeze
+**Only after operators provision independent infrastructure**
 
-## Phase 7 — Public Testnet
-**Only after Phase 6 technical gates are met**
+v0.18 should prioritize evidence over new features:
 
-- [ ] Signed public node software release
-- [ ] Signed testnet genesis ceremony
-- [x] Browser wallet/explorer UI foundation
-- [x] Test-faucet implementation foundation
-- [x] Public gateway foundation
-- [x] Network monitoring/health tooling foundation
-- [x] Dedicated external explorer index prototype
-- [x] Application checkpoint export/restore prototype
-- [ ] Independent multi-host sustained deployment
-- [ ] Native external-consensus state sync
-- [ ] Stress/partition testing with published evidence
+- [ ] Independent-host validator deployment
+- [ ] Long-duration soak monitoring
+- [ ] Live state-sync/bootstrap recovery drills
+- [ ] Fault/partition/load campaigns using v0.17 tooling
+- [ ] Signed source/genesis/release/evidence bundle publication
+- [ ] Explorer reconciliation/rebuild evidence
+- [ ] Protected validator signer drill
+- [ ] Incident-response exercises
 - [ ] Community test program
+- [ ] Frozen security-review candidate
 
 Testnet CRKBIT units represent test units only and should not be represented as production-value assets.
 
-## Phase 8 — Security Review
+## Phase 8 — Independent Security Review
 
 Before a production network launch:
 
-- [ ] Internal security review
-- [ ] Independent consensus/application audit
+- [ ] Independent consensus/application review
 - [ ] Independent network/RPC security review
-- [ ] Browser-wallet security review
-- [ ] Consensus-failure and partition testing
-- [ ] Economic-security review
+- [ ] Independent browser-wallet review
 - [ ] Cryptography/key-management review
-- [ ] Incident-response drills
-- [ ] Legal/regulatory review where applicable
+- [ ] Economic-security review
+- [ ] Incident-response review
+- [ ] Applicable legal/regulatory review
+- [ ] Remediate or explicitly accept every high/critical finding
 
 See `blockchain/docs/MAINNET_GATES.md` for the full release-gate checklist.
 
@@ -237,17 +171,7 @@ See `blockchain/docs/MAINNET_GATES.md` for the full release-gate checklist.
 
 A production mainnet can only be considered after successful long-lived public testing, reviewed external consensus/application behavior, independent security review and a clear operational/economic/legal model.
 
-Potential production items include:
-
-- final consensus configuration,
-- reproducible signed releases,
-- production genesis ceremony,
-- hardened wallet ecosystem,
-- production explorer/indexer,
-- validator onboarding and protected signer strategy,
-- CRKBIT production utility/economics,
-- upgrade/governance process,
-- incident-response operations.
+Potential production items include final consensus configuration, reproducible signed releases, production genesis ceremony, hardened wallet ecosystem, production explorer/indexer, validator onboarding and remote signer strategy, CRKBIT production utility/economics, upgrade/governance process and incident-response operations.
 
 ## CRKBIT Status
 
