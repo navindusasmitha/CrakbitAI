@@ -22,7 +22,7 @@ class FinalizeRequestV21(BaseModel):
     transactions: list[dict[str, Any]]
 
 
-def create_app(config: legacy.legacy.legacy.ExecutionServiceV14Config | None = None):
+def create_app(config=None):
     app = legacy.create_app(config, state_sync_manager_cls=CometStateSyncManagerV21)
     store = ExternalExecutionStoreV21(app.state.ledger)
     app.state.external_execution_v21 = store
