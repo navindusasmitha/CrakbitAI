@@ -4,44 +4,50 @@
 
 > Secure Code. Secure Chains. Build the Future.
 
-Crakbit AI is an independent technology project building defensive-security tooling for developers, researchers, students and open-source communities. The repository contains an early secure-code scanner plus the Crakbit Chain research/public-testnet stack.
+Crakbit AI is an independent technology project building defensive-security tooling plus experimental blockchain infrastructure.
 
 ## Current status
 
-- Security scanner: early alpha
-- Security CLI: early alpha
+- Security scanner / CLI: early alpha
 - AI Security Assistant: in development
-- Crakbit Chain: **v0.30.0a1 continuous-operations / evidence-publication alpha**
-- External consensus candidate: CometBFT `v0.40.0`
-- Governed execution protocol: `crakbit-execution/3`
-- Browser wallet/public gateway: alpha
-- Public-testnet, review/remediation, final-candidate, launch-rehearsal, live-host and continuous-evidence tooling: implemented
+- Crakbit Chain package: **v0.31.0a1**
+- New primary chain research direction: **native Proof of Work + UTXO**
+- Working v0.31 PoW: **`crakpow-scrypt-v1` CPU-mineable devnet**
+- First-party solo miner + mining-pool prototype: implemented
+- Previous CometBFT/BFT path: retained as legacy/research infrastructure
+- Production mainnet: **not launched**
 - Production CRKBIT: **not launched**
 - Official CRKBIT presale: **none**
 
-Crakbit Chain is **not a production mainnet** and should not be used to custody real value.
+Do not use the current alpha to custody real value.
 
-## Crakbit Chain v0.30
+## Crakbit Chain v0.31 — PoW pivot
 
-v0.30 adds an operations layer on top of the v0.29 real-host evidence path:
+v0.31 introduces an actual proof-of-work block-production path instead of pretending the previous validator-based CometBFT path is Bitcoin-like mining.
 
-- signed non-secret 4+ validator monitoring inventory,
-- rejection of secret-bearing inventory fields,
-- read-only live CometBFT cluster monitoring,
-- signed height-spread/app-hash-divergence monitoring samples,
-- resumable hash-chained monitoring checkpoints,
-- default seven-day monitoring target with >=0.99 success ratio,
-- `scripts/run_v30_monitor.py` for continuous checkpoint/resume collection,
-- raw evidence archive manifests with SHA-256 + retention policy,
-- active RPC/explorer/gateway health probes,
-- redundant public-edge gate with two healthy endpoints per role by default,
-- protected HSM/remote-signer connectivity checks without reading private keys,
-- signed public evidence bundle bound to the exact v0.29 real-evidence freeze,
-- signed operator checklist that keeps DNS, treasury movement and launch execution manual.
+Implemented now:
 
-A passing v0.30 evidence bundle still does **not** automatically start validators, change DNS, move funds or create production-value CRKBIT. Production readiness and launch flags stay false.
+- deterministic PoW genesis,
+- Bitcoin-style UTXO accounting,
+- Ed25519 `crk1...` ownership/signatures,
+- signed transfers + transaction fees,
+- mempool double-spend policy,
+- coinbase block rewards + maturity,
+- Merkle roots,
+- memory-hard scrypt PoW,
+- 256-bit targets + bounded difficulty retargeting,
+- cumulative chain-work accounting,
+- CPU solo mining,
+- SQLite persistent chain/UTXO/mempool state,
+- FastAPI node RPC (`getblocktemplate`, `submitblock`, transaction/balance/block endpoints),
+- first-party `crakbit-pool/1` mining-pool protocol,
+- pool share difficulty separated from network target,
+- test PPLNS accounting,
+- native CPU pool-miner script.
 
-See [`blockchain/V0.30.md`](blockchain/V0.30.md) and [`blockchain/README.md`](blockchain/README.md).
+The production PoW algorithm is **not frozen**. A real RandomX adapter/benchmark remains a future evaluation item; v0.31 uses Python's real scrypt primitive so CPU-mined blocks are working/testable now without claiming unimplemented RandomX support.
+
+See [`blockchain/V0.31.md`](blockchain/V0.31.md).
 
 ## Quick test
 
@@ -53,35 +59,38 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-## v0.30 operations workflow
+## Quick PoW devnet
 
 ```bash
-crakchain monitor-inventory-v30-build --help
-crakchain monitor-sample-v30-probe --help
-crakchain monitor-checkpoint-v30-build --help
-crakchain archive-v30-build --help
-crakchain edge-v30-probe --help
-crakchain edge-gate-v30-build --help
-crakchain signer-v30-probe --help
-crakchain public-evidence-v30-build --help
-crakchain operator-checklist-v30-build --help
+crakchain pow-wallet-v31-new --output private/miner.json
+crakchain pow-chain-v31-init --db runtime/pow-v31/chain.sqlite3
+crakchain pow-mine-v31 --db runtime/pow-v31/chain.sqlite3 --miner-address crk1YOUR_ADDRESS --blocks 1
+crakchain pow-chain-v31-info --db runtime/pow-v31/chain.sqlite3
 ```
 
-For a resumable seven-day read-only campaign:
+Run the node RPC:
 
 ```bash
-python scripts/run_v30_monitor.py --help
+crakchain pow-node-v31-run --db runtime/pow-v31/chain.sqlite3 --host 127.0.0.1 --port 28443
 ```
 
-## Mainnet path
+Run the first-party pool:
 
-Production launch remains gated by actual independently managed validators, genuine long-running/fault/load/storage/state-sync evidence, protected remote/HSM signing, production RPC/TLS/WAF/DDoS/capacity/secret-management engineering, independently corroborated consensus/application/governance/network/cryptography/browser-wallet review, high/critical remediation/retest, finalized economics/incentives, applicable legal/regulatory review and an explicit human launch/no-launch decision.
+```bash
+crakchain pow-pool-v31-run --db runtime/pow-v31/pool.sqlite3 --node-url http://127.0.0.1:28443 --pool-address crk1POOL_ADDRESS --host 127.0.0.1 --port 3333
+```
 
-See [`blockchain/docs/MAINNET_GATES.md`](blockchain/docs/MAINNET_GATES.md).
+Then a native CPU pool miner can connect with:
 
-## Mining note
+```bash
+python scripts/run_pow_pool_miner_v31.py --host 127.0.0.1 --port 3333 --address crk1MINER_ADDRESS --worker cpu-01
+```
 
-The current Mining Lab is a **test-only proof-of-work reward service**, not Crakbit consensus mining. It does not mint new supply or create CometBFT blocks.
+## Important v0.31 boundary
+
+This is a CPU-mineable PoW **devnet prototype**, not yet a decentralized Bitcoin-like production network. v0.31 currently accepts blocks extending the local canonical tip only. P2P peer discovery/gossip, competing forks, highest-cumulative-work reorganization/undo data, RandomX interoperability, mature Stratum/XMRig compatibility, hardened pool payouts and long-lived multi-node PoW testing still need to be completed.
+
+The previous v0.23–v0.30 operations/review/evidence tooling remains useful and is retained, but CometBFT validator consensus is not silently mixed into the new PoW consensus path.
 
 ## Funding
 
