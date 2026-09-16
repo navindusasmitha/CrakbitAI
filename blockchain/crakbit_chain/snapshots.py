@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+import time
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
 from .crypto import KeyPair, canonical_json, sha256_hex, verify_signature
@@ -9,6 +12,7 @@ from .storage import Ledger, LedgerError
 
 SNAPSHOT_FORMAT = "crakbit-state-snapshot-v1"
 CERTIFICATE_FORMAT = "crakbit-snapshot-certificate-v1"
+IMPORT_JOURNAL_FORMAT = "crakbit-snapshot-import-journal-v1"
 
 
 def snapshot_state(ledger: Ledger) -> dict[str, Any]:
@@ -119,12 +123,7 @@ def build_snapshot_certificate(
     envelopes: list[dict[str, Any]],
     genesis: Genesis,
 ) -> dict[str, Any]:
-    """Build a >2/3 certificate from validator signatures over identical state.
-
-    Validators may be at different heights while a network is catching up, so signatures
-    are grouped by snapshot hash. The strongest group that reaches the configured quorum
-    is selected. A certificate can never mix signatures over different state roots.
-    """
+    """Build a >2/3 certificate from validator signatures over identical state."""
 
     groups: dict[str, dict[str, dict[str, Any]]] = defaultdict(dict)
     snapshots: dict[str, dict[str, Any]] = {}
@@ -205,23 +204,86 @@ def verify_snapshot_artifact(artifact: dict[str, Any], genesis: Genesis) -> dict
     return verify_snapshot(artifact, genesis)
 
 
+def snapshot_import_journal_path(ledger: Ledger) -> Path:
+    return ledger.db_path.parent / "snapshot-import.journal.json"
+
+
+def snapshot_import_journal_status(ledger: Ledger) -> dict[str, Any]:
+    path = snapshot_import_journal_path(ledger)
+    if not path.exists():
+        return {"present": False, "path": str(path)}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {"present": True, "path": str(path), "valid": False}
+    return {"present": True, "path": str(path), "valid": True, **payload}
+
+
+def _database_snapshot_certificate_hash(ledger: Ledger) -> str | None:
+    with ledger.connect() as conn:
+        row = conn.execute(
+            "SELECT value FROM metadata WHERE key='snapshot_certificate_hash'"
+        ).fetchone()
+        return str(row["value"]) if row is not None else None
+
+
+def _write_import_journal(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(path)
+
+
 def import_snapshot_certificate(
     ledger: Ledger,
     certificate: dict[str, Any],
 ) -> dict[str, Any]:
     """Bootstrap an empty local ledger from a quorum-certified snapshot.
 
-    Import is intentionally restricted to a fresh genesis-height database. This avoids
-    silently overwriting local finalized history. Pre-snapshot historical blocks are not
-    reconstructed; after import the node can continue syncing blocks newer than the
-    certified snapshot height.
+    v0.8 adds a sidecar import journal. SQLite already makes the database mutation atomic;
+    the sidecar records intent before the transaction so a process crash can be detected on
+    restart. Re-running the same import safely clears a journal left after a successful
+    commit or retries an import whose database transaction rolled back.
     """
 
     snapshot = verify_snapshot_certificate(certificate, ledger.genesis)
+    certificate_hash = sha256_hex(canonical_json(certificate))
+    journal_path = snapshot_import_journal_path(ledger)
+
+    existing_journal: dict[str, Any] | None = None
+    if journal_path.exists():
+        try:
+            existing_journal = json.loads(journal_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            raise LedgerError("snapshot import journal is unreadable; operator review required") from exc
+        if existing_journal.get("format") != IMPORT_JOURNAL_FORMAT:
+            raise LedgerError("unknown snapshot import journal format")
+        if existing_journal.get("certificate_hash") != certificate_hash:
+            raise LedgerError("unfinished snapshot import journal references a different certificate")
+
+    committed_hash = _database_snapshot_certificate_hash(ledger)
+    if committed_hash == certificate_hash:
+        if ledger.height != int(snapshot["height"]) or ledger.last_hash != str(snapshot["last_hash"]):
+            raise LedgerError("snapshot metadata exists but local height/hash does not match certificate")
+        if journal_path.exists():
+            journal_path.unlink()
+        return snapshot
+
     if ledger.height != 0 or ledger.last_hash != "0" * 64:
         raise LedgerError("snapshot import requires a fresh height-zero database")
 
     accounts = _validate_snapshot_body(snapshot, ledger.genesis)
+    journal = {
+        "format": IMPORT_JOURNAL_FORMAT,
+        "state": "prepared",
+        "certificate_hash": certificate_hash,
+        "target_height": int(snapshot["height"]),
+        "target_last_hash": str(snapshot["last_hash"]),
+        "accounts_root": str(snapshot["accounts_root"]),
+        "prepared_at_ms": int(time.time() * 1000),
+    }
+    _write_import_journal(journal_path, journal)
+
     with ledger.connect() as conn:
         conn.execute("BEGIN IMMEDIATE")
         try:
@@ -255,7 +317,7 @@ def import_snapshot_certificate(
                 "snapshot_base_height": str(int(snapshot["height"])),
                 "snapshot_base_hash": str(snapshot["last_hash"]),
                 "snapshot_accounts_root": str(snapshot["accounts_root"]),
-                "snapshot_certificate_hash": sha256_hex(canonical_json(certificate)),
+                "snapshot_certificate_hash": certificate_hash,
             }
             for key, value in metadata.items():
                 conn.execute(
@@ -267,4 +329,9 @@ def import_snapshot_certificate(
         except Exception:
             conn.execute("ROLLBACK")
             raise
+
+    journal["state"] = "committed"
+    journal["committed_at_ms"] = int(time.time() * 1000)
+    _write_import_journal(journal_path, journal)
+    journal_path.unlink()
     return snapshot
