@@ -15,7 +15,7 @@ Do not reuse key material across roles.
 | Crakbit research validator | Research/devnet Ed25519 key | Never promoted to production |
 | Crakbit user wallet | User Ed25519 key | Client/user custody |
 | Validator TLS | TLS private key | Certificate lifecycle/rotation |
-| Release signer | Dedicated release Ed25519 key | Offline/protected release workflow |
+| Release/evidence signer | Dedicated Ed25519 key | Offline/protected release/evidence workflow |
 | Faucet | Dedicated funded testnet wallet | Public-testnet service only |
 | Mining Lab reward | Dedicated funded testnet wallet | Public-testnet service only |
 
@@ -37,19 +37,7 @@ The validator host should possess only the material necessary to contact the sig
 
 ## Required properties
 
-A production signer design should provide:
-
-- explicit chain/network binding where supported,
-- prevention of double-signing across height/round/step,
-- authenticated and encrypted signer transport when not strictly local,
-- strict allow-list of validator clients,
-- audit/event logging without private-key leakage,
-- rate/availability monitoring,
-- backup and disaster-recovery process,
-- key rotation/replacement process,
-- fail-closed behavior on corrupted signer state,
-- documented behavior during network partitions,
-- protection against restoring two active signer copies from the same backup.
+A production signer design should provide explicit chain/network binding where supported, prevention of double-signing across height/round/step, authenticated/encrypted transport when not strictly local, strict validator-client allow-listing, safe audit logging, rate/availability monitoring, backup/disaster recovery, rotation, fail-closed corrupted-state behavior and protection against restoring two active signer copies from the same backup.
 
 ## Double-signing protection
 
@@ -67,6 +55,34 @@ Before any production launch, test at minimum:
 8. key rotation with no double-sign interval.
 
 The expected result for unsafe/stale signing state is to stop signing rather than guess.
+
+## v0.17 CometBFT configuration helper
+
+v0.17 adds:
+
+```text
+scripts/configure_comet_remote_signer.py
+```
+
+Example for a signer bound to loopback:
+
+```bash
+python scripts/configure_comet_remote_signer.py \
+  --config /path/to/comet/config/config.toml \
+  --signer tcp://127.0.0.1:1234
+```
+
+The helper:
+
+- finds exactly one `priv_validator_laddr` setting,
+- backs up `config.toml` by default,
+- updates only the signer address,
+- refuses non-loopback endpoints by default,
+- never reads, copies or modifies the validator private key.
+
+A non-loopback address requires `--allow-non-loopback`, but that flag is **not a security mechanism**. The operator must separately provide authenticated/encrypted private transport, firewalling and signer identity verification.
+
+The helper configures the CometBFT side only. It does not implement an HSM, create a remote signer, migrate a validator key or satisfy the production key-custody gate.
 
 ## Remote signer network boundary
 
@@ -91,14 +107,7 @@ If the signer is not on the same machine:
 
 ## Rotation / compromise response
 
-A reviewed validator lifecycle must define how to:
-
-- stop a compromised validator,
-- revoke/replace credentials,
-- update validator set membership where protocol/governance permits,
-- rotate TLS credentials separately from consensus keys,
-- preserve evidence/logs for incident review,
-- communicate operator actions without publishing secrets.
+A reviewed validator lifecycle must define how to stop a compromised validator, revoke/replace credentials, update validator-set membership where protocol/governance permits, rotate TLS credentials separately from consensus keys, preserve evidence/logs and communicate operator actions without publishing secrets.
 
 The current Crakbit research configuration does not yet define final production validator governance or emergency removal semantics.
 
@@ -110,14 +119,14 @@ Plain local CometBFT validator keys are acceptable for disposable isolated testi
 
 ### Stage B — independent-host public testnet
 
-Use separate hosts/operators and begin exercising remote-signer-like separation or protected signing. Run key-loss/restart/partition drills and record evidence.
+Use separate hosts/operators and exercise real remote-signer-like separation or protected signing. Run key-loss/restart/partition drills and record signed evidence.
 
 ### Stage C — production candidate
 
 Require an independently reviewed signer/HSM-equivalent design, documented operational ownership, tested disaster recovery and monitored failover procedures.
 
-## What v0.16 does and does not do
+## What v0.17 does and does not do
 
-v0.16 provides this custody model, key-separation rules, multi-host health tooling and lab generation. It does **not** deploy an HSM, choose a commercial signer product, migrate existing validator keys automatically or satisfy the mainnet validator-key gate by documentation alone.
+v0.17 provides custody guidance plus a guarded CometBFT configuration helper. It does **not** deploy an HSM, choose a commercial signer product, migrate existing validator keys, prove a remote-signer drill has been executed or satisfy the mainnet validator-key gate by documentation/tooling alone.
 
 Any production implementation should be reviewed against the exact CometBFT version, signer protocol and operator environment actually deployed.
