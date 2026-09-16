@@ -12,7 +12,9 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=9400)
     parser.add_argument("--genesis", required=True)
     parser.add_argument("--key", required=True, help="Dedicated funded faucet key; never use a validator key")
-    parser.add_argument("--rpc", required=True)
+    parser.add_argument("--rpc", default="http://127.0.0.1:9101", help="Research-node RPC fallback")
+    parser.add_argument("--gateway", default="", help="Optional v0.15 public gateway; supports research or CometBFT mode")
+    parser.add_argument("--state", default="runtime/faucet-state.sqlite3")
     parser.add_argument("--amount", default="10", help="Test CRKBIT per successful request; max 100")
     parser.add_argument("--cooldown-seconds", type=int, default=3600)
     parser.add_argument("--global-rpm", type=int, default=10)
@@ -22,6 +24,8 @@ def main() -> int:
     os.environ["CRAKBIT_FAUCET_GENESIS"] = args.genesis
     os.environ["CRAKBIT_FAUCET_KEY"] = args.key
     os.environ["CRAKBIT_FAUCET_RPC"] = args.rpc
+    os.environ["CRAKBIT_FAUCET_GATEWAY"] = args.gateway
+    os.environ["CRAKBIT_FAUCET_STATE"] = args.state
     os.environ["CRAKBIT_FAUCET_AMOUNT"] = str(args.amount)
     os.environ["CRAKBIT_FAUCET_ADDRESS_COOLDOWN"] = str(args.cooldown_seconds)
     os.environ["CRAKBIT_FAUCET_GLOBAL_RPM"] = str(args.global_rpm)
