@@ -23,10 +23,14 @@ class SnapshotApplyRequest(BaseModel):
     sender: str = ""
 
 
-def create_app(config: legacy.legacy.ExecutionServiceV14Config | None = None):
+def create_app(
+    config: legacy.legacy.ExecutionServiceV14Config | None = None,
+    *,
+    state_sync_manager_cls=CometStateSyncManager,
+):
     app = legacy.create_app(config)
     resolved = config or legacy.legacy.ExecutionServiceV14Config.from_env()
-    manager = CometStateSyncManager(genesis=app.state.ledger.genesis, data_dir=resolved.data_dir)
+    manager = state_sync_manager_cls(genesis=app.state.ledger.genesis, data_dir=resolved.data_dir)
     app.title = "Crakbit External Consensus Execution Service"
     app.version = "0.17.0a1"
     app.state.comet_state_sync = manager
