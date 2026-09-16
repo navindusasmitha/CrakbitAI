@@ -11,17 +11,17 @@ Crakbit AI is an independent technology project building defensive-security tool
 - Security scanner: early alpha
 - Security CLI: early alpha
 - AI Security Assistant: in development
-- Crakbit Chain: **v0.25.0a1 public-testnet / independent-review-candidate tooling alpha**
+- Crakbit Chain: **v0.26.0a1 public-testnet / independent-review-remediation alpha**
 - External consensus candidate: CometBFT `v0.40.0`
 - Governed execution protocol: `crakbit-execution/3`
 - Browser wallet/public gateway: alpha
-- Public-testnet deployment, operational-hardening and review-freeze tooling: implemented
+- Public-testnet deployment, operational-hardening, review-freeze and remediation tooling: implemented
 - Production CRKBIT: **not launched**
 - Official CRKBIT presale: **none**
 
 Crakbit Chain is **not a production mainnet** and should not be used to custody real value.
 
-## Crakbit Chain v0.25
+## Crakbit Chain v0.26
 
 The research/public-testnet stack now includes:
 
@@ -35,16 +35,17 @@ The research/public-testnet stack now includes:
 - browser wallet, hardened gateway, explorer, faucet and test-only Mining Lab,
 - reproducible-build/SBOM/release/review evidence tooling,
 - v0.23 independent-operator inventory, genesis/deployment bundles and public-testnet monitoring,
-- v0.24 host preflight, authorized fault/recovery records, redundant-edge checks, protected-signer evidence and separate 24h/72h/7-day readiness gates,
-- **v0.25 incident-response evidence with escalation/recovery checks**,
-- **signed per-operator host attestations bound to exact source/CometBFT/genesis identity**,
-- **four-or-more unique operator/validator/evidence-signer gates plus provider/region diversity**,
-- **review freeze blocked until v0.24 operational readiness, host evidence and incident drill gates are satisfied**,
-- **signed exact review-candidate freeze with explicit independent-review scope**.
+- v0.24 host preflight, authorized fault/recovery records, redundant-edge checks, protected-signer evidence and 24h/72h/7-day readiness gates,
+- v0.25 signed operator evidence, incident-response records and exact independent-review candidate freeze,
+- **v0.26 signed review-finding register with stable IDs**,
+- **hard blocker for high/critical findings until fixes are independently retested on the exact candidate commit**,
+- **signed supply-chain/reproducible-build attestations tied to dependency-lock and SBOM hashes**,
+- **signed public-edge TLS/WAF/DDoS/load/failover attestations without provider secrets**,
+- **candidate supersession rules and signed post-remediation re-freeze**.
 
-Signed host attestations remain **operator self-attestations**, not independent proof of real-world infrastructure claims. A frozen candidate is not a completed audit and is not production-mainnet approval.
+A passing v0.26 remediation gate is not an audit verdict or mainnet approval. It only verifies consistency of the supplied signed review/remediation evidence.
 
-See [`blockchain/V0.25.md`](blockchain/V0.25.md), [`blockchain/README.md`](blockchain/README.md) and [`blockchain/docs/INDEPENDENT_REVIEW_HANDOFF_V25.md`](blockchain/docs/INDEPENDENT_REVIEW_HANDOFF_V25.md).
+See [`blockchain/V0.26.md`](blockchain/V0.26.md) and [`blockchain/README.md`](blockchain/README.md).
 
 ## Quick test
 
@@ -56,24 +57,23 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-## v0.25 evidence / review workflow
-
-After real authorized v0.24 operational campaigns have produced evidence, operators can create signed host attestations, record incident-response drills, build the aggregate review gate and only then freeze an exact candidate for independent review.
+## v0.26 review remediation workflow
 
 ```bash
-crakchain incident-v25-record --help
-crakchain host-attestation-v25-build --help
-crakchain host-attestation-v25-verify --help
-crakchain review-gate-v25-build --help
-crakchain review-freeze-v25-build --help
-crakchain review-freeze-v25-verify --help
+crakchain review-findings-v26-build --help
+crakchain review-retest-v26-build --help
+crakchain supply-attestation-v26-build --help
+crakchain edge-attestation-v26-build --help
+crakchain remediation-gate-v26-build --help
+crakchain review-refreeze-v26-build --help
+crakchain review-refreeze-v26-verify --help
 ```
 
-The repository does **not** claim that real independent VPS validators, seven-day soak campaigns, remote-signer drills or independent audits have occurred merely because the tooling exists.
+The repository does **not** claim that real independent VPS validators, seven-day soak campaigns, protected-signer deployment or independent security review have completed merely because the tooling exists.
 
 ## Mainnet path
 
-Production launch remains gated by actual independently managed validators, genuine 24h → 72h → 7-day operation, real authorized fault/load/storage/state-sync campaigns, protected remote/HSM signing, production RPC/TLS/WAF/DDoS/secret-management engineering, independent consensus/application/governance/network/cryptography/browser-wallet review, remediation of high/critical findings, final validator/CRKBIT economics and applicable legal/regulatory review.
+Production launch remains gated by actual independently managed validators, genuine long-running/fault/load/storage/state-sync evidence, protected remote/HSM signing, production RPC/TLS/WAF/DDoS/secret-management engineering, independent consensus/application/governance/network/cryptography/browser-wallet review, remediation and independent retest of high/critical findings, final validator/CRKBIT economics and applicable legal/regulatory review.
 
 See [`blockchain/docs/MAINNET_GATES.md`](blockchain/docs/MAINNET_GATES.md).
 
