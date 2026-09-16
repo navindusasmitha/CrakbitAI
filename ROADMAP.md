@@ -151,48 +151,50 @@ A runnable research/devnet and external CometBFT application path exist. This do
 - [ ] Execute real clean-host state-sync/disaster-recovery drills
 - [ ] Execute partition/latency/packet-loss/process-kill/storage/load campaigns
 
-### External evidence still required
-
-- [ ] Run validators continuously on independently managed VPS/providers
-- [ ] Demonstrate live clean-host CometBFT state sync and app-hash/governance-state convergence
-- [ ] Execute real partition, packet-loss, latency, process-kill and sustained-load campaigns
-- [ ] Publish signed raw health/fault/recovery/soak/governance evidence tied to exact source/CometBFT version
-- [ ] Deploy and drill a real remote-signer/HSM-compatible validator/governance flow
-- [ ] Perform a multi-operator genesis ceremony with independently held validator keys
-- [ ] Deploy/review multi-edge shared rate limiting, WAF/DDoS and TLS automation
-- [ ] Freeze a candidate with real evidence and commission independent consensus/application/governance/network/wallet review
-
 ## Phase 7 — Long-Lived Public Testnet / Review Candidate
 
 ### v0.24 — operational fault / recovery hardening
 
-- [ ] Add operator-safe host/deployment preflight validation
-- [ ] Add automated backup/restore and clean-host state-sync drill runner
-- [ ] Add signed restart/partition/latency/packet-loss/load/storage-fault campaign records
-- [ ] Run validator-governance campaigns across real independent hosts
-- [ ] Add public RPC/explorer redundancy and recovery verification
-- [ ] Add alert/incident evidence and operator escalation records
-- [ ] Enforce 72-hour and 7-day readiness gates
-- [ ] Deploy/drill protected validator remote signer/HSM-equivalent custody
-- [ ] Produce frozen independent-review package only after real evidence exists
+- [x] Package/CLI `0.24.0a1`
+- [x] Operator-safe host/deployment preflight validation
+- [x] Exact package/CometBFT/application-genesis/consensus-genesis identity gates
+- [x] Private/loopback execution + ABCI bind checks
+- [x] Secret-safe execution-token presence check
+- [x] Writable data path + minimum free-space gate
+- [x] Typed restart/process-kill/partition/latency/packet-loss/load/storage fault plans
+- [x] Mandatory recovery command for each fault plan step
+- [x] Dry-run-by-default plan boundary with explicit execution evidence
+- [x] Backup/restore convergence records
+- [x] Clean-host state-sync convergence records
+- [x] Public RPC/explorer redundancy verification
+- [x] Same-height app-hash conflict detection across redundant RPC nodes
+- [x] Protected remote-signer/HSM-style evidence format with no-key-export gate
+- [x] Separate actual-duration 24-hour / 72-hour / 7-day soak gates
+- [x] Aggregate operational-review-candidate readiness report
+- [x] Signed v0.24 evidence bound to exact source commit and artifact hashes
+- [x] v0.24 regression tests and documentation
+- [ ] Monitoring alert/incident escalation evidence format
+- [ ] Actual independent-host execution of the modeled campaigns
+- [ ] Frozen independent-review package built from real evidence
 
-### Operational launch tasks
+### v0.25 — real independent-host execution / review freeze
 
-- [ ] Provision four or more independently managed VPS validators
-- [ ] Deploy governed execution/ABCI path with private execution/validator surfaces
-- [ ] Deploy separate public RPC/gateway/explorer/faucet edge
-- [ ] Configure DNS/TLS/firewall/monitoring/alerts/backups
-- [ ] Run 24-hour soak and publish evidence
-- [ ] Extend to 72-hour soak
-- [ ] Extend to 7-day soak
-- [ ] Execute validator-governance activation campaigns
-- [ ] Execute clean-host state-sync/bootstrap recovery drills
-- [ ] Execute partition/load/restart campaigns
-- [ ] Signed source/genesis/release/evidence publication
-- [ ] Protected validator/governance signer drill
-- [ ] Incident-response exercises
-- [ ] Community test program
-- [ ] Frozen independent-review candidate
+- [ ] Provision 4+ independently managed validators across suitable operators/providers/regions
+- [ ] Perform real multi-operator genesis ceremony with independently held keys
+- [ ] Deploy governed execution/ABCI services with private operator surfaces
+- [ ] Deploy redundant public RPC/gateway/explorer/faucet edges behind TLS/WAF/DDoS controls
+- [ ] Run genuine 24-hour soak and publish evidence
+- [ ] Run genuine 72-hour soak and publish evidence
+- [ ] Run genuine 7-day soak and publish evidence
+- [ ] Execute authorized restart/process-kill campaigns
+- [ ] Execute authorized partition/latency/packet-loss campaigns
+- [ ] Execute authorized sustained-load/storage-fault campaigns
+- [ ] Execute validator join/remove/replace activation campaigns
+- [ ] Complete backup/restore and clean-host state-sync disaster-recovery drills
+- [ ] Deploy/drill protected remote signer or HSM-equivalent custody
+- [ ] Add alerting/incident-response evidence and operator escalation drills
+- [ ] Sign and publish raw operational evidence bound to exact source/CometBFT/genesis versions
+- [ ] Freeze an exact independent-review candidate only after evidence exists
 
 Testnet CRKBIT units represent test units only and should not be represented as production-value assets.
 
