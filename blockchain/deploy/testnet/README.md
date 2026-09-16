@@ -1,65 +1,124 @@
-# Crakbit Chain v0.10 — Public Testnet Operator Template
+# Crakbit Chain Public-Testnet Operator Scaffold
 
-This directory is an **operator scaffold for a future public testnet**. It is not a mainnet deployment recipe and must not be used for real-value custody.
+This directory contains **examples for a future research/public testnet**, not a production mainnet deployment.
 
-## Required local files
+The current chain remains a research devnet. Do not use it for real-value custody.
 
-Create these locally and do not commit private validator material:
+## Files
+
+- `docker-compose.yml` — one-validator-per-host container scaffold.
+- `.env.example` — RPC/resource bounds, mTLS and optional monitoring-auth variables.
+- `nginx.conf.example` — reverse-proxy hardening example.
+- `nftables.example.conf` — deny-by-default host firewall example.
+
+## Minimum operator model
+
+Each validator should run on an independent host or failure domain with:
+
+1. a dedicated consensus Ed25519 key,
+2. a separate TLS private key/certificate,
+3. a validator CA trusted by all validator operators,
+4. `https://` validator peer URLs with correct SANs,
+5. peer certificate fingerprints distributed out-of-band,
+6. the validator-internal listener restricted at firewall/VPC level,
+7. a public reverse proxy separate from validator-internal traffic,
+8. backups/snapshots stored outside the node filesystem,
+9. monitoring reachable only from operator networks or authenticated paths,
+10. documented key/certificate rotation and incident response.
+
+## Certificate rotation
+
+v0.12 allows a maximum of two accepted SHA-256 leaf-certificate fingerprints for one validator during a controlled rotation window:
+
+```json
+{
+  "crk1VALIDATOR": [
+    "old_certificate_fingerprint",
+    "new_certificate_fingerprint"
+  ]
+}
+```
+
+Recommended sequence:
+
+1. issue the new certificate,
+2. distribute a pin file containing old + new fingerprints,
+3. wait until all peers have loaded the overlap set,
+4. rotate the validator certificate/key,
+5. verify `/transport/status` and peer health,
+6. remove the old fingerprint from all peers.
+
+This is operator-coordinated rotation, not an automatic PKI controller.
+
+## Monitoring authentication
+
+A long bearer token can protect sensitive operator endpoints:
 
 ```text
-genesis.json
-validator-key.json
-.env
+CRAKBIT_MONITORING_BEARER_TOKEN=<secret-at-least-24-characters>
 ```
 
-`validator-key.json` must be generated and transferred securely for the specific validator host. Never reuse the devnet treasury key as a validator key.
+Prefer private monitoring networks/VPNs even when application-level authentication is enabled. Do not place the token in this repository or directly in a committed compose file.
 
-## Important transport requirement
+## Reverse proxy and firewall
 
-The compose template starts the node with `--require-peer-tls`. Therefore every validator `peer_url` in `genesis.json` must use `https://`.
+The validator application should not be bound directly to a public Internet interface without a reviewed proxy/network policy.
 
-The current Crakbit node only enforces HTTPS peer URLs; it does **not** yet provision certificates, perform reviewed mutual-TLS client authentication, pin certificates, or rotate them. A reverse proxy/service mesh may terminate TLS for testnet experiments, but this is not a substitute for the planned native validator mTLS lifecycle.
+The examples in this directory demonstrate the intended layering:
 
-## RPC exposure
+```text
+Internet
+   ↓
+reverse proxy / rate limits / TLS
+   ↓
+public read/transaction RPC
 
-Do not publish port `9101` directly to the Internet. Put a hardened reverse proxy or load balancer in front of the RPC and enforce at least:
+validator peers
+   ↓
+mTLS + certificate pinning + Ed25519 request authentication
+   ↓
+validator internal API
+```
 
-- TLS,
-- connection limits,
-- request/body limits,
-- per-IP rate limits,
-- timeouts,
-- logging with secret/header redaction,
-- firewall rules that keep `/internal/*` validator traffic private.
+Review `nftables.example.conf` before use. The management address in that file is a documentation-only TEST-NET address and must be replaced.
 
-v0.10 adds node-local transaction rate limiting, request-size checks and bounded mempool/block selection, but those are defense-in-depth controls rather than DDoS protection.
+## History and recovery
 
-## Start
-
-After placing a reviewed genesis file and validator key on the host:
+A full-history validator/archive node can export a genesis-anchored history artifact:
 
 ```bash
-cp .env.example .env
-docker compose up -d --build
+crakchain archive-export \
+  --genesis /run/crakbit/genesis.json \
+  --data /var/lib/crakbit \
+  --output /var/backups/crakbit/history.json
 ```
 
-Check locally from the host or trusted management network:
+A snapshot-bootstrapped node may verify and backfill that history later with `archive-verify` and `archive-import`. History import does not rewrite the snapshot-restored account state.
+
+## Soak tests
+
+Before any wider testnet announcement, run the multi-node monitor for sustained periods:
 
 ```bash
-curl http://127.0.0.1:9101/health
-curl http://127.0.0.1:9101/limits/status
-curl http://127.0.0.1:9101/operations/status
+python scripts/soak_test.py \
+  --node https://node1.example \
+  --node https://node2.example \
+  --node https://node3.example \
+  --node https://node4.example \
+  --duration-seconds 86400 \
+  --interval-seconds 5 \
+  --output runtime/soak-results.jsonl \
+  --fail-on-divergence
 ```
 
-If the reverse proxy is the only component publishing a public port, keep the validator container network private.
+Retain the output together with incident logs, validator logs, configuration versions and genesis hash.
 
-## Before a real public testnet
+## Still required before public-value use
 
-Still required:
-
-1. reviewed cross-round BFT lock/unlock semantics or migration to an established BFT core,
-2. mutual validator TLS with identity binding, pinning and rotation,
-3. repeated partition/latency/Byzantine/load tests,
-4. backup restore drills and corruption/power-loss tests,
-5. alert routing and incident runbooks,
-6. independent consensus/network security review.
+- integration with an independently reviewed BFT consensus core,
+- formal safety/liveness review,
+- sustained multi-host partition/latency/load/Byzantine testing,
+- production-grade key custody/HSM-equivalent controls,
+- hardened monitoring/alert routing,
+- production DDoS/reverse-proxy/network review,
+- independent consensus/network/security audit.
