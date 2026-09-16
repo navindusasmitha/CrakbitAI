@@ -5,12 +5,13 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from .app_protocol import ExecutionProtocolAdapter, PROTOCOL_VERSION
 from .external_commit import COMMIT_PROTOCOL_VERSION, ExternalExecutionStore
 from .external_replay import replay_safe_stage_finalize
+from .explorer_queries import account_activity
 from .genesis import Genesis
 from .storage import Ledger, LedgerError
 
@@ -73,7 +74,7 @@ def create_app(config: ExecutionServiceV14Config | None = None) -> FastAPI:
 
     app = FastAPI(
         title="Crakbit External Consensus Execution Service",
-        version="0.14.0a1",
+        version="0.15.0a1",
     )
     app.state.ledger = ledger
     app.state.external_execution = external
@@ -100,6 +101,7 @@ def create_app(config: ExecutionServiceV14Config | None = None) -> FastAPI:
             "commit_protocol": COMMIT_PROTOCOL_VERSION,
             "external_consensus_commit_enabled": True,
             "app_ahead_finalize_replay": True,
+            "read_api_enabled": True,
             "reviewed_bft_core_integrated": False,
             "production_ready": False,
         }
@@ -127,7 +129,14 @@ def create_app(config: ExecutionServiceV14Config | None = None) -> FastAPI:
 
     @app.get("/v2/info")
     def v2_info() -> dict:
-        return external.status()
+        return {
+            **external.status(),
+            "network": genesis.network_name,
+            "symbol": genesis.symbol,
+            "decimals": genesis.decimals,
+            "min_fee_atomic": genesis.min_fee,
+            "max_supply_atomic": genesis.max_supply,
+        }
 
     @app.get("/v2/pending")
     def v2_pending() -> dict:
@@ -137,6 +146,42 @@ def create_app(config: ExecutionServiceV14Config | None = None) -> FastAPI:
             "height": status["height"],
             "pending_finalize": status["pending_finalize"],
         }
+
+    @app.get("/v2/account/{address}")
+    def v2_account(address: str, limit: int = Query(default=50, ge=1, le=100)) -> dict:
+        return account_activity(ledger, address.strip().lower(), limit)
+
+    @app.get("/v2/transaction/{txid}")
+    def v2_transaction(txid: str) -> dict:
+        result = ledger.get_transaction(txid.strip().lower())
+        if result is None:
+            raise HTTPException(404, "transaction not found")
+        return result
+
+    @app.get("/v2/commits")
+    def v2_commits(limit: int = Query(default=20, ge=1, le=100)) -> dict:
+        with ledger.connect() as conn:
+            rows = conn.execute(
+                "SELECT height,request_hash,application_hash,consensus_block_hash," 
+                "transaction_root,transaction_count,fee_recipient,committed_at_ms " 
+                "FROM external_commits ORDER BY height DESC LIMIT ?",
+                (int(limit),),
+            ).fetchall()
+        items = [
+            {
+                "height": int(row["height"]),
+                "request_hash": str(row["request_hash"]),
+                "application_hash": str(row["application_hash"]),
+                "hash": str(row["consensus_block_hash"]),
+                "consensus_block_hash": str(row["consensus_block_hash"]),
+                "transaction_root": str(row["transaction_root"]),
+                "transaction_count": int(row["transaction_count"]),
+                "fee_recipient": str(row["fee_recipient"]),
+                "committed_at_ms": int(row["committed_at_ms"]),
+            }
+            for row in rows
+        ]
+        return {"count": len(items), "items": items, "mode": "external-consensus"}
 
     @app.post("/v2/check-tx")
     def v2_check_tx(payload: CheckTxRequest) -> dict:
