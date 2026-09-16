@@ -179,7 +179,7 @@ def generate_governed_lab(
         nodes=nodes,
         cometbft_binary=cometbft_binary,
         bridge_binary=bridge_binary,
-        execution_script="scripts/run_execution_service_v21.py",
+        execution_script="scripts/run_execution_service_v22.py",
         application_genesis=str(app_genesis),
         base_rpc_port=base_rpc_port,
         base_p2p_port=base_p2p_port,
