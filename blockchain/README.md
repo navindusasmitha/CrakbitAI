@@ -1,8 +1,8 @@
 # Crakbit Chain — Public-Testnet / Review-Candidate Infrastructure
 
-**Status: v0.18 alpha (`0.18.0a1`) — not a production mainnet.**
+**Status: v0.19 alpha (`0.19.0a1`) — not a production mainnet.**
 
-Crakbit Chain is the experimental blockchain/application-state component of Crakbit AI. The current external-consensus path uses CometBFT `v0.40.0`, a Go ABCI bridge, deterministic Crakbit execution, native ABCI state sync, a browser wallet/public gateway, indexed explorer tooling and signed evidence/review artifacts.
+Crakbit Chain is the experimental blockchain/application-state component of Crakbit AI. The current external-consensus path uses CometBFT `v0.40.0`, a Go ABCI bridge, deterministic Crakbit execution, native ABCI state sync, browser wallet/public gateway tooling, indexed explorer support and signed review/release evidence.
 
 > Production CRKBIT has **not** launched. There is no official CRKBIT presale or production token contract. Do not use this software to custody real value.
 
@@ -15,7 +15,7 @@ Crakbit Chain is the experimental blockchain/application-state component of Crak
 - Application signatures: Ed25519
 - External BFT integration candidate: CometBFT `v0.40.0`
 - Application state: SQLite
-- Current package: `0.18.0a1`
+- Current package: `0.19.0a1`
 
 The 21M figure is a development configuration parameter, not a promise of value or final production economics.
 
@@ -40,27 +40,29 @@ crakbit-execution/2
         ├── native ABCI snapshot lifecycle
         └── deterministic application state
                  │
-                 ├── explorer index
-                 ├── soak/fault evidence
-                 └── signed review freeze
+                 ├── explorer index / reconciliation
+                 ├── soak + fault evidence
+                 ├── review finding matrix
+                 └── signed release provenance
 ```
 
-The older Python research consensus remains in the repository only for backwards-compatible experiments. It is not the intended production BFT path.
+The older Python research consensus remains only for backwards-compatible experiments. It is not the intended production BFT path.
 
-## v0.18 additions
+## v0.19 additions
 
-v0.18 is intentionally a **review/evidence phase**, not another mainnet marketing step. It adds:
+v0.19 is a **review-remediation and release-engineering phase**. It adds:
 
-- signed review-candidate freeze manifests,
-- exact Git commit + package + CometBFT version binding,
-- genesis fingerprint/file-hash binding,
-- cryptographic hashing of selected review artifacts,
-- clean explorer rebuild/reconciliation with per-table SHA-256 fingerprints,
-- sustained multi-host health/soak evidence collection,
-- conservative review claims that remain `false` until independent work is actually completed,
-- v0.18 tests while retaining v0.17 native CometBFT state-sync and Go bridge tests.
+- machine-readable security-review remediation matrices,
+- conservative high/critical finding release gates,
+- required regression-test references for remediated high/critical findings,
+- reproducible artifact SHA-256 comparison tooling,
+- CI checks for two Python wheel builds and two Go bridge builds,
+- a direct-dependency CycloneDX 1.5 SBOM generator,
+- signed release provenance bound to exact source/genesis/artifact hashes,
+- signed upgrade/rollback/incident/disaster-recovery/validator-lifecycle drill evidence,
+- v0.19 regression tests and documentation.
 
-See [`V0.18.md`](V0.18.md).
+See [`V0.19.md`](V0.19.md).
 
 ## Install / test
 
@@ -79,25 +81,110 @@ go mod download
 go test -mod=mod ./...
 ```
 
-## Native CometBFT state sync
+## Review-finding remediation gate
 
-After a committed external-application height:
+Build a matrix from one or more review files:
 
 ```bash
-crakchain comet-snapshot-materialize \
-  --genesis runtime/genesis.json \
-  --data runtime/comet-app
+SOURCE_COMMIT=$(git rev-parse HEAD)
 
-crakchain comet-snapshot-status \
-  --genesis runtime/genesis.json \
-  --data runtime/comet-app
+crakchain review-findings-build \
+  --source-commit "$SOURCE_COMMIT" \
+  --finding private/review-findings.json \
+  --output runtime/review/remediation-matrix.json
+
+crakchain review-findings-check \
+  --matrix runtime/review/remediation-matrix.json
 ```
 
-The bridge supports `ListSnapshots`, `OfferSnapshot`, `LoadSnapshotChunk` and `ApplySnapshotChunk`. Offered snapshot state is accepted only when it matches the application hash supplied through the CometBFT state-sync trust path, and chunk/full-artifact hashes are verified before import.
+The check returns non-zero while high/critical findings remain unresolved or a remediated high/critical finding lacks a recorded regression-test reference. Clearing this automated gate is not an audit certificate and does not make the network production-ready.
 
-## Explorer reconciliation
+## Reproducible artifact comparison
 
-Build a fresh explorer index from the external application DB and compare it with the current index:
+```bash
+crakchain repro-compare \
+  --left runtime/build-a \
+  --right runtime/build-b \
+  --file crakbit-cometbft-bridge \
+  --output runtime/release/reproducible-build.json
+```
+
+The report proves equality only for the supplied artifacts. It does not prove that two independent organizations or build environments reproduced the artifacts.
+
+## Direct-dependency SBOM
+
+```bash
+crakchain sbom-build \
+  --repo-root .. \
+  --output runtime/release/sbom.cdx.json
+```
+
+The current CycloneDX document covers direct Python runtime dependencies and direct Go requirements, plus hashes of the dependency input files. It explicitly does not claim complete transitive dependency coverage.
+
+## Signed release provenance
+
+After real release artifacts, SBOM and reproducibility evidence exist:
+
+```bash
+crakchain release-provenance-build \
+  --genesis runtime/genesis.json \
+  --key private/release-signing-key.json \
+  --source-commit "$SOURCE_COMMIT" \
+  --package-version 0.19.0a1 \
+  --cometbft-version v0.40.0 \
+  --artifact bridge=runtime/release/crakbit-cometbft-bridge \
+  --sbom runtime/release/sbom.cdx.json \
+  --repro-report runtime/release/reproducible-build.json \
+  --output runtime/release/provenance.json
+```
+
+Verify:
+
+```bash
+crakchain release-provenance-verify \
+  --genesis runtime/genesis.json \
+  --provenance runtime/release/provenance.json \
+  --artifact-dir runtime/release \
+  --expected-source-commit "$SOURCE_COMMIT"
+```
+
+Release-signing private keys must never be committed or sent through chat/support systems.
+
+## Operations-drill evidence
+
+v0.19 can sign evidence for upgrade, rollback, incident-response, disaster-recovery and validator-lifecycle drills. The format records operator-reported results and hashes supporting artifacts; it does not claim independent verification.
+
+Example:
+
+```bash
+crakchain ops-drill-build \
+  --key private/ops-evidence-key.json \
+  --source-commit "$SOURCE_COMMIT" \
+  --kind disaster-recovery \
+  --started-at-ms 1000 \
+  --completed-at-ms 2000 \
+  --success \
+  --summary "Recovered disposable test node and verified application state" \
+  --evidence runtime/evidence/recovery.json \
+  --output runtime/evidence/drill.json
+```
+
+## Native CometBFT state sync
+
+v0.19 retains the v0.17+ ABCI snapshot lifecycle:
+
+```text
+ListSnapshots
+OfferSnapshot
+LoadSnapshotChunk
+ApplySnapshotChunk
+```
+
+Snapshot acceptance remains bound to the application hash supplied through the CometBFT trust path, with chunk/full-artifact verification and pristine-state restore requirements.
+
+## Explorer reconciliation and soak evidence
+
+The v0.18 clean explorer reconciliation and sustained health collector remain available:
 
 ```bash
 crakchain explorer-reconcile \
@@ -106,82 +193,17 @@ crakchain explorer-reconcile \
   --index runtime/explorer-index.sqlite3 \
   --rebuilt-output runtime/reconcile/explorer-clean.sqlite3 \
   --output runtime/evidence/explorer-reconcile.json
-```
 
-A mismatch returns a non-zero exit code. The current index is not silently repaired or overwritten.
-
-## Sustained testnet soak evidence
-
-```bash
 python scripts/run_testnet_soak.py \
   --inventory private/testnet-inventory.json \
   --duration-seconds 21600 \
   --interval-seconds 30 \
-  --max-height-spread 2 \
   --output runtime/evidence/soak-6h.json
 ```
 
-The collector records only the endpoints actually sampled. It does not infer independent ownership/provider diversity from hostnames.
-
-## Controlled fault campaigns
-
-Fault campaigns remain dry-run by default:
-
-```bash
-python scripts/run_fault_campaign.py \
-  --inventory private/testnet-inventory.json \
-  --campaign private/fault-campaign.json \
-  --output runtime/evidence/fault-campaign.json
-```
-
-Only add `--execute` after reviewing every fault/recovery command on an authorized test network.
-
-## Signed public-testnet evidence
-
-```bash
-crakchain evidence-build \
-  --genesis runtime/genesis.json \
-  --key private/evidence-signing-key.json \
-  --source-commit EXACT_GIT_COMMIT \
-  --cometbft-version v0.40.0 \
-  --evidence runtime/evidence/soak-6h.json \
-  --evidence runtime/evidence/fault-campaign.json \
-  --output runtime/evidence/public-testnet-evidence.json
-```
-
-Evidence-signing keys must never be committed.
-
-## Signed review freeze
-
-After generating **real** evidence and any release/genesis artifacts:
-
-```bash
-crakchain review-freeze-build \
-  --genesis runtime/genesis.json \
-  --key private/review-signing-key.json \
-  --source-commit EXACT_GIT_COMMIT \
-  --package-version 0.18.0a1 \
-  --cometbft-version v0.40.0 \
-  --artifact evidence=runtime/evidence/public-testnet-evidence.json \
-  --artifact reconcile=runtime/evidence/explorer-reconcile.json \
-  --artifact soak=runtime/evidence/soak-6h.json \
-  --output runtime/review/crakbit-v0.18-review-freeze.json
-```
-
-Verify:
-
-```bash
-crakchain review-freeze-verify \
-  --genesis runtime/genesis.json \
-  --freeze runtime/review/crakbit-v0.18-review-freeze.json \
-  --artifact-dir runtime/evidence
-```
-
-If the frozen source changes, create a new review candidate rather than claiming the old review manifest covers new code.
-
 ## Browser wallet / gateway
 
-The alpha browser wallet still provides local Ed25519 key generation, encrypted local vault storage, local transaction signing, balance/activity views, explorer access, test faucet access and an optional Mining Lab. The gateway should receive signed transactions, not wallet private keys.
+The alpha browser wallet still provides local Ed25519 key generation, encrypted local vault storage, client-side transaction signing, balance/activity views, explorer access, test faucet access and an optional Mining Lab. The gateway should receive signed transactions, not wallet private keys.
 
 The Mining Lab remains a **test-only work-reward service**. It does not mint supply, produce CometBFT blocks, select validators or change voting power.
 
@@ -190,11 +212,11 @@ The Mining Lab remains a **test-only work-reward service**. It does not mint sup
 Read:
 
 - [`SECURITY.md`](SECURITY.md)
-- [`V0.18.md`](V0.18.md)
+- [`V0.19.md`](V0.19.md)
 - [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md)
 - [`docs/WALLET_THREAT_MODEL.md`](docs/WALLET_THREAT_MODEL.md)
 - [`docs/VALIDATOR_REMOTE_SIGNER.md`](docs/VALIDATOR_REMOTE_SIGNER.md)
 
-Major external gates still open include long-lived independent-host validator operation, live clean-host state-sync evidence, executed partition/latency/load campaigns, protected remote-signer/HSM deployment, multi-operator genesis ceremony, independent wallet/consensus/application/network review, production multi-edge DDoS/capacity engineering, final validator economics and applicable legal review.
+Major external gates still open include long-lived independent-host validator operation, live clean-host state-sync evidence, executed partition/latency/load campaigns, protected remote-signer/HSM deployment, multi-operator genesis ceremony, independent wallet/consensus/application/network review, complete transitive supply-chain review, production multi-edge DDoS/capacity engineering, final validator economics and applicable legal review.
 
 Until those gates are satisfied, describe this software as **research**, **public testnet**, **review candidate** or **mainnet-candidate infrastructure** — not production mainnet.
