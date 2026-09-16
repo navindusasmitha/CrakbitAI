@@ -28,7 +28,7 @@ The scanner performs static checks only and does not execute target code. It is 
 
 Planned defensive tooling includes smart-contract analysis, contract-risk assessment, public blockchain-data analysis, developer guidance and human-readable security reports.
 
-### Crakbit Chain — v0.16 Public-Testnet/Mainnet-Candidate Infrastructure Alpha
+### Crakbit Chain — v0.17 Public-Testnet/Mainnet-Candidate Infrastructure Alpha
 
 A runnable experimental blockchain/application stack exists in [`blockchain/`](blockchain/).
 
@@ -38,67 +38,60 @@ The current external-consensus test path is:
 Browser wallet / CLI
         │
         ▼
-Public gateway
+Public gateway / controlled testnet edge
         │
         ▼
 CometBFT v0.40.0
         │ ABCI
         ▼
-Crakbit Go bridge
+Crakbit Go bridge v0.17
         │
         ▼
 crakbit-execution/2
         │
-        ▼
-Dedicated application state
+        ├── crash-safe FinalizeBlock → Commit
+        ├── native ABCI snapshot state-sync lifecycle
+        └── deterministic application state
+                │
+                ├── dedicated explorer index
+                └── signed testnet evidence tooling
 ```
 
-Implemented research/public-testnet components include:
+Implemented research/public-testnet components now include:
 
 - Ed25519 wallets and `crk1...` addresses,
 - signed CRKBIT test transactions,
-- browser wallet with encrypted local vault,
-- client-side transaction signing,
+- browser wallet with encrypted local vault and client-side signing,
 - public wallet/explorer gateway,
-- CometBFT `v0.40.0` ABCI bridge PoC,
+- CometBFT `v0.40.0` ABCI bridge,
 - crash-safe staged FinalizeBlock → atomic Commit application flow,
 - deterministic application hashes,
-- signed application-genesis ceremony tooling,
-- deterministic external-application checkpoint export/verify/restore,
-- checkpoint-base-aware recovery without fabricated history,
+- signed application-genesis/release tooling,
+- native ABCI `ListSnapshots`, `OfferSnapshot`, `LoadSnapshotChunk`, `ApplySnapshotChunk` state-sync code,
+- chunk/transport/application-hash verification for state restore,
 - dedicated external explorer index,
 - one-command local multi-validator CometBFT lab generator,
-- restart-persistent public write-rate limiting,
-- persistent test faucet controls,
+- durable public write/faucet/mining limits,
 - optional browser SHA-256 Mining Lab reward system,
 - wallet threat model and CSP/security-header profile,
 - multi-host validator health/divergence checks,
-- application crash/replay/checkpoint evidence matrix,
-- validator remote-signer/HSM-equivalent guidance,
+- controlled dry-run-by-default fault campaign tooling,
+- signed exact-source public-testnet evidence bundles,
+- single-edge TLS/rate-limit deployment profile,
+- validator remote-signer configuration helper/guidance,
 - Python + Go automated blockchain CI.
 
 The older Python prevote/precommit chain remains in the repository for research/backwards-compatible local experiments. It is not the intended production BFT path.
 
-**Important:** v0.16 is not a production mainnet. It has not completed sustained independent-host operation, native CometBFT state-sync integration, protected production validator-key custody or independent consensus/application/network/wallet security review. It must not be used to custody real value.
+**Important:** v0.17 is not a production mainnet. Sustained independent-host operation, live recovery evidence, protected validator-key custody, real fault/load campaigns and independent consensus/application/network/wallet security review are still required. It must not be used to custody real value.
 
-See [`blockchain/V0.16.md`](blockchain/V0.16.md), [`blockchain/README.md`](blockchain/README.md) and [`blockchain/docs/MAINNET_GATES.md`](blockchain/docs/MAINNET_GATES.md).
+See [`blockchain/V0.17.md`](blockchain/V0.17.md), [`blockchain/README.md`](blockchain/README.md) and [`blockchain/docs/MAINNET_GATES.md`](blockchain/docs/MAINNET_GATES.md).
 
 ## Browser Wallet / Web UI
 
-The test wallet interface provides:
+The test wallet interface provides local Ed25519 wallet generation, PBKDF2-SHA256 + AES-GCM encrypted vaults, encrypted backup/import, local transaction signing, balances/activity, transfers, explorer views, validators, faucet requests and the opt-in Mining Lab.
 
-- local Ed25519 wallet generation,
-- PBKDF2-SHA256 + AES-GCM encrypted browser vault,
-- encrypted wallet backup/import,
-- local transaction signing,
-- balance/nonce/activity,
-- CRKBIT test transfer flow,
-- address/transaction explorer,
-- validator view,
-- faucet requests,
-- opt-in Mining Lab.
-
-The gateway is not intended to receive the wallet private key. The v0.16 security profile defaults to same-origin access and adds restrictive CSP/browser security headers.
+The gateway is not intended to receive the wallet private key. The security profile defaults to same-origin access and restrictive CSP/browser security headers.
 
 The wallet is not an audited hardware-wallet replacement. See [`blockchain/docs/WALLET_THREAT_MODEL.md`](blockchain/docs/WALLET_THREAT_MODEL.md).
 
@@ -130,12 +123,6 @@ pip install -e ".[dev]"
 crak scan ../your-project
 ```
 
-JSON output:
-
-```bash
-crak scan ../your-project --json
-```
-
 ## Quick Start — Crakbit Chain Research Node
 
 Requires Python 3.11+ and Docker.
@@ -148,15 +135,9 @@ python scripts/bootstrap_devnet.py
 docker compose up --build
 ```
 
-Open the local wallet UI:
+Open the local wallet UI at `http://127.0.0.1:9101/ui/`. This normal node path is the older research-consensus path.
 
-```text
-http://127.0.0.1:9101/ui/
-```
-
-This normal node path is the older research consensus path.
-
-## v0.16 External-BFT Tooling
+## v0.17 External-BFT / State-Sync Tooling
 
 Build the Go bridge:
 
@@ -167,31 +148,25 @@ go test -mod=mod ./...
 go build -o crakbit-cometbft-bridge .
 ```
 
-Generate a disposable 4-validator CometBFT lab with an operator-supplied CometBFT `v0.40.0` binary:
+Run the v0.17 external execution service with a secret kept local:
+
+```bash
+python ../scripts/run_execution_service_v17.py \
+  --genesis ../runtime/genesis.json \
+  --data ../runtime/comet-app \
+  --token REPLACE_WITH_LONG_RANDOM_SECRET
+```
+
+Materialize a CometBFT state-sync snapshot after a committed height:
 
 ```bash
 cd ..
-python scripts/generate_cometbft_lab.py \
-  --cometbft /path/to/cometbft \
-  --chain-id crakbit-v16-local \
-  --nodes 4 \
-  --output runtime/cometbft-lab
-```
-
-See [`blockchain/deploy/cometbft-lab/README.md`](blockchain/deploy/cometbft-lab/README.md).
-
-## External Application Checkpoints
-
-v0.16 can export and verify deterministic application state:
-
-```bash
-crakchain external-snapshot-export \
+crakchain comet-snapshot-materialize \
   --genesis runtime/genesis.json \
-  --data runtime/comet-app \
-  --output runtime/external-checkpoint.json
+  --data runtime/comet-app
 ```
 
-A restore should be bound to a separately trusted CometBFT height/application hash. Native CometBFT state-sync lifecycle integration is still a future gate.
+The state-sync snapshot is accepted on restore only when its application hash matches the trusted hash supplied by CometBFT and the complete reconstructed state verifies.
 
 ## Current Project Status
 
@@ -204,13 +179,14 @@ A restore should be bound to a separately trusted CometBFT height/application ha
 | Security CLI | Early alpha |
 | Developer API | Planned |
 | Smart-contract scanner | Planned |
-| Crakbit Chain package | **v0.16.0a1 alpha** |
+| Crakbit Chain package | **v0.17.0a1 alpha** |
 | Browser wallet/public gateway | **Alpha implemented** |
-| CometBFT ABCI bridge | **Integration PoC implemented** |
+| CometBFT ABCI bridge | **v0.17 integration implemented** |
 | Crash-safe external execution | **Prototype implemented** |
-| External application checkpoint | **v0.16 adapter implemented** |
-| Dedicated external explorer index | **v0.16 prototype implemented** |
-| Local multi-validator CometBFT lab generator | **v0.16 implemented** |
+| Native ABCI application state sync | **v0.17 code implemented; live independent-host evidence pending** |
+| Dedicated external explorer index | **Prototype implemented** |
+| Local multi-validator CometBFT lab generator | **Implemented** |
+| Signed public-testnet evidence tooling | **v0.17 implemented** |
 | Independent-host public testnet evidence | Not completed |
 | Independent consensus/security audit | Not completed |
 | Production CRKBIT | **Not launched** |
@@ -222,10 +198,10 @@ The high-level path is:
 1. Security MVP and developer tooling
 2. Blockchain-security tooling
 3. Research chain and recovery/security experiments
-4. External reviewed-BFT integration PoC
+4. External reviewed-BFT integration
 5. Browser wallet/public-testnet tooling
-6. Repeatable multi-validator/state-recovery/indexing infrastructure
-7. Sustained independent-host public testnet and published fault evidence
+6. Native state-sync and operational-evidence tooling
+7. Sustained independent-host public testnet and published fault/recovery evidence
 8. Independent security/consensus/wallet review
 9. Mainnet consideration only after technical, operational, economic and legal gates are satisfied
 
@@ -235,9 +211,7 @@ See [`ROADMAP.md`](ROADMAP.md).
 
 Crakbit AI is raising funds to support the Security MVP, security research, infrastructure, developer tools, documentation, testing and carefully staged blockchain/testnet research.
 
-The current fundraising target is **USD 150,000** with milestone-based allocation.
-
-See [`docs/FUNDING.md`](docs/FUNDING.md).
+The current fundraising target is **USD 150,000** with milestone-based allocation. See [`docs/FUNDING.md`](docs/FUNDING.md).
 
 **The current fundraising campaign is not a CRKBIT token sale and does not promise investment returns.**
 
@@ -253,9 +227,7 @@ The proposed development parameters use 8 decimals and a 21,000,000 maximum gene
 
 Crakbit AI is being developed primarily for defensive security, secure software development, code review, research and educational use.
 
-Please read [`SECURITY.md`](SECURITY.md) for project vulnerability reporting and [`blockchain/SECURITY.md`](blockchain/SECURITY.md) for blockchain-specific limitations.
-
-Mainnet release gates are documented in [`blockchain/docs/MAINNET_GATES.md`](blockchain/docs/MAINNET_GATES.md).
+Please read [`SECURITY.md`](SECURITY.md) for project vulnerability reporting and [`blockchain/SECURITY.md`](blockchain/SECURITY.md) for blockchain-specific limitations. Mainnet release gates are documented in [`blockchain/docs/MAINNET_GATES.md`](blockchain/docs/MAINNET_GATES.md).
 
 ## Contributing
 
