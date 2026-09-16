@@ -22,19 +22,7 @@ Production CRKBIT is not launched. There is no official presale or production to
 
 ## Legacy Blockchain Research — v0.1 through v0.30
 
-The earlier chain path used CometBFT/BFT validator consensus. It produced useful work in:
-
-- [x] signed transaction/accounting primitives,
-- [x] browser wallet/gateway/explorer/faucet tooling,
-- [x] ABCI/state-sync research,
-- [x] validator governance research,
-- [x] crash/replay/recovery testing,
-- [x] deployment/monitoring tooling,
-- [x] release/evidence signing,
-- [x] audit/remediation/retest gates,
-- [x] long-running evidence/archive/public-edge tooling.
-
-This code remains available as legacy/research infrastructure. It is **not silently combined** with the new PoW consensus path.
+The earlier chain path used CometBFT/BFT validator consensus. It produced useful wallet, recovery, monitoring, release and review tooling. That code remains legacy/research infrastructure and is **not silently combined** with the PoW consensus path.
 
 ## Native PoW Roadmap
 
@@ -43,7 +31,7 @@ This code remains available as legacy/research infrastructure. It is **not silen
 - [x] Package/CLI `0.31.0a1`
 - [x] Separate native PoW consensus path
 - [x] Bitcoin-style UTXO ledger
-- [x] Existing Ed25519 `crk1...` ownership keys
+- [x] Ed25519 `crk1...` ownership keys
 - [x] Signed UTXO transactions + fees
 - [x] Mempool double-spend protection
 - [x] Coinbase rewards + maturity
@@ -61,42 +49,43 @@ This code remains available as legacy/research infrastructure. It is **not silen
 - [x] Native CPU pool miner
 - [x] PoW regression tests
 
-### v0.31 limitations that remain explicit
+### v0.32 — decentralized PoW networking / chain selection
 
-- [ ] P2P peer network
-- [ ] Block/transaction gossip
-- [ ] Header-first sync
-- [ ] Competing-fork storage
-- [ ] Highest-cumulative-work reorganization
-- [ ] UTXO undo/rollback records
-- [ ] Orphan handling
-- [ ] Production timestamp/mempool/fee policy
-- [ ] Final PoW algorithm selection
-- [ ] RandomX native integration/benchmark
-- [ ] Standard Stratum/XMRig compatibility
-- [ ] Automatic mature pool payouts
-- [ ] Long-lived multi-node public PoW testnet
+- [x] Package/CLI `0.32.0a1`
+- [x] Versioned `crakbit-p2p/1` wire protocol
+- [x] Ed25519 peer identity + signed handshake
+- [x] Chain ID / genesis binding during handshake
+- [x] Static seed peers + bounded peer discovery
+- [x] Header locator/announcement synchronization path
+- [x] Inventory/block/transaction gossip
+- [x] Persistent side-chain block graph
+- [x] Bounded orphan storage + parent-triggered retry
+- [x] Cumulative-work comparison across branches
+- [x] Full branch replay validation before activation
+- [x] Strict higher-work canonical branch selection
+- [x] Canonical block/transaction/UTXO replacement from replayed branch state
+- [x] Reorg mempool/disconnected-transaction reconciliation
+- [x] Median-time-past branch timestamp rule
+- [x] Peer scoring + message/block/inventory/rate limits
+- [x] Combined P2P + mining-compatible RPC node
+- [x] Real two-node TCP synchronization regression test
 
-### v0.32 target — decentralized PoW networking / chain selection
+### v0.32 limitations still explicit
 
-- [ ] Define versioned P2P wire protocol
-- [ ] Peer identity + handshake + network/chain ID checks
-- [ ] Peer discovery / static seed nodes
-- [ ] Headers/inventory/block/transaction messages
-- [ ] Header-first synchronization
-- [ ] Side-chain block storage
-- [ ] Chainwork comparison across branches
-- [ ] Safe canonical reorg engine
-- [ ] UTXO undo journal
-- [ ] Reorg mempool reconciliation
-- [ ] Orphan block handling
-- [ ] Median-time-past style timestamp rules
-- [ ] Peer scoring / message-size / rate-limit protections
+- [ ] Durable UTXO undo journal for large reorg efficiency (v0.32 safely replays candidate state instead)
+- [ ] Persisted peer reputation/address database
+- [ ] Anti-eclipse/Sybil hardening
+- [ ] Full independently validated header-chain sync before block download
+- [ ] Compact block / bandwidth optimization
+- [ ] Large-chain reorg/sync performance benchmarks
+- [ ] Extensive malformed-message/fuzz/resource-exhaustion campaigns
+- [ ] Production transport/privacy/NAT policy
 
 ### v0.33 target — CPU mining algorithm / interoperability hardening
 
 - [ ] Integrate a real RandomX native implementation as a candidate
-- [ ] Benchmark scrypt vs RandomX on CPUs/GPUs
+- [ ] Publish deterministic RandomX test vectors
+- [ ] Benchmark scrypt vs RandomX on representative CPUs/GPUs
 - [ ] Review validation CPU/memory DoS exposure
 - [ ] Define deterministic RandomX seed/key schedule if selected
 - [ ] Multi-core optimized native miner
@@ -106,7 +95,7 @@ This code remains available as legacy/research infrastructure. It is **not silen
 - [ ] Stale/duplicate/share-replay defenses
 - [ ] Pool TLS/auth/rate limits
 
-### v0.34 target — wallet/pool/explorer production-testnet features
+### v0.34 target — wallet/pool/explorer + P2P hardening
 
 - [ ] Mature coinbase-aware pool payout transaction builder
 - [ ] PPLNS payout batching / fee policy
@@ -114,7 +103,9 @@ This code remains available as legacy/research infrastructure. It is **not silen
 - [ ] PoW explorer difficulty/hashrate/coinbase/miner views
 - [ ] Wallet confirmations / fee estimation / reorg awareness
 - [ ] Watch-only addresses and safe backup/recovery flows
-- [ ] Public node/RPC rate limiting and reverse proxy guidance
+- [ ] Persistent peer database + anti-eclipse controls
+- [ ] Efficient UTXO undo/reorg journal
+- [ ] Public node/RPC rate limiting and reverse-proxy guidance
 
 ### v0.35 target — real multi-node PoW public testnet
 
@@ -124,7 +115,7 @@ This code remains available as legacy/research infrastructure. It is **not silen
 - [ ] Natural and forced competing forks/reorg testing
 - [ ] Peer partition/reconnect tests
 - [ ] Invalid block/tx/fuzz/DoS campaigns
-- [ ] Snapshot/bootstrap/reindex/recovery testing
+- [ ] Bootstrap/reindex/recovery testing
 - [ ] Reproducible tagged releases + SBOM
 - [ ] Independent consensus/network/wallet/pool review
 
@@ -132,14 +123,14 @@ This code remains available as legacy/research infrastructure. It is **not silen
 
 Production mainnet should only be considered after:
 
-- a real decentralized P2P PoW network exists,
-- highest-chainwork fork/reorg logic has been independently tested/reviewed,
+- the decentralized PoW P2P/fork-choice implementation has undergone long-lived independent testing,
+- reorg/state-transition logic has been independently reviewed,
 - the final PoW algorithm and mining interoperability are frozen,
 - long-lived independent public testing succeeds,
 - wallet/node/pool security reviews are complete,
 - high/critical findings are remediated/retested,
 - production economics/rewards/fees/supply are finalized,
-- economic attack incentives are reviewed,
+- mining-centralization and economic attacks are reviewed,
 - applicable legal/regulatory review is complete,
 - an explicit human launch/no-launch decision is made.
 
@@ -147,4 +138,4 @@ Production mainnet should only be considered after:
 
 **Production CRKBIT is not launched. No official presale. No production token contract.**
 
-v0.31 subsidy, halving and target parameters are configurable devnet settings. The previously discussed 21,000,000 maximum-supply and 8-decimal design remain proposals until deliberately finalized and independently reviewed.
+Current subsidy, halving and target parameters are configurable devnet settings. The previously discussed 21,000,000 maximum-supply and 8-decimal design remain proposals until deliberately finalized and independently reviewed.
