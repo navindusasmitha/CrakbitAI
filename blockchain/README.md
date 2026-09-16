@@ -1,71 +1,86 @@
-# Crakbit Chain — Development Network Prototype
+# Crakbit Chain — Research / Public-Testnet Infrastructure
 
-**Status: research/devnet alpha (`0.14.0-alpha`)**
+**Status: alpha (`0.15.0a1`) — not a production mainnet.**
 
-Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosystem. The project now includes the earlier research Python consensus/devnet plus a separate v0.14 external-consensus integration path built around a pinned CometBFT ABCI bridge and a dedicated crash-safe Crakbit application-state service.
+Crakbit Chain is the experimental blockchain component of Crakbit AI. v0.15 keeps the v0.14 CometBFT integration proof-of-concept and adds a browser wallet, unified public gateway, persistent test faucet and an optional proof-of-work reward lab so the system can be exercised more like a public testnet.
 
-> This is **not a production mainnet**, has not completed independent consensus/network review, and must not be used to custody real value.
+> Production CRKBIT has **not** launched. There is no official CRKBIT presale or production token contract. Do not use this software to custody real value.
 
-## Devnet parameters
+## Development parameters
 
 - Symbol: `CRKBIT`
 - Decimals: `8`
 - Proposed development genesis cap: `21,000,000 CRKBIT`
-- Default research validators: `4`
-- Default research quorum: `3 of 4`
 - Address format: `crk1...`
 - Application signatures: Ed25519
+- Research validator topology: 4 validators / strict 3-of-4 quorum by default
+- External BFT integration candidate: CometBFT `v0.40.0`
 - Application state: SQLite
-- Research RPC: FastAPI / JSON
 
-The 21M value is a development-network parameter, not a promise of future token value or final mainnet economics. Production CRKBIT has not launched, there is no official presale, and there is no production token contract.
+The 21M figure is a development configuration parameter, not a promise of value or final production economics.
 
-## Consensus direction
+## Architecture
 
-The older Python prevote/precommit consensus remains a **research implementation only**. It is not the intended production BFT path.
+The repository currently has two clearly separated consensus paths.
 
-v0.14 adds a concrete external-consensus proof-of-concept:
+### Research path
 
 ```text
+Browser / CLI
+    ↓
+FastAPI research node
+    ↓
+Python prevote/precommit research consensus
+    ↓
+SQLite research-chain state
+```
+
+### External-BFT integration path
+
+```text
+Browser wallet
+    ↓
+Crakbit public gateway
+    ├──────────────→ authenticated execution read APIs
+    ↓
+CometBFT JSON-RPC
+    ↓
 CometBFT v0.40.0
-      │ ABCI socket
-      ▼
-Crakbit Go ABCI bridge
-      │ authenticated loopback HTTP
-      ▼
+    ↓ ABCI
+Crakbit Go bridge
+    ↓ authenticated loopback HTTP
 crakbit-execution/2 service
-      │ staged FinalizeBlock → atomic Commit
-      ▼
+    ↓ staged FinalizeBlock → atomic Commit
 Dedicated external application SQLite state
 ```
 
-This topology is separate from the normal research `crakchain node` database. Do not point both consensus owners at the same data directory.
+The Python consensus remains research-only. It is not presented as the intended production mainnet consensus.
 
-See [`docs/ADR-0001-consensus-direction.md`](docs/ADR-0001-consensus-direction.md), [`docs/EXTERNAL_CONSENSUS_V2.md`](docs/EXTERNAL_CONSENSUS_V2.md) and [`V0.14.md`](V0.14.md).
+## v0.15 large update
 
-## v0.14 major update
+v0.15 adds:
 
-v0.14 adds:
+- responsive Web UI for network status, wallet, explorer, validators, faucet and Mining Lab,
+- browser-generated Ed25519 wallets and `crk1...` addresses,
+- PBKDF2-SHA256 + AES-GCM encrypted local wallet vault,
+- client-side canonical transaction signing,
+- encrypted wallet backup/import support,
+- standalone public gateway with `research` and `cometbft` modes,
+- CometBFT `broadcast_tx_sync` support for signed Crakbit transactions,
+- authenticated external-execution read APIs for accounts, transactions and commits,
+- persistent SQLite test-faucet cooldown/distribution records,
+- gateway-aware faucet broadcasting,
+- opt-in browser proof-of-work Mining Lab with persistent server-side challenges,
+- persistent mining cooldown and daily reward limits,
+- dedicated non-validator mining-reward wallet model,
+- v0.15 automated tests,
+- explicit production mainnet release gates.
 
-- versioned `crakbit-execution/2` mutating external-consensus protocol,
-- deterministic application hash over height, consensus block hash and sorted account state,
-- persisted non-mutating FinalizeBlock staging,
-- atomic SQLite Commit with durable external commit records,
-- pending-finalize recovery across process restart,
-- dedicated external execution database isolation checks,
-- authenticated v0.14 execution service,
-- Go ABCI bridge pinned to `github.com/cometbft/cometbft v0.40.0`,
-- ABCI `Info`, `CheckTx`, `PrepareProposal`, `ProcessProposal`, `FinalizeBlock`, `Commit` and minimal query support,
-- signed >2/3 genesis ceremony/attestation tooling,
-- external-consensus local CLI/debug commands,
-- `/consensus/integration-status`,
-- combined Python + Go blockchain CI.
+See [`V0.15.md`](V0.15.md) and [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md).
 
-All v0.13 signed release tooling, faucet/explorer experiments, v0.12 archive recovery, v0.11 mTLS/pinning and earlier backup/snapshot/resource-hardening work remain in the repository.
+## Quick start — local research network + Web wallet
 
-## Quick start — research local devnet
-
-Requirements: Python 3.11+ and Docker Desktop / Docker Engine.
+Requirements: Python 3.11+ and Docker.
 
 ```bash
 cd blockchain
@@ -75,16 +90,101 @@ python scripts/bootstrap_devnet.py
 docker compose up --build
 ```
 
-Local research RPC endpoints:
+Open the browser wallet/explorer on node 1:
 
-- Node 1: `http://127.0.0.1:9101`
-- Node 2: `http://127.0.0.1:9102`
-- Node 3: `http://127.0.0.1:9103`
-- Node 4: `http://127.0.0.1:9104`
+```text
+http://127.0.0.1:9101/ui/
+```
 
-## v0.14 external application service
+Research RPC nodes:
 
-Use a **fresh dedicated data directory**:
+```text
+http://127.0.0.1:9101
+http://127.0.0.1:9102
+http://127.0.0.1:9103
+http://127.0.0.1:9104
+```
+
+## Browser wallet security model
+
+The Web UI creates Ed25519 keys in the browser. The private key is stored only inside an encrypted local vault using PBKDF2-SHA256 and AES-GCM. Transactions are signed in the browser before broadcast.
+
+The alpha browser vault is **not a hardware wallet and has not completed independent wallet review**. Browser compromise, malicious extensions, XSS or origin compromise can still put keys at risk. Keep an encrypted backup and never import validator/release/faucet/mining-reward keys into the browser wallet.
+
+## Full local public-UX stack
+
+Create dedicated test wallets for the faucet and mining rewards:
+
+```bash
+crakchain keygen --output runtime/faucet.json
+crakchain keygen --output runtime/mining-reward.json
+```
+
+Fund these wallets with test CRKBIT from the development treasury. Do not use validator consensus keys.
+
+Start the public gateway:
+
+```bash
+python scripts/run_public_gateway.py \
+  --genesis runtime/genesis.json \
+  --mode research \
+  --research-rpc http://127.0.0.1:9101 \
+  --faucet-url http://127.0.0.1:9400 \
+  --mining-url http://127.0.0.1:9500 \
+  --host 127.0.0.1 \
+  --port 9600
+```
+
+Start the persistent test faucet:
+
+```bash
+python scripts/run_faucet.py \
+  --genesis runtime/genesis.json \
+  --key runtime/faucet.json \
+  --gateway http://127.0.0.1:9600 \
+  --state runtime/faucet-state.sqlite3 \
+  --amount 10
+```
+
+Start the test Mining Lab reward service:
+
+```bash
+python scripts/run_pow_mining.py \
+  --genesis runtime/genesis.json \
+  --key runtime/mining-reward.json \
+  --gateway http://127.0.0.1:9600 \
+  --state runtime/mining-state.sqlite3 \
+  --reward 1 \
+  --difficulty-bits 18
+```
+
+Open:
+
+```text
+http://127.0.0.1:9600/ui/
+```
+
+## What “Mining Lab” means
+
+The current Mining Lab is **not consensus block mining**.
+
+It works like this:
+
+```text
+browser gets random challenge
+        ↓
+visible SHA-256 proof-of-work
+        ↓
+server verifies target
+        ↓
+dedicated reward wallet sends a test CRKBIT transaction
+```
+
+CometBFT remains the external BFT consensus integration path. Converting Crakbit itself to proof-of-work block production would require a different consensus protocol and is not silently mixed into this design.
+
+## CometBFT integration
+
+Run the external application service on a private/loopback interface with a long random bearer token:
 
 ```bash
 python scripts/run_execution_service_v14.py \
@@ -95,22 +195,7 @@ python scripts/run_execution_service_v14.py \
   --port 26659
 ```
 
-Useful authenticated endpoints:
-
-```text
-GET  /v2/info
-GET  /v2/pending
-POST /v2/check-tx
-POST /v2/preview-finalize
-POST /v2/finalize
-POST /v2/commit
-```
-
-Only `/health` is unauthenticated. Keep this service on loopback/private networking.
-
-## CometBFT bridge
-
-Requires Go 1.25+.
+Build/test the ABCI bridge:
 
 ```bash
 cd blockchain/cometbft-app
@@ -119,88 +204,54 @@ go test -mod=mod ./...
 go build -o crakbit-cometbft-bridge .
 ```
 
-Run:
+The execution service and ABCI socket should remain private. Never expose the execution bearer token in browser JavaScript.
+
+Public gateway in CometBFT mode:
 
 ```bash
-export CRAKBIT_EXECUTION_URL=http://127.0.0.1:26659
-export CRAKBIT_EXECUTION_TOKEN=REPLACE_WITH_LONG_RANDOM_SECRET
-export CRAKBIT_ABCI_LISTEN=tcp://127.0.0.1:26658
-./crakbit-cometbft-bridge
-```
-
-Configure the CometBFT node's `proxy_app` to the bridge socket. CometBFT node/validator keys are separate from Crakbit application keys.
-
-See [`cometbft-app/README.md`](cometbft-app/README.md).
-
-## External execution CLI
-
-```bash
-crakchain external-status \
+python scripts/run_public_gateway.py \
   --genesis runtime/genesis.json \
-  --data runtime/comet-app
+  --mode cometbft \
+  --comet-rpc http://127.0.0.1:26657 \
+  --execution-url http://127.0.0.1:26659 \
+  --execution-token REPLACE_WITH_LOCAL_SECRET \
+  --host 127.0.0.1 \
+  --port 9600
 ```
 
-Preview a block transition without mutating state:
+## Key-role separation
 
-```bash
-crakchain external-preview \
-  --genesis runtime/genesis.json \
-  --data runtime/comet-app \
-  --height 1 \
-  --block-hash 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
-  --transactions runtime/transactions.json
+Use different keys for different jobs:
+
+```text
+CometBFT consensus/node key
+Crakbit research-validator key
+user wallet key
+TLS key
+release-signing key
+faucet key
+mining-reward key
 ```
 
-The `external-finalize` and `external-commit` commands expose the same staged lifecycle for local/debug testing.
+Never commit private keys or seed material to GitHub.
 
-## Signed genesis ceremony
+## Signed genesis and release artifacts
 
-Create the ceremony statement:
+The v0.14+ tooling remains available:
 
-```bash
-crakchain ceremony-create \
-  --genesis runtime/genesis.json \
-  --output runtime/genesis-ceremony.json
+```text
+crakchain ceremony-create
+crakchain ceremony-sign
+crakchain ceremony-verify
+crakchain release-build
+crakchain release-verify
 ```
 
-Each configured validator signs independently with its own local validator key:
+A proper production launch would require independently held validator keys, reproducible artifacts and a verified final genesis ceremony.
 
-```bash
-crakchain ceremony-sign \
-  --ceremony runtime/genesis-ceremony.json \
-  --key runtime/node1/validator.json
-```
+## Recovery and integrity tooling
 
-After enough independent validator attestations, verify strict >2/3 quorum:
-
-```bash
-crakchain ceremony-verify \
-  --ceremony runtime/genesis-ceremony.json \
-  --genesis runtime/genesis.json
-```
-
-Never send validator private keys to another operator just to create a ceremony file. Only exchange the signed public ceremony artifact.
-
-## Signed release manifests
-
-Use a **dedicated release-signing key**, not a validator key:
-
-```bash
-crakchain keygen --output runtime/release-signing-key.json
-
-crakchain release-build \
-  --genesis runtime/genesis.json \
-  --key runtime/release-signing-key.json \
-  --version 0.14.0a1 \
-  --artifact dist/crakbit-chain.whl \
-  --output runtime/release-0.14.json
-```
-
-Verify with `crakchain release-verify` and an expected release-signer address.
-
-## Snapshot, archive, integrity and recovery
-
-Earlier recovery tooling remains available:
+Existing tooling remains available:
 
 ```text
 snapshot-fetch-chunked
@@ -214,30 +265,9 @@ backup-create
 backup-verify
 ```
 
-The genesis-anchored archive tooling verifies proposer signatures, view-change certificates, prevote/precommit quorum certificates, transaction signatures/nonces/balances, state roots and hash continuity for the research chain history.
-
-## Research explorer / faucet / operations
-
-The research node continues to provide bounded explorer APIs and test-only faucet tooling. Public deployment still requires upstream reverse-proxy/firewall/DDoS controls and persistent abuse limits.
-
-Useful research-node endpoints include:
-
-```text
-GET /consensus/integration-status
-GET /protocol/status
-GET /explorer/summary
-GET /explorer/blocks
-GET /explorer/address/{address}
-GET /transport/status
-GET /archive/status
-GET /execution/status
-GET /operator/security-status
-GET /metrics/prometheus
-```
-
 ## Tests
 
-Python suite:
+Python:
 
 ```bash
 cd blockchain
@@ -245,7 +275,7 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-Go bridge suite:
+CometBFT Go bridge:
 
 ```bash
 cd blockchain/cometbft-app
@@ -253,20 +283,19 @@ go mod download
 go test -mod=mod ./...
 ```
 
-GitHub Actions runs both suites on blockchain changes.
+GitHub Actions runs both suites for blockchain changes.
 
-## Main remaining blockers
+## Before a real mainnet
 
-- sustained live multi-process CometBFT replay/restart testing,
-- multi-host CometBFT validator deployment with published partition/latency/load evidence,
-- exhaustive app-ahead/consensus-ahead crash recovery testing,
-- CometBFT state-sync integration with Crakbit snapshots,
-- reviewed validator-set lifecycle/governance design,
-- production validator/release-key custody or HSM/remote-signer strategy,
-- indexed external-consensus explorer storage,
-- persistent/upstream faucet abuse protection,
-- production monitoring/firewall/reverse-proxy/DDoS architecture,
-- independent consensus/network/application security review,
-- meaningful public-testnet operation before any mainnet planning.
+A Web UI, wallets and a mining-looking feature do **not** make a blockchain production-ready. Before any production mainnet claim, the project still needs a sustained independent-host testnet, external-consensus state sync, exhaustive fault/load testing, production validator key custody, hardened public infrastructure, indexed explorer, independent consensus/network/application/wallet review, incident-response operations and final economic/legal review.
 
-See [`V0.14.md`](V0.14.md), [`docs/EXTERNAL_CONSENSUS_V2.md`](docs/EXTERNAL_CONSENSUS_V2.md), [`cometbft-app/README.md`](cometbft-app/README.md), [`V0.13.md`](V0.13.md), [`SPEC.md`](SPEC.md) and [`SECURITY.md`](SECURITY.md).
+The complete checklist is in [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md).
+
+Further documentation:
+
+- [`V0.15.md`](V0.15.md)
+- [`V0.14.md`](V0.14.md)
+- [`docs/EXTERNAL_CONSENSUS_V2.md`](docs/EXTERNAL_CONSENSUS_V2.md)
+- [`docs/ADR-0001-consensus-direction.md`](docs/ADR-0001-consensus-direction.md)
+- [`SPEC.md`](SPEC.md)
+- [`SECURITY.md`](SECURITY.md)
