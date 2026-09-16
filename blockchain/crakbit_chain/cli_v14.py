@@ -9,6 +9,7 @@ from pathlib import Path
 from . import cli as legacy_cli
 from . import cli_v13
 from .external_commit import ExternalExecutionStore
+from .external_replay import replay_safe_stage_finalize
 from .genesis import Genesis
 from .genesis_ceremony import (
     add_attestation,
@@ -88,7 +89,8 @@ def _run_external(argv: list[str]) -> int:
                 transactions=transactions,
             )
         else:
-            result = store.stage_finalize(
+            result = replay_safe_stage_finalize(
+                store,
                 height=args.height,
                 consensus_block_hash=args.block_hash,
                 transactions=transactions,
