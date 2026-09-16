@@ -19,7 +19,7 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 )
 
-const bridgeVersion = "crakbit-cometbft-bridge/0.17"
+const bridgeVersion = "crakbit-cometbft-bridge/0.21"
 
 type executionClient struct {
 	baseURL string
@@ -46,12 +46,18 @@ type checkResponse struct {
 	Detail   string `json:"detail"`
 }
 
+type validatorUpdateResponse struct {
+	PublicKey string `json:"public_key"`
+	Power     int64  `json:"power"`
+}
+
 type finalizeResponse struct {
-	Protocol            string `json:"protocol"`
-	Height              int64  `json:"height"`
-	NextApplicationHash string `json:"next_application_hash"`
-	RequestHash         string `json:"request_hash"`
-	TransactionCount    int    `json:"transaction_count"`
+	Protocol            string                    `json:"protocol"`
+	Height              int64                     `json:"height"`
+	NextApplicationHash string                    `json:"next_application_hash"`
+	RequestHash         string                    `json:"request_hash"`
+	TransactionCount    int                       `json:"transaction_count"`
+	ValidatorUpdates    []validatorUpdateResponse `json:"validator_updates"`
 }
 
 type commitResponse struct {
@@ -178,9 +184,27 @@ func rawTransactions(txs [][]byte) ([]json.RawMessage, error) {
 	return items, nil
 }
 
+func decodeValidatorUpdates(items []validatorUpdateResponse) ([]abci.ValidatorUpdate, error) {
+	updates := make([]abci.ValidatorUpdate, 0, len(items))
+	for _, item := range items {
+		pubKey, err := base64.StdEncoding.DecodeString(item.PublicKey)
+		if err != nil {
+			return nil, fmt.Errorf("decode validator public key: %w", err)
+		}
+		if len(pubKey) != 32 {
+			return nil, fmt.Errorf("validator Ed25519 public key must be 32 bytes, got %d", len(pubKey))
+		}
+		if item.Power < 0 {
+			return nil, fmt.Errorf("validator power may not be negative")
+		}
+		updates = append(updates, abci.Ed25519ValidatorUpdate(pubKey, item.Power))
+	}
+	return updates, nil
+}
+
 func (app *bridgeApp) Info(ctx context.Context, _ *abci.RequestInfo) (*abci.ResponseInfo, error) {
 	var info infoResponse
-	if err := app.execution.doJSON(ctx, http.MethodGet, "/v2/info", nil, &info); err != nil {
+	if err := app.execution.doJSON(ctx, http.MethodGet, "/v4/info", nil, &info); err != nil {
 		return nil, err
 	}
 	appHash, err := decodeHash(info.ApplicationHash)
@@ -190,7 +214,7 @@ func (app *bridgeApp) Info(ctx context.Context, _ *abci.RequestInfo) (*abci.Resp
 	return &abci.ResponseInfo{
 		Data:             bridgeVersion,
 		Version:          bridgeVersion,
-		AppVersion:       2,
+		AppVersion:       3,
 		LastBlockHeight:  info.Height,
 		LastBlockAppHash: appHash,
 	}, nil
@@ -204,7 +228,7 @@ func (app *bridgeApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*a
 	if err := app.execution.doJSON(
 		ctx,
 		http.MethodPost,
-		"/v2/check-tx",
+		"/v4/check-tx",
 		txEnvelope{Transaction: json.RawMessage(req.Tx)},
 		&result,
 	); err != nil {
@@ -261,7 +285,7 @@ func (app *bridgeApp) FinalizeBlock(ctx context.Context, req *abci.RequestFinali
 	if err := app.execution.doJSON(
 		ctx,
 		http.MethodPost,
-		"/v2/finalize",
+		"/v4/finalize",
 		finalizeEnvelope{
 			Height:             req.Height,
 			ConsensusBlockHash: hex.EncodeToString(req.Hash),
@@ -275,19 +299,24 @@ func (app *bridgeApp) FinalizeBlock(ctx context.Context, req *abci.RequestFinali
 	if err != nil {
 		return nil, err
 	}
+	validatorUpdates, err := decodeValidatorUpdates(result.ValidatorUpdates)
+	if err != nil {
+		return nil, err
+	}
 	txResults := make([]*abci.ExecTxResult, len(req.Txs))
 	for i := range txResults {
 		txResults[i] = &abci.ExecTxResult{Code: abci.CodeTypeOK}
 	}
 	return &abci.ResponseFinalizeBlock{
-		TxResults: txResults,
-		AppHash:   appHash,
+		TxResults:        txResults,
+		AppHash:          appHash,
+		ValidatorUpdates: validatorUpdates,
 	}, nil
 }
 
 func (app *bridgeApp) Commit(ctx context.Context, _ *abci.RequestCommit) (*abci.ResponseCommit, error) {
 	var result commitResponse
-	if err := app.execution.doJSON(ctx, http.MethodPost, "/v2/commit", struct{}{}, &result); err != nil {
+	if err := app.execution.doJSON(ctx, http.MethodPost, "/v4/commit", struct{}{}, &result); err != nil {
 		return nil, err
 	}
 	return &abci.ResponseCommit{}, nil
@@ -422,7 +451,7 @@ func (app *bridgeApp) Query(ctx context.Context, req *abci.RequestQuery) (*abci.
 		return &abci.ResponseQuery{Code: 1, Log: "supported query path: /app/info"}, nil
 	}
 	var info infoResponse
-	if err := app.execution.doJSON(ctx, http.MethodGet, "/v2/info", nil, &info); err != nil {
+	if err := app.execution.doJSON(ctx, http.MethodGet, "/v4/info", nil, &info); err != nil {
 		return nil, err
 	}
 	encoded, err := json.Marshal(info)
