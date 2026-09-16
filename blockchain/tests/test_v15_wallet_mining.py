@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import importlib
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -10,7 +12,6 @@ from crakbit_chain.crypto import KeyPair
 from crakbit_chain.execution_service_v14 import ExecutionServiceV14Config, create_app as create_execution_app
 from crakbit_chain.models import ATOMIC_UNITS
 from crakbit_chain.pow_mining import MiningStore, meets_difficulty, work_digest
-from crakbit_chain.public_gateway import GatewayConfig
 
 
 def make_genesis(tmp_path: Path):
@@ -121,7 +122,9 @@ def test_external_execution_read_api_for_gateway(tmp_path):
 
 def test_gateway_config_and_packaged_wallet_ui(tmp_path):
     genesis_path, _, _, _ = make_genesis(tmp_path)
-    config = GatewayConfig(genesis_path=str(genesis_path), mode="research")
+    os.environ["CRAKBIT_GATEWAY_GENESIS"] = str(genesis_path)
+    module = importlib.import_module("crakbit_chain.public_gateway")
+    config = module.GatewayConfig(genesis_path=str(genesis_path), mode="research")
     config.validate()
 
     package_dir = Path(__file__).resolve().parents[1] / "crakbit_chain" / "webui"
