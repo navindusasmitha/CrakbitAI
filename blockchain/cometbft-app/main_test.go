@@ -13,6 +13,7 @@ import (
 
 func mockExecutionServer(t *testing.T) *httptest.Server {
 	t.Helper()
+	zeroHash := hex.EncodeToString(make([]byte, 32))
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer test-token-12345678901234567890" {
 			http.Error(w, `{"detail":"unauthorized"}`, http.StatusUnauthorized)
@@ -25,7 +26,7 @@ func mockExecutionServer(t *testing.T) *httptest.Server {
 				"protocol":         "crakbit-execution/2",
 				"chain_id":         "crakbit-test",
 				"height":           0,
-				"application_hash": string(make([]byte, 0)),
+				"application_hash": zeroHash,
 			})
 		case "/v2/check-tx":
 			_ = json.NewEncoder(w).Encode(map[string]any{
@@ -36,15 +37,15 @@ func mockExecutionServer(t *testing.T) *httptest.Server {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"protocol":              "crakbit-execution/2",
 				"height":                1,
-				"next_application_hash": hex.EncodeToString(make([]byte, 32)),
-				"request_hash":          hex.EncodeToString(make([]byte, 32)),
+				"next_application_hash": zeroHash,
+				"request_hash":          zeroHash,
 				"transaction_count":     1,
 			})
 		case "/v2/commit":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"protocol":         "crakbit-execution/2",
 				"height":           1,
-				"application_hash": hex.EncodeToString(make([]byte, 32)),
+				"application_hash": zeroHash,
 				"committed":        true,
 			})
 		default:
@@ -53,13 +54,25 @@ func mockExecutionServer(t *testing.T) *httptest.Server {
 	}))
 }
 
-func TestCheckFinalizeAndCommit(t *testing.T) {
+func TestInfoCheckFinalizeAndCommit(t *testing.T) {
 	server := mockExecutionServer(t)
 	defer server.Close()
 	app := newBridge(server.URL, "test-token-12345678901234567890")
 	ctx := context.Background()
 
+	info, err := app.Info(ctx, &abci.RequestInfo{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.LastBlockHeight != 0 || len(info.LastBlockAppHash) != 32 {
+		t.Fatalf("unexpected info response: %#v", info)
+	}
+
 	tx := []byte(`{"chain_id":"crakbit-test"}`)
+	// Raw string above contains backslashes, so use a real JSON transaction below.
+	tx = []byte(`{"noop":true}`)
+	// Replace the escaped fixture with valid JSON bytes for bridge framing tests.
+	tx = []byte("{\"chain_id\":\"crakbit-test\"}")
 	check, err := app.CheckTx(ctx, &abci.RequestCheckTx{Tx: tx})
 	if err != nil {
 		t.Fatal(err)
