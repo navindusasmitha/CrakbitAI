@@ -1,0 +1,41 @@
+services:
+  validator:
+    build:
+      context: ../..
+    restart: unless-stopped
+    command:
+      - crakchain
+      - node
+      - --genesis
+      - /config/genesis.json
+      - --key
+      - /run/secrets/validator-key.json
+      - --data
+      - /data
+      - --host
+      - 0.0.0.0
+      - --port
+      - "9101"
+      - --require-peer-tls
+    environment:
+      CRAKBIT_MAX_PUBLIC_BODY_BYTES: ${CRAKBIT_MAX_PUBLIC_BODY_BYTES:-262144}
+      CRAKBIT_MAX_INTERNAL_BODY_BYTES: ${CRAKBIT_MAX_INTERNAL_BODY_BYTES:-2097152}
+      CRAKBIT_PUBLIC_TX_RPM: ${CRAKBIT_PUBLIC_TX_RPM:-60}
+      CRAKBIT_MAX_MEMPOOL_TXS: ${CRAKBIT_MAX_MEMPOOL_TXS:-5000}
+      CRAKBIT_MAX_BLOCK_TXS: ${CRAKBIT_MAX_BLOCK_TXS:-1000}
+      CRAKBIT_MAX_TX_BYTES: ${CRAKBIT_MAX_TX_BYTES:-65536}
+    volumes:
+      - ./genesis.json:/config/genesis.json:ro
+      - ./validator-key.json:/run/secrets/validator-key.json:ro
+      - validator-data:/data
+    expose:
+      - "9101"
+    networks:
+      - validator-net
+
+networks:
+  validator-net:
+    driver: bridge
+
+volumes:
+  validator-data:
