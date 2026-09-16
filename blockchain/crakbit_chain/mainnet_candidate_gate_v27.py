@@ -6,6 +6,7 @@ from . import mainnet_candidate_v27 as core
 
 
 MainnetCandidateV27Error = core.MainnetCandidateV27Error
+_original_build_candidate_identity = core.build_candidate_identity
 
 
 def build_candidate_identity(
@@ -50,7 +51,7 @@ def build_candidate_identity(
         if manifest.get("subject_sha256") != economics_subject:
             raise MainnetCandidateV27Error(f"{label} review does not bind the exact economics freeze")
 
-    return core._build_candidate_identity_unpatched(
+    return _original_build_candidate_identity(
         operational_readiness=operational_readiness,
         remediation_gate=remediation_gate,
         governance_policy=governance_policy,
