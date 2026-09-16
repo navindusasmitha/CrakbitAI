@@ -1,45 +1,24 @@
 # Crakbit Chain — Development Network Prototype
 
-**Status: early devnet / research prototype (`0.9.0-alpha`)**
+**Status: research/devnet alpha (`0.10.0-alpha`)**
 
-Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosystem. The current devnet implements native test-only **CRKBIT** accounting, signed transactions, certified view changes, a two-phase **prevote → precommit** finality pipeline, durable local consensus locks, authenticated validator requests, durable peer replay protection, quorum-certified state snapshots, resumable chunked snapshot transfer, recovery journaling, local integrity diagnostics, verified online backups, validator telemetry, peer synchronization, RPC/CLI tooling and a development explorer.
+Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosystem. The current development network includes native test-only `CRKBIT` accounting, Ed25519-signed transactions, certified view changes, prevote/precommit finality, authenticated validator requests, durable replay protection, quorum-certified state snapshots, resumable snapshot transfer, integrity checks, verified backups, Prometheus/Grafana monitoring and v0.10 resource-bounding controls.
 
-> This is **not a production mainnet**, has not been independently audited, and must not be used to custody real value.
+> This is **not a production mainnet**, has not completed independent consensus/network review, and must not be used to custody real value.
 
 ## Devnet Parameters
 
-- Native symbol: `CRKBIT`
+- Symbol: `CRKBIT`
 - Decimals: `8`
-- Proposed maximum genesis supply: `21,000,000 CRKBIT`
-- Default local validator count: `4`
+- Proposed development genesis cap: `21,000,000 CRKBIT`
+- Default validators: `4`
 - Default quorum: `3 of 4`
-- Transaction/block/vote/request signatures: Ed25519
 - Address format: `crk1...`
-- Default block interval: 5 seconds
-- Default view timeout: 10 seconds
+- Signatures: Ed25519
 - State storage: SQLite
-- RPC: FastAPI / JSON over HTTP
+- RPC: FastAPI / JSON
 
-The 21M cap is a **devnet configuration parameter**, not a promise of future token value or final mainnet economics.
-
-## v0.9 Operations / Integrity Upgrade
-
-v0.9 keeps the existing research consensus behavior unchanged and adds operator-safety tooling around storage, recovery and monitoring.
-
-New work includes:
-
-- `crakchain doctor` quick/full ledger integrity checks,
-- SQLite corruption checks,
-- genesis/tip/supply/snapshot-base consistency verification,
-- local block-chain continuity verification,
-- proposer/certificate/transaction-index verification,
-- online SQLite backup creation,
-- SHA-256 backup manifests,
-- backup verification against chain identity and integrity checks,
-- `/integrity/status` and `/operations/status`,
-- development Prometheus + Grafana configuration and validator dashboard.
-
-This phase does **not** claim to solve the remaining mature-BFT or validator-mTLS blockers.
+The 21M value is a development-network configuration parameter, not a promise of future token value or final mainnet economics.
 
 ## Consensus Flow
 
@@ -53,114 +32,36 @@ proposal
 finalized block
 ```
 
-Certified view changes remain required for later rounds. A validator persists its local lock when precommitting. The current lock remains deliberately conservative and is **not yet a complete production BFT unlock protocol**.
+Later rounds require certified view changes. Local phase votes and locks survive restart. The current cross-round lock remains conservative and is **not yet a reviewed production BFT lock/unlock protocol**.
 
-## Validator Request Authentication
+## v0.10 Hardening
 
-Internal validator requests are signed with Ed25519 and commit to the HTTP method, request path, request-body hash, validator identity, timestamp and random nonce.
+v0.10 adds:
 
-Accepted replay nonces are persisted in SQLite under the node data directory so a process restart does not immediately erase replay state.
+- bounded public/internal request sizes,
+- public `POST /transactions` rate limiting,
+- maximum serialized transaction size,
+- bounded mempool capacity,
+- bounded block transaction selection,
+- `/limits/status`,
+- verified backup restore-drill tooling,
+- Prometheus alert rules,
+- a future public-testnet validator deployment scaffold.
 
-A signed challenge/response endpoint verifies possession of the configured validator key.
+Default development limits:
 
-`--require-peer-tls` can enforce HTTPS peer URLs, but this is not yet a complete mutually authenticated TLS/certificate lifecycle.
-
-## Quorum Snapshot Recovery
-
-A quorum snapshot certificate requires strict `>2/3` signatures over the exact same snapshot hash. For the default four-validator devnet, at least three matching validator signatures are required.
-
-Build a certificate using resumable verified chunks:
-
-```bash
-crakchain snapshot-fetch-chunked \
-  --genesis runtime/genesis.json \
-  --output runtime/snapshot-cert.json \
-  --cache-dir runtime/snapshot-cache
+```text
+CRAKBIT_MAX_PUBLIC_BODY_BYTES=262144
+CRAKBIT_MAX_INTERNAL_BODY_BYTES=2097152
+CRAKBIT_PUBLIC_TX_RPM=60
+CRAKBIT_MAX_MEMPOOL_TXS=5000
+CRAKBIT_MAX_BLOCK_TXS=1000
+CRAKBIT_MAX_TX_BYTES=65536
 ```
 
-Verify the resulting certificate:
+These node-local limits are defense-in-depth. A public testnet still requires a hardened reverse proxy/load balancer, firewall policy and network-level abuse controls.
 
-```bash
-crakchain snapshot-verify \
-  --snapshot runtime/snapshot-cert.json \
-  --genesis runtime/genesis.json
-```
-
-Import into a **fresh** database only:
-
-```bash
-crakchain snapshot-import \
-  --snapshot runtime/snapshot-cert.json \
-  --genesis runtime/genesis.json \
-  --data runtime/recovered-node
-```
-
-Snapshot bootstrap restores certified account balances/nonces and the finalized base hash. It does **not** reconstruct block bodies or transaction history before that snapshot base.
-
-## v0.9 Integrity Doctor
-
-Quick local check:
-
-```bash
-crakchain doctor \
-  --genesis runtime/genesis.json \
-  --data runtime/node1-data
-```
-
-Full local-history check:
-
-```bash
-crakchain doctor \
-  --genesis runtime/genesis.json \
-  --data runtime/node1-data \
-  --full
-```
-
-Full mode verifies locally stored block continuity, block hashes, proposer schedule/signatures, transaction Merkle roots, view-change/prevote/precommit certificates and the local transaction index.
-
-Snapshot-bootstrapped nodes are checked starting from their certified snapshot base. Missing pre-snapshot block bodies are reported as an expected limitation, not silently treated as locally available history.
-
-RPC diagnostics:
-
-```bash
-curl http://127.0.0.1:9101/integrity/status
-curl "http://127.0.0.1:9101/integrity/status?full=true"
-curl http://127.0.0.1:9101/operations/status
-```
-
-## Verified Online Backups
-
-Create a consistent online SQLite backup and SHA-256 manifest:
-
-```bash
-crakchain backup-create \
-  --genesis runtime/genesis.json \
-  --data runtime/node1-data \
-  --output runtime/backups/node1.sqlite3
-```
-
-Verify later:
-
-```bash
-crakchain backup-verify \
-  --genesis runtime/genesis.json \
-  --backup runtime/backups/node1.sqlite3 \
-  --manifest runtime/backups/node1.sqlite3.manifest.json \
-  --full
-```
-
-The copied database must pass integrity verification before backup creation succeeds. The manifest binds the chain ID, genesis fingerprint, height, tip hash, file size and complete-file SHA-256.
-
-## Snapshot-Aware History
-
-```bash
-curl http://127.0.0.1:9101/history/status
-curl http://127.0.0.1:9101/history/block/1
-```
-
-A snapshot-bootstrapped node reports its snapshot base height/hash and local history start. Requests for unavailable pre-snapshot local block bodies return an explicit `410 Gone` explanation through the history-aware endpoint.
-
-## Quick Start — Fresh Local Devnet
+## Quick Start
 
 Requirements: Python 3.11+ and Docker Desktop / Docker Engine.
 
@@ -180,33 +81,7 @@ Local RPC endpoints:
 - Node 4: `http://127.0.0.1:9104`
 - API docs: `http://127.0.0.1:9101/docs`
 
-## Monitoring
-
-```bash
-curl http://127.0.0.1:9101/health
-curl http://127.0.0.1:9101/status
-curl http://127.0.0.1:9101/peers
-curl http://127.0.0.1:9101/validators
-curl http://127.0.0.1:9101/evidence
-curl http://127.0.0.1:9101/consensus/events
-curl http://127.0.0.1:9101/metrics/prometheus
-curl http://127.0.0.1:9101/recovery/status
-curl http://127.0.0.1:9101/history/status
-curl http://127.0.0.1:9101/integrity/status
-```
-
-A development Prometheus + Grafana stack is available under [`ops/`](ops/):
-
-```bash
-cd blockchain/ops
-docker compose -f docker-compose.observability.yml up -d
-```
-
-See [`ops/README.md`](ops/README.md). The included Grafana credentials are development defaults and must not be exposed unchanged.
-
-## Wallet / Test CRKBIT
-
-Bootstrap creates a **devnet-only** treasury key at `runtime/treasury.json` unless an existing test address is supplied.
+## Wallet / Test Transfers
 
 ```bash
 crakchain keygen --output runtime/alice.json
@@ -225,51 +100,123 @@ crakchain send \
   --rpc http://127.0.0.1:9101
 ```
 
-## Explorer
+Never commit or share validator/private wallet key files.
+
+## Snapshot Recovery
+
+Build a quorum certificate using resumable verified chunks:
 
 ```bash
-python -m http.server 8080 -d explorer
+crakchain snapshot-fetch-chunked \
+  --genesis runtime/genesis.json \
+  --output runtime/snapshot-cert.json \
+  --cache-dir runtime/snapshot-cache
 ```
 
-Open `http://127.0.0.1:8080`.
+Verify:
 
-## Development RPC Endpoints
+```bash
+crakchain snapshot-verify \
+  --snapshot runtime/snapshot-cert.json \
+  --genesis runtime/genesis.json
+```
 
-Public development endpoints include:
+Import into a fresh node database:
 
-- `GET /health`
-- `GET /status`
-- `GET /validators`
-- `GET /peers`
-- `GET /evidence`
-- `GET /consensus/events`
-- `GET /metrics`
-- `GET /metrics/prometheus`
-- `GET /snapshot/latest`
-- `GET /snapshot/bundle/manifest`
-- `GET /snapshot/bundle/chunk/{artifact_sha256}/{index}`
-- `GET /recovery/status`
-- `GET /recovery/import-journal`
-- `GET /history/status`
-- `GET /history/block/{height}`
-- `GET /integrity/status`
-- `GET /operations/status`
-- `GET /balance/{address}`
-- `GET /blocks/{height}`
-- `GET /transactions/{txid}`
-- `POST /transactions`
+```bash
+crakchain snapshot-import \
+  --snapshot runtime/snapshot-cert.json \
+  --genesis runtime/genesis.json \
+  --data runtime/recovered-node
+```
 
-Authenticated development peer endpoints include:
+Snapshot bootstrap restores certified state but does not reconstruct historical block bodies before the snapshot base.
 
-- `POST /internal/hello`
-- `POST /internal/transaction`
-- `POST /internal/view-change-request`
-- `POST /internal/prevote`
-- `POST /internal/precommit`
-- `POST /internal/proposal`
-- `POST /internal/block`
+## Integrity & Backups
 
-## Run Tests
+Quick local integrity check:
+
+```bash
+crakchain doctor --genesis runtime/genesis.json --data runtime/node1-data
+```
+
+Full locally stored history/certificate check:
+
+```bash
+crakchain doctor --genesis runtime/genesis.json --data runtime/node1-data --full
+```
+
+Create a verified online SQLite backup:
+
+```bash
+crakchain backup-create \
+  --genesis runtime/genesis.json \
+  --data runtime/node1-data \
+  --output runtime/backups/node1.sqlite3
+```
+
+Verify the backup:
+
+```bash
+crakchain backup-verify \
+  --genesis runtime/genesis.json \
+  --backup runtime/backups/node1.sqlite3 \
+  --manifest runtime/backups/node1.sqlite3.manifest.json \
+  --full
+```
+
+Restore drill into a fresh directory:
+
+```bash
+python scripts/backup_restore_drill.py \
+  --genesis runtime/genesis.json \
+  --backup runtime/backups/node1.sqlite3 \
+  --manifest runtime/backups/node1.sqlite3.manifest.json \
+  --output-data runtime/restore-drill/node1
+```
+
+The restore drill never replaces a live database automatically.
+
+## Monitoring
+
+Start the development Prometheus/Grafana stack after the local validators are running:
+
+```bash
+cd ops
+docker compose -f docker-compose.observability.yml up -d
+```
+
+- Prometheus: `http://127.0.0.1:9090`
+- Grafana: `http://127.0.0.1:3000`
+
+The included credentials/configuration are development defaults and must not be exposed unchanged to the Internet.
+
+Useful node endpoints:
+
+```text
+GET /health
+GET /status
+GET /limits/status
+GET /operations/status
+GET /integrity/status
+GET /validators
+GET /peers
+GET /evidence
+GET /consensus/events
+GET /metrics
+GET /metrics/prometheus
+GET /snapshot/latest
+GET /recovery/status
+GET /history/status
+```
+
+## Future Public Testnet Scaffold
+
+See [`deploy/testnet/`](deploy/testnet/).
+
+The scaffold intentionally requires HTTPS validator peer URLs and keeps the validator service un-published by default. It still needs a real reverse proxy/network policy and does not provide native reviewed mTLS certificate provisioning or rotation.
+
+## Tests
 
 ```bash
 cd blockchain
@@ -277,31 +224,17 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-GitHub Actions also runs the blockchain test suite on repository changes.
+GitHub Actions runs the blockchain test suite on blockchain changes.
 
-## Important Limitations
+## Main Remaining Blockers
 
-- The conservative cross-round lock has no mature proof-based unlock rule.
-- HTTPS enforcement does not provide a reviewed mTLS/certificate pinning/rotation lifecycle.
-- Snapshot bootstrap does not reconstruct historical blocks before the snapshot base.
-- Chunk caching resumes the same immutable bundle; it is not a production streaming protocol.
-- Verified backups improve operations but are not a disaster-recovery substitute until restore drills and external copies are tested.
-- The development Grafana stack has local default credentials and is not production hardened.
-- No validator-set changes, staking/slashing or production governance exists.
-- Long-running Byzantine/partition/load testing remains incomplete.
-- No independent consensus/network security audit has been completed.
+- mature proof-based cross-round BFT lock/unlock semantics or migration to an established reviewed BFT core,
+- formal safety/liveness review,
+- mutually authenticated validator TLS with certificate pinning and rotation,
+- archive/history synchronization for snapshot-bootstrapped nodes,
+- long-running partition/latency/Byzantine/load testing,
+- production key-management and incident-response procedures,
+- production firewall/reverse-proxy/DDoS controls,
+- independent consensus/network/security audit.
 
-See [`V0.9.md`](V0.9.md), [`V0.8.md`](V0.8.md), [`SPEC.md`](SPEC.md) and [`SECURITY.md`](SECURITY.md) for protocol and security notes.
-
-## Next Engineering Milestones — v0.10
-
-1. Resolve the conservative cross-round consensus lock through a reviewed BFT design or migration to an established BFT core.
-2. Add mutually authenticated encrypted validator transport with certificate/key lifecycle management.
-3. Add archive/history synchronization for snapshot-bootstrapped nodes.
-4. Add bounded RPC/mempool/request abuse controls.
-5. Build repeatable partition, latency, Byzantine and load-test harnesses.
-6. Add abrupt-power-loss/database-corruption recovery automation and backup restore drills.
-7. Add authenticated monitoring, alert rules and incident-response runbooks.
-8. Add reproducible public-testnet deployment manifests.
-9. Improve faucet, wallet and explorer testnet UX.
-10. Commission independent consensus/network review before any public-value use.
+See [`V0.10.md`](V0.10.md), [`V0.9.md`](V0.9.md), [`SPEC.md`](SPEC.md) and [`SECURITY.md`](SECURITY.md).
