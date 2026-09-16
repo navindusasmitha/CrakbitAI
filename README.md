@@ -4,9 +4,9 @@
 
 > Secure Code. Secure Chains. Build the Future.
 
-Crakbit AI is an independent, founder-led technology project building accessible security tooling for developers, security researchers, students and open-source communities.
+Crakbit AI is an independent, founder-led technology project building accessible defensive-security tooling for developers, security researchers, students and open-source communities.
 
-The project is currently in **early development / Security MVP alpha + blockchain public-testnet review-candidate research**. The priority remains useful defensive-security technology and careful public testing before any production blockchain or production-value CRKBIT launch.
+The project is currently in **early development / Security MVP alpha + blockchain public-testnet review-candidate research**. Useful security technology, reproducible testing and independent review come before any production blockchain or production-value CRKBIT launch.
 
 ## Mission
 
@@ -26,7 +26,7 @@ A deterministic static-analysis prototype exists in [`scanner/`](scanner/). Curr
 
 Planned defensive tooling includes smart-contract analysis, contract-risk assessment, public blockchain-data analysis, developer guidance and human-readable security reports.
 
-### Crakbit Chain — v0.19 Public-Testnet / Review-Candidate Alpha
+### Crakbit Chain — v0.20 Public-Testnet / Review-Candidate Alpha
 
 A runnable experimental blockchain/application stack exists in [`blockchain/`](blockchain/).
 
@@ -50,9 +50,9 @@ crakbit-execution/2
         └── deterministic application state
                 │
                 ├── explorer index / reconciliation
-                ├── health / soak / fault evidence
-                ├── review remediation matrix
-                └── signed release provenance
+                ├── review + release provenance
+                ├── v0.20 schema migration rehearsal
+                └── signed validator lifecycle drill plans
 ```
 
 Implemented research/public-testnet components include:
@@ -70,16 +70,19 @@ Implemented research/public-testnet components include:
 - review finding/remediation matrix with high/critical release gating,
 - reproducible Python wheel and Go bridge checks in CI,
 - direct-dependency CycloneDX SBOM generation,
-- signed release provenance and signed operations-drill evidence,
+- signed release provenance and operations-drill evidence,
+- explicit v0.20 external-application schema versioning,
+- offline v19 → v20 migration/rollback rehearsal,
+- signed migration evidence,
+- signed validator join/remove/replace **drill plans**,
 - browser wallet security headers/threat model,
-- test faucet and optional browser SHA-256 Mining Lab reward system,
-- Python + Go automated blockchain CI.
+- test faucet and optional browser SHA-256 Mining Lab reward system.
 
 The older Python prevote/precommit chain remains for research/backwards-compatible local experiments. It is not the intended production BFT path.
 
-**Important:** v0.19 is not a production mainnet. Sustained independent-host operation, live recovery evidence, protected validator-key custody, real fault/load campaigns, complete supply-chain review and independent consensus/application/network/wallet security review are still required. It must not be used to custody real value.
+**Important:** v0.20 is not a production mainnet. Live validator-set changes are not enabled, sustained independent-host operation and live recovery/fault evidence remain required, and independent consensus/application/network/wallet security review has not been completed. It must not be used to custody real value.
 
-See [`blockchain/V0.19.md`](blockchain/V0.19.md), [`blockchain/README.md`](blockchain/README.md) and [`blockchain/docs/MAINNET_GATES.md`](blockchain/docs/MAINNET_GATES.md).
+See [`blockchain/V0.20.md`](blockchain/V0.20.md), [`blockchain/README.md`](blockchain/README.md), [`blockchain/SECURITY.md`](blockchain/SECURITY.md) and [`blockchain/docs/MAINNET_GATES.md`](blockchain/docs/MAINNET_GATES.md).
 
 ## Browser Wallet / Web UI
 
@@ -128,34 +131,32 @@ pytest -q
 
 The normal `crakchain node` path still targets the older research node. The external-consensus candidate uses the CometBFT bridge and external execution service documented in [`blockchain/README.md`](blockchain/README.md).
 
-## v0.19 Release Engineering
+## v0.20 Upgrade Compatibility
 
-Build a direct-dependency SBOM:
-
-```bash
-cd blockchain
-crakchain sbom-build \
-  --repo-root .. \
-  --output runtime/release/sbom.cdx.json
-```
-
-Build/check a security-review remediation matrix:
+Check the current external-application schema:
 
 ```bash
-SOURCE_COMMIT=$(git rev-parse HEAD)
-
-crakchain review-findings-build \
-  --source-commit "$SOURCE_COMMIT" \
-  --finding private/review-findings.json \
-  --output runtime/review/remediation-matrix.json
-
-crakchain review-findings-check \
-  --matrix runtime/review/remediation-matrix.json
+crakchain schema-status --data runtime/comet-app
 ```
 
-The automated gate stays blocked while high/critical findings are unresolved or remediated high/critical findings have no recorded regression-test reference.
+Dry-run migration/rollback without modifying the source DB:
 
-Signed release provenance can bind exact source commit, package version, CometBFT version, genesis identity, SBOM, reproducibility report and selected artifact hashes. See [`blockchain/V0.19.md`](blockchain/V0.19.md).
+```bash
+crakchain migration-dry-run --source runtime/comet-app
+```
+
+Run a full offline upgrade rehearsal:
+
+```bash
+crakchain upgrade-rehearse \
+  --genesis runtime/genesis.json \
+  --source-data runtime/comet-app \
+  --output-data runtime/upgrade-rehearsal-v20 \
+  --cometbft-version v0.40.0 \
+  --report runtime/evidence/upgrade-v20.json
+```
+
+v0.20 validator lifecycle plans are signed review/drill artifacts only. They do **not** emit live CometBFT validator updates. A live update path must first be implemented as deterministic replicated application state and independently reviewed.
 
 ## Current Project Status
 
@@ -168,15 +169,14 @@ Signed release provenance can bind exact source commit, package version, CometBF
 | Security CLI | Early alpha |
 | Developer API | Planned |
 | Smart-contract scanner | Planned |
-| Crakbit Chain package | **v0.19.0a1 alpha** |
+| Crakbit Chain package | **v0.20.0a1 alpha** |
 | Browser wallet/public gateway | **Alpha implemented** |
 | CometBFT ABCI bridge | **Integration implemented** |
 | Native ABCI application state sync | **Code implemented; live independent-host evidence pending** |
 | Explorer reconciliation | **Implemented** |
-| Review remediation matrix | **v0.19 implemented** |
-| Reproducible build CI | **v0.19 Python wheel + Go bridge checks implemented** |
-| Direct-dependency SBOM | **v0.19 implemented; full transitive inventory pending** |
-| Signed release provenance | **v0.19 implemented** |
+| Review / release provenance | **Implemented** |
+| v0.20 schema migration/rollback rehearsal | **Implemented** |
+| v0.20 validator lifecycle drill plans | **Implemented; live updates disabled** |
 | Independent-host public testnet evidence | Not completed |
 | Independent consensus/security audit | Not completed |
 | Production CRKBIT | **Not launched** |
@@ -190,10 +190,10 @@ The high-level path is:
 3. Research chain and recovery/security experiments
 4. External reviewed-BFT integration
 5. Browser wallet/public-testnet tooling
-6. Native state sync and operational-evidence tooling
+6. Native state sync and operational evidence
 7. Review freeze, reproducible release engineering and remediation
-8. Sustained independent-host public testnet and independent security review
-9. Upgrade/validator-lifecycle hardening
+8. Upgrade compatibility and deterministic validator-governance research
+9. Sustained independent-host public testnet and independent security review
 10. Mainnet consideration only after technical, operational, economic and legal gates are satisfied
 
 See [`ROADMAP.md`](ROADMAP.md).
