@@ -114,6 +114,7 @@ A runnable research/devnet and external CometBFT application path exist. This do
 - [x] Governance history + validator-update emission export for explorer/review use
 - [x] Explicit `H`, `H+1`, `H+2` validator-governance campaign plan format
 - [x] Signed campaign evidence tied to exact source commit, genesis and artifact hashes
+- [x] Guarded normal-CometBFT governance broadcast helper
 - [x] v0.22 regression tests
 - [ ] Actually execute join/remove/replace campaigns on the generated four-node lab
 - [ ] Execute restart/process-kill tests at `H`, `H+1`, and `H+2`
@@ -123,6 +124,32 @@ A runnable research/devnet and external CometBFT application path exist. This do
 - [ ] Repeat the campaign across independently managed VPS/providers
 - [ ] Review governance-key/consensus-key separation and remote-signer design
 - [ ] Research timelock/emergency/cancel semantics before any production consideration
+
+### v0.23 — public-testnet deployment / operations tooling
+
+- [x] Package/CLI `0.23.0a1`
+- [x] Public-only validator identity export from each operator host
+- [x] Reject secret/private fields from shared validator metadata
+- [x] 4+ validator public-testnet inventory format
+- [x] Independent-operator/provider/region diversity gates
+- [x] Shared application + CometBFT genesis bundle generation
+- [x] SHA-256 genesis manifest without private material
+- [x] Per-validator non-secret deployment bundles
+- [x] systemd service templates and persistent-peer artifacts
+- [x] Independent-node `/status` + `/abci_info` monitoring
+- [x] Same-height application-hash divergence detection
+- [x] JSONL long-running soak collection + summary
+- [x] Minimum 24-hour soak gate semantics
+- [x] Public-testnet readiness report distinct from production-mainnet readiness
+- [x] Signed operations evidence tied to exact Git commit and artifact hashes
+- [x] v0.23 regression tests/documentation
+- [ ] Provision four or more independently managed VPS validators
+- [ ] Perform real multi-operator genesis ceremony
+- [ ] Run actual 24-hour soak on independent hosts
+- [ ] Extend actual soak to 72 hours and then 7 days
+- [ ] Execute real independent-host validator governance campaigns
+- [ ] Execute real clean-host state-sync/disaster-recovery drills
+- [ ] Execute partition/latency/packet-loss/process-kill/storage/load campaigns
 
 ### External evidence still required
 
@@ -137,7 +164,19 @@ A runnable research/devnet and external CometBFT application path exist. This do
 
 ## Phase 7 — Long-Lived Public Testnet / Review Candidate
 
-### Suggested v0.23 operational phase
+### v0.24 — operational fault / recovery hardening
+
+- [ ] Add operator-safe host/deployment preflight validation
+- [ ] Add automated backup/restore and clean-host state-sync drill runner
+- [ ] Add signed restart/partition/latency/packet-loss/load/storage-fault campaign records
+- [ ] Run validator-governance campaigns across real independent hosts
+- [ ] Add public RPC/explorer redundancy and recovery verification
+- [ ] Add alert/incident evidence and operator escalation records
+- [ ] Enforce 72-hour and 7-day readiness gates
+- [ ] Deploy/drill protected validator remote signer/HSM-equivalent custody
+- [ ] Produce frozen independent-review package only after real evidence exists
+
+### Operational launch tasks
 
 - [ ] Provision four or more independently managed VPS validators
 - [ ] Deploy governed execution/ABCI path with private execution/validator surfaces
