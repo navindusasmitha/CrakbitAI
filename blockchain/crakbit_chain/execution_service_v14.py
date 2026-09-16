@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from .app_protocol import ExecutionProtocolAdapter, PROTOCOL_VERSION
 from .external_commit import COMMIT_PROTOCOL_VERSION, ExternalExecutionStore
+from .external_replay import replay_safe_stage_finalize
 from .genesis import Genesis
 from .storage import Ledger, LedgerError
 
@@ -98,6 +99,7 @@ def create_app(config: ExecutionServiceV14Config | None = None) -> FastAPI:
             "preview_protocol": PROTOCOL_VERSION,
             "commit_protocol": COMMIT_PROTOCOL_VERSION,
             "external_consensus_commit_enabled": True,
+            "app_ahead_finalize_replay": True,
             "reviewed_bft_core_integrated": False,
             "production_ready": False,
         }
@@ -158,7 +160,8 @@ def create_app(config: ExecutionServiceV14Config | None = None) -> FastAPI:
         if len(payload.transactions) > 1000:
             raise HTTPException(413, "external finalize is limited to 1000 transactions")
         try:
-            return external.stage_finalize(
+            return replay_safe_stage_finalize(
+                external,
                 height=payload.height,
                 consensus_block_hash=payload.consensus_block_hash,
                 transactions=payload.transactions,
