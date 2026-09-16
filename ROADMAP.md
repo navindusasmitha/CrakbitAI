@@ -6,7 +6,7 @@ This roadmap describes the intended development order for Crakbit AI. Dates are 
 
 **Technology first. Security first. Tokens later.**
 
-The immediate product focus remains a useful defensive-security MVP. In parallel, Crakbit Chain is being used as a research network to turn blockchain, validator-security, recovery and external-consensus integration ideas into testable code. Production mainnet planning remains gated on reviewed consensus, long-running public testing and independent security review.
+Crakbit AI remains primarily a defensive-security and secure-development project. Crakbit Chain is developed in parallel as a testable blockchain-security and infrastructure research platform. Production mainnet planning stays gated on long-running public testing, independently reviewed consensus/application behavior, wallet/network review and operational readiness.
 
 ## Phase 1 — Foundation
 **Target: Q3–Q4 2026**
@@ -14,13 +14,11 @@ The immediate product focus remains a useful defensive-security MVP. In parallel
 - [x] Establish Crakbit AI project identity
 - [x] Launch public website
 - [x] Create public GitHub repository
-- [x] Publish initial roadmap and project documentation
-- [x] Publish initial technical architecture
-- [x] Publish initial security model
+- [x] Publish initial roadmap and architecture/security documentation
 - [x] Establish public Giveth project listing
 - [ ] Establish consistent public development/update cadence
-- [ ] Launch/complete official project social and community channels
-- [ ] Link final public fundraising URL throughout website/repository
+- [ ] Complete official community/social channels
+- [ ] Link final fundraising URL consistently across public project surfaces
 
 ## Phase 2 — Security MVP
 **Target: Q4 2026**
@@ -35,10 +33,6 @@ The immediate product focus remains a useful defensive-security MVP. In parallel
 - [x] Severity/confidence model
 - [ ] Public web demo
 
-### MVP success criteria
-
-A developer should be able to submit or scan a small codebase and receive a clear, defensible report describing potential security issues and remediation guidance.
-
 ## Phase 3 — Developer Tooling
 **Target: Q1 2027**
 
@@ -49,7 +43,7 @@ A developer should be able to submit or scan a small codebase and receive a clea
 - [ ] Repository scan workflow
 - [ ] CI/CD integration prototype
 - [ ] Authentication and rate-limiting design
-- [ ] Expanded documentation and examples
+- [ ] Expanded documentation/examples
 
 ## Phase 4 — Blockchain Security
 **Target: Q2 2027**
@@ -69,152 +63,168 @@ A developer should be able to submit or scan a small codebase and receive a clea
 - [ ] CI/CD workflow templates
 - [ ] IDE integration research
 - [ ] Plugin/extension architecture
-- [ ] Open-source rule contribution framework
+- [ ] Open-source rule-contribution framework
 
-## Phase 6 — Crakbit Chain Research & Devnet
+## Phase 6 — Crakbit Chain Research → Public-Testnet Candidate
 **Prototype started September 2026**
 
-A runnable research/devnet exists to turn network ideas into testable code. This does **not** mean a production blockchain or public-value CRKBIT asset has launched.
+A runnable research/devnet exists. It does **not** mean a production blockchain or production-value CRKBIT asset has launched.
 
-### Completed research/devnet foundation through v0.10
+### Completed foundation through v0.10
 
-- [x] Native test-only CRKBIT accounting unit
-- [x] Ed25519 wallet/key generation and `crk1...` addresses
-- [x] Signed transfers, nonces/replay protection and minimum fees
-- [x] Signed block proposals, previous-hash linking, Merkle roots and deterministic state roots
-- [x] SQLite chain/account/consensus persistence
-- [x] Round-specific proposer schedule and quorum-certified view changes
-- [x] Signed prevote/precommit phases with >2/3 certificates
-- [x] Persistent anti-double-vote records, locks, event journal and equivocation evidence
-- [x] Authenticated validator requests, challenge/response and durable replay protection
-- [x] Quorum snapshots, resumable state transfer and safe snapshot bootstrap
-- [x] Local integrity verification and verified backup/restore drills
-- [x] Prometheus/Grafana development observability and alerts
-- [x] Bounded RPC, transaction, mempool and block resource controls
-- [x] Public-testnet deployment/operator scaffold
-- [x] Automated blockchain CI
+- [x] Native test-only CRKBIT accounting
+- [x] Ed25519 wallets and `crk1...` addresses
+- [x] Signed transfers, nonce/replay protection and fees
+- [x] Signed block proposals, Merkle/state roots and SQLite persistence
+- [x] Research prevote/precommit + certified view changes
+- [x] Persistent anti-double-vote/lock/event/evidence state
+- [x] Authenticated validator requests and durable replay protection
+- [x] Quorum snapshots, resumable transfer and state bootstrap
+- [x] Integrity verification, backups and restore drills
+- [x] RPC/mempool/block resource bounds
+- [x] Prometheus/Grafana development observability
+- [x] Public-testnet operator scaffold
 
 ### v0.11 — validator transport hardening
 
-- [x] Record consensus architecture decision: do not treat the bespoke Python consensus as a production BFT path
-- [x] Set reviewed external BFT migration/evaluation as a release gate
-- [x] Operator-managed validator mTLS, CA/hostname validation and certificate pinning
+- [x] Record architecture decision not to market bespoke Python consensus as production BFT
+- [x] Make independently reviewed external BFT evaluation a release gate
+- [x] Operator-managed mTLS trust configuration
 - [x] Inbound mutual-TLS launcher
-- [x] Certificate fingerprint helper and dual-key/transport incident runbook
-- [x] Toxiproxy transport-fault harness
-- [x] Public-testnet reverse-proxy hardening example
+- [x] TLS certificate pinning and rotation runbook
+- [x] Toxiproxy fault harness
+- [x] Public-testnet reverse-proxy example
 
-### v0.12 — archive, recovery and testnet hardening
+### v0.12 — archive/recovery/testnet hardening
 
 - [x] Genesis-anchored full-history archive export/verify/import
-- [x] Snapshot-node historical backfill without current-state mutation
+- [x] Snapshot-node history backfill without mutating current state
 - [x] Consensus/execution boundary groundwork
-- [x] Dual TLS certificate-pin overlap during rotation
-- [x] Optional bearer authentication for operator endpoints
-- [x] Duplicate/conflicting/forged validator-vote fixtures
-- [x] Multi-node soak/divergence tooling
-- [x] Deny-by-default nftables public-testnet example
+- [x] Dual TLS pin overlap
+- [x] Authenticated operator monitoring option
+- [x] Byzantine vote fixtures
+- [x] Multi-node soak/divergence monitor
+- [x] Deny-by-default firewall example
 
-### v0.13 — external-consensus preparation and public-testnet tooling
+### v0.13 — external-consensus protocol/tooling
 
-- [x] Deterministic `crakbit-execution/1` preview/process boundary
-- [x] Deterministic application hash independent from consensus-local metadata
+- [x] Deterministic `crakbit-execution/1` preview boundary
+- [x] Deterministic application hash
 - [x] Authenticated loopback execution-service PoC
-- [x] Signed release/genesis manifest tooling
-- [x] Non-secret independent-host provisioning scaffolds
-- [x] Strictly test-only faucet foundation
-- [x] Bounded read-only explorer APIs
-- [x] Reproducible soak summary generation
-- [x] External BFT evaluation criteria and external-review package checklist
+- [x] Signed release/genesis artifact manifests
+- [x] Multi-host validator provisioning scaffold
+- [x] Test faucet foundation
+- [x] Read-only explorer APIs
+- [x] Soak evidence summarizer
+- [x] External BFT evaluation/review package
 
-### v0.14 — external BFT bridge + crash-safe application commit
+### v0.14 — CometBFT bridge + crash-safe application commit
 
-- [x] Pin CometBFT `v0.40.0` for the integration PoC
-- [x] Add Go ABCI bridge module
-- [x] Implement ABCI `Info`, `CheckTx`, `PrepareProposal`, `ProcessProposal`, `FinalizeBlock`, `Commit` and minimal query support
-- [x] Add versioned mutating `crakbit-execution/2` protocol
-- [x] Add deterministic application hash bound to external consensus block hash
-- [x] Add dedicated external application database isolation checks
-- [x] Persist FinalizeBlock stage without mutating committed application state
-- [x] Atomically apply staged Commit in SQLite
-- [x] Persist external commit records and pending-finalize recovery state
-- [x] Accept identical app-ahead FinalizeBlock replay and reject conflicting replay
-- [x] Add authenticated v0.14 execution service
-- [x] Add signed strict >2/3 genesis ceremony/validator attestations
-- [x] Add external-consensus and ceremony CLI tooling
-- [x] Add local CometBFT PoC runbook
-- [x] Extend CI to test Python and Go bridge code
+- [x] Select/pin CometBFT `v0.40.0` for integration PoC
+- [x] Add `crakbit-execution/2` mutating application protocol
+- [x] Persist deterministic application hashes at commit boundaries
+- [x] Persist non-mutating FinalizeBlock staging
+- [x] Atomic crash-safe SQLite Commit
+- [x] Finalize replay/idempotency handling
+- [x] Separate external application DB ownership
+- [x] Go ABCI bridge: Info/CheckTx/PrepareProposal/ProcessProposal/FinalizeBlock/Commit
+- [x] Signed strict >2/3 genesis ceremony tooling
+- [x] Combined Python + Go CI
+- [x] Local CometBFT integration runbook
 
-### v0.15 — repeatable external-BFT test network
+### v0.15 — wallet/public gateway/mining-lab large phase
 
-- [ ] Add one-command local four-node CometBFT lab generation
+- [x] Bump chain package to `0.15.0a1`
+- [x] Responsive Web UI for overview, wallet, explorer, validators and services
+- [x] Browser-generated Ed25519 wallet compatible with Crakbit addresses
+- [x] PBKDF2-SHA256 + AES-GCM encrypted local wallet vault
+- [x] Client-side canonical transaction signing and broadcast
+- [x] Encrypted wallet backup/import flow
+- [x] Embedded same-origin wallet API/UI on research nodes
+- [x] Standalone public gateway with `research` and `cometbft` modes
+- [x] CometBFT `broadcast_tx_sync` transaction path
+- [x] Authenticated external-state read APIs for accounts/transactions/commits
+- [x] Persistent SQLite faucet distribution/cooldown records
+- [x] Faucet broadcasting through research or CometBFT gateway path
+- [x] Opt-in browser proof-of-work Mining Lab
+- [x] Persistent mining challenge/solution/cooldown/daily-limit state
+- [x] Dedicated non-validator mining-reward wallet model
+- [x] Explicitly document that Mining Lab is **not** consensus block mining
+- [x] Publish explicit production mainnet release gates
+- [x] Add automated v0.15 wallet/mining/read-API tests
+
+### v0.16 — next major phase: real multi-host public testnet evidence
+
+- [ ] One-command 4-node local CometBFT lab generation
 - [ ] Generate/verify CometBFT consensus genesis and peer inventory separately from Crakbit application genesis
-- [ ] Add exhaustive crash-point replay matrix around FinalizeBlock/Commit
-- [ ] Add external-consensus snapshot/state-sync adapter work
-- [ ] Add dedicated indexed explorer database for external-consensus history
-- [ ] Make faucet cooldown/distribution accounting persistent across restart
-- [ ] Add multi-host deployment inventory and automated health checks
-- [ ] Automate partition, latency, restart and sustained-load campaigns against the CometBFT path
-- [ ] Publish signed testnet release + application-genesis ceremony + soak/fault evidence bundle
-- [ ] Add production-oriented validator key/remote-signer/HSM evaluation
-- [ ] Prepare first independent consensus/network/application review handoff
+- [ ] Complete external-consensus snapshot/state-sync adapter
+- [ ] Add dedicated indexed explorer database for the external-consensus path
+- [ ] Add crash-point replay matrix around FinalizeBlock/Commit/restart
+- [ ] Add persistent distributed/upstream faucet/mining abuse controls
+- [ ] Add multi-host inventory, deployment and health automation
+- [ ] Run automated partition, latency, packet-loss, restart and sustained-load campaigns
+- [ ] Add browser-wallet threat-model/security fixtures and production CSP profile
+- [ ] Publish signed testnet release + genesis ceremony + fault/soak evidence bundle
+- [ ] Add remote-signer/HSM-equivalent validator key guidance
+- [ ] Prepare first independent consensus/application/network/wallet review candidate
 
-### Current consensus/network warning
+### Current warning
 
-v0.14 provides a real ABCI bridge and crash-safe external application commit PoC, but it is still **not a production mainnet**. The older Python consensus remains research-only, the CometBFT path has not yet completed a sustained independent-host public testnet campaign, full state sync and production key operations are incomplete, and no independent consensus/network/security audit has been completed.
+v0.15 provides a much more complete **public-testnet user experience**, but it is still not production mainnet software. A Web UI, wallet and proof-of-work reward lab do not replace external consensus validation, long-lived multi-host testing, production key custody, DDoS/security architecture or independent review.
+
+The Mining Lab is a test-reward service only; the external consensus integration remains CometBFT-based.
 
 ## Phase 7 — Public Testnet
-**Only after Phase 6 security gates are met**
+**Only after Phase 6 technical gates are met**
 
-- [ ] Public external-BFT node software release
-- [x] Signed application-genesis ceremony foundation
-- [x] Signed release-manifest foundation
-- [ ] CometBFT consensus-genesis ceremony/process
-- [ ] Public indexed testnet explorer
-- [ ] Testnet wallet support
-- [x] Test-only faucet implementation foundation
-- [x] Public node/operator documentation foundation
+- [ ] Signed public node software release
+- [ ] Signed testnet genesis ceremony
+- [x] Browser wallet/explorer UI foundation
+- [x] Test-faucet implementation foundation
+- [x] Public gateway foundation
 - [x] Network monitoring/soak tooling foundation
-- [ ] Multi-host public deployment
-- [ ] Stress/partition/restart testing with published evidence
+- [ ] Independent multi-host deployment
+- [ ] External-consensus state sync
+- [ ] Dedicated indexed public explorer
+- [ ] Stress/partition testing with published evidence
 - [ ] Community test program
 
-Any CRKBIT units used on testnet are test-only and should have no represented production value.
+Testnet CRKBIT units represent test units only and should not be represented as production-value assets.
 
 ## Phase 8 — Security Review
 
-Before any production network launch:
+Before a production network launch:
 
 - [ ] Internal security review
-- [ ] Independent code/security audit
-- [ ] External-consensus replay/failure testing
-- [ ] Network partition/fault testing
+- [ ] Independent consensus/application audit
+- [ ] Independent network/RPC security review
+- [ ] Browser-wallet security review
+- [ ] Consensus-failure and partition testing
 - [ ] Economic-security review
 - [ ] Cryptography/key-management review
-- [ ] Incident-response planning
+- [ ] Incident-response drills
 - [ ] Legal/regulatory review where applicable
+
+See `blockchain/docs/MAINNET_GATES.md` for the full release-gate checklist.
 
 ## Phase 9 — Mainnet Consideration
 
-A production mainnet should only be considered after successful long-lived public testing, independently reviewed consensus, external security review and a clear operational/economic model.
+A production mainnet can only be considered after successful long-lived public testing, reviewed external consensus/application behavior, independent security review and a clear operational/economic/legal model.
 
-Potential items:
+Potential production items include:
 
-- Final consensus mechanism/version
-- Genesis process
-- Production explorer
-- Production wallet ecosystem
-- Validator onboarding and remote-signer/key-custody model
-- CRKBIT utility implementation
-- Developer/network services
-- Upgrade/governance process
+- final consensus configuration,
+- reproducible signed releases,
+- production genesis ceremony,
+- hardened wallet ecosystem,
+- production explorer/indexer,
+- validator onboarding and remote signer strategy,
+- CRKBIT production utility/economics,
+- upgrade/governance process,
+- incident-response operations.
 
 ## CRKBIT Status
 
 **Production CRKBIT is not launched. No official presale. No production token contract.**
 
-The research/devnet implements test-only CRKBIT accounting with a proposed maximum genesis supply of 21,000,000 and 8 decimals. Those parameters remain subject to technical, security, economic and legal review before any production implementation.
-
-## Roadmap Updates
-
-Major roadmap changes should be documented in repository commits and project updates so supporters and contributors can distinguish completed prototypes, public testnets and production systems.
+The research/public-testnet code uses test-only CRKBIT accounting with 8 decimals and a proposed 21,000,000 maximum genesis supply. Those parameters remain subject to technical, security, economic and legal review before any production implementation.
