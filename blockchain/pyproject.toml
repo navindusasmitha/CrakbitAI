@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crakbit-chain"
-version = "0.31.0a1"
-description = "Crakbit Chain native Proof-of-Work alpha with UTXO accounting, CPU scrypt mining, node RPC and a first-party mining-pool protocol"
+version = "0.32.0a1"
+description = "Crakbit Chain native Proof-of-Work P2P alpha with side-chain storage, highest-cumulative-work fork choice, canonical reorgs and signed peer networking"
 requires-python = ">=3.11"
 dependencies = [
   "cryptography>=42.0.0",
@@ -18,7 +18,7 @@ dependencies = [
 dev = ["pytest>=8.0.0", "build>=1.2.2"]
 
 [project.scripts]
-crakchain = "crakbit_chain.cli_v31:main"
+crakchain = "crakbit_chain.cli_v32:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
