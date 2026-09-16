@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 
 from .crypto import canonical_json, sha256_hex
-from .pow_v31 import MAX_UINT256, PowConfig, PowV31Error, block_hash, parse_target, pow_hash, target_hex
+from .pow_v31 import MAX_UINT256, PowConfig, parse_target, pow_hash, target_hex
 
 POOL_PROTOCOL = "crakbit-pool/1"
 
@@ -159,11 +159,23 @@ class PoolLedger:
         return {str(row["payout_address"]): int(row["pending_amount"]) for row in self.db.execute("SELECT * FROM balances ORDER BY payout_address")}
 
 
+def pow_config_from_template(template: dict[str, Any]) -> PowConfig:
+    params = template.get("pow", {}) or {}
+    try:
+        return PowConfig(
+            pow_algo=str(params["algo"]),
+            scrypt_n=int(params["scrypt_n"]),
+            scrypt_r=int(params["scrypt_r"]),
+            scrypt_p=int(params["scrypt_p"]),
+        )
+    except Exception as exc:
+        raise PowPoolV31Error("node template is missing/invalid PoW parameters") from exc
+
+
 class CrakbitPool:
-    def __init__(self, config: PoolConfig, ledger: PoolLedger, pow_config: PowConfig | None = None):
+    def __init__(self, config: PoolConfig, ledger: PoolLedger):
         self.config = config
         self.ledger = ledger
-        self.pow_config = pow_config or PowConfig()
         self._last_refresh = 0.0
 
     def _node_post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -180,6 +192,7 @@ class CrakbitPool:
             "/pow/v1/getblocktemplate",
             {"miner_address": self.config.pool_address, "message": "Crakbit Pool v0.31"},
         )
+        pow_config_from_template(template)
         network_target = parse_target(template["target"])
         share_target = min(MAX_UINT256, network_target * self.config.share_target_multiplier)
         stable = {
@@ -188,6 +201,7 @@ class CrakbitPool:
             "merkle_root": template["block"]["header"]["merkle_root"],
             "network_target": target_hex(network_target),
             "share_target": target_hex(share_target),
+            "pow": template["pow"],
         }
         job_id = sha256_hex(canonical_json(stable))[:24]
         job = {
@@ -217,12 +231,7 @@ class CrakbitPool:
             "network_target": job["network_target"],
             "extra_nonce": block["header"]["extra_nonce"],
             "block": block,
-            "pow": {
-                "algo": self.pow_config.pow_algo,
-                "scrypt_n": self.pow_config.scrypt_n,
-                "scrypt_r": self.pow_config.scrypt_r,
-                "scrypt_p": self.pow_config.scrypt_p,
-            },
+            "pow": dict(job["template"]["pow"]),
             "production_mainnet_ready": False,
         }
 
@@ -233,7 +242,8 @@ class CrakbitPool:
         block = json.loads(json.dumps(active["template"]["block"]))
         block["header"]["extra_nonce"] = int(extra_nonce) & 0xFFFFFFFFFFFFFFFF
         block["header"]["nonce"] = int(nonce)
-        digest = pow_hash(block["header"], self.pow_config)
+        pow_config = pow_config_from_template(active["template"])
+        digest = pow_hash(block["header"], pow_config)
         digest_int = int.from_bytes(digest, "big")
         share_target = parse_target(active["share_target"])
         network_target = parse_target(active["network_target"])
