@@ -84,36 +84,44 @@ A runnable research/devnet and external CometBFT application path exist. This do
 
 ### v0.21 — deterministic validator governance / activation
 
-- [x] Bump package/CLI to `0.21.0a1`
-- [x] Add `crakbit-execution/3` governed application path
-- [x] Add canonical validator join/remove/replace governance transaction format
-- [x] Add strict `>2/3` current voting-power approval rule
-- [x] Replicate active and pending validator lifecycle state
-- [x] Include validator-governance state in the deterministic application hash
-- [x] Derive live ABCI validator updates only from validated replicated input
-- [x] Record deterministic validator-update emission for crash/replay recovery
-- [x] Model application-side validator activation at `H+2`
-- [x] Add schema 21 and v20 → v21 offline-copy migration/rollback rehearsal
-- [x] Add governance-aware external snapshots and native ABCI state sync
-- [x] Add multi-operator governance request build/sign/verify CLI
-- [x] Add Python governance/migration/state-sync tests
-- [x] Add Go bridge validator-update tests
-- [ ] Execute independent multi-host join/remove/replace campaigns
-- [ ] Independently review the update-height/activation semantics
-- [ ] Drill protected remote/HSM governance signing
+- [x] Package/CLI `0.21.0a1`
+- [x] `crakbit-execution/3` governed application path
+- [x] Canonical validator join/remove/replace governance transaction format
+- [x] Strict `>2/3` current voting-power approval rule
+- [x] Replicated active and pending validator lifecycle state
+- [x] Validator-governance state in deterministic application hash
+- [x] ABCI validator updates derived from validated replicated input
+- [x] Crash/replay-safe validator-update emission records
+- [x] Modeled application-side validator activation at `H+2`
+- [x] Schema 21 and v20 → v21 offline-copy migration/rollback rehearsal
+- [x] Governance-aware external snapshots and native ABCI state sync
+- [x] Multi-operator governance request build/sign/verify CLI
+- [x] Python + Go governance/migration/state-sync tests
+- [ ] Independent multi-host join/remove/replace execution evidence
+- [ ] Independent review of update-height/activation semantics
+- [ ] Protected remote/HSM governance-signing drill
 
-### v0.22 — governed multi-node campaigns / coordinated upgrades
+### v0.22 — governed multi-node campaigns / evidence tooling
 
-- [ ] One-command four-node governed CometBFT campaign lab
-- [ ] Controlled broadcast helper for quorum-approved governance transactions
-- [ ] Automated join/remove/replace campaigns with convergence checks
-- [ ] Restart/process-kill tests at `H`, `H+1`, and `H+2`
-- [ ] Partition/latency tests across a pending validator activation
-- [ ] Native state-sync bootstrap while governance state is pending
-- [ ] Coordinated schema/protocol upgrade activation across all validators
-- [ ] Explorer/index representation of governance transactions and validator history
-- [ ] Signed campaign evidence + application/validator-set divergence detection
-- [ ] Governance-key/consensus-key separation and remote-signer design
+- [x] Package/CLI `0.22.0a1`
+- [x] One-command governed CometBFT local lab generator
+- [x] Align generated application-genesis validator identities with disposable CometBFT lab validator identities
+- [x] Generate explicit disposable local-lab treasury/governance signing material under `.secrets`
+- [x] Generate governed operator inventory with RPC/execution endpoints
+- [x] Cluster reachability/height/application-hash/governance convergence monitor
+- [x] Detect same-height application-hash divergence
+- [x] Detect same-height validator-set/pending-governance divergence
+- [x] Governance history + validator-update emission export for explorer/review use
+- [x] Explicit `H`, `H+1`, `H+2` validator-governance campaign plan format
+- [x] Signed campaign evidence tied to exact source commit, genesis and artifact hashes
+- [x] v0.22 regression tests
+- [ ] Actually execute join/remove/replace campaigns on the generated four-node lab
+- [ ] Execute restart/process-kill tests at `H`, `H+1`, and `H+2`
+- [ ] Execute partition/latency tests across a pending validator activation
+- [ ] Execute clean-node native state sync while governance state is pending
+- [ ] Execute coordinated schema/protocol upgrade activation across all validators
+- [ ] Repeat the campaign across independently managed VPS/providers
+- [ ] Review governance-key/consensus-key separation and remote-signer design
 - [ ] Research timelock/emergency/cancel semantics before any production consideration
 
 ### External evidence still required
@@ -129,10 +137,18 @@ A runnable research/devnet and external CometBFT application path exist. This do
 
 ## Phase 7 — Long-Lived Public Testnet / Review Candidate
 
-- [ ] Independent-host validator deployment
-- [ ] Long-duration soak monitoring with published evidence
-- [ ] Live state-sync/bootstrap recovery drills
-- [ ] Fault/partition/load/governance campaigns
+### Suggested v0.23 operational phase
+
+- [ ] Provision four or more independently managed VPS validators
+- [ ] Deploy governed execution/ABCI path with private execution/validator surfaces
+- [ ] Deploy separate public RPC/gateway/explorer/faucet edge
+- [ ] Configure DNS/TLS/firewall/monitoring/alerts/backups
+- [ ] Run 24-hour soak and publish evidence
+- [ ] Extend to 72-hour soak
+- [ ] Extend to 7-day soak
+- [ ] Execute validator-governance activation campaigns
+- [ ] Execute clean-host state-sync/bootstrap recovery drills
+- [ ] Execute partition/load/restart campaigns
 - [ ] Signed source/genesis/release/evidence publication
 - [ ] Protected validator/governance signer drill
 - [ ] Incident-response exercises
@@ -150,7 +166,7 @@ Testnet CRKBIT units represent test units only and should not be represented as 
 - [ ] Economic-security review
 - [ ] Incident-response review
 - [ ] Applicable legal/regulatory review
-- [ ] Remediate or explicitly accept every high/critical finding
+- [ ] Remediate or explicitly accept every high/critical finding before launch
 
 ## Phase 9 — Release / Operations Hardening
 
