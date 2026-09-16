@@ -1,14 +1,38 @@
 from __future__ import annotations
 
 import json
+from threading import Lock
 
 import pytest
 
 from crakbit_chain.crypto import KeyPair
+from crakbit_chain.genesis import Genesis
 from crakbit_chain.limits import FixedWindowLimiter, LimitConfig, install_node_limits
 from crakbit_chain.models import ATOMIC_UNITS, Transaction
-from crakbit_chain.node import Node
-from crakbit_chain.storage import LedgerError
+from crakbit_chain.storage import Ledger, LedgerError
+
+
+class FakeNode:
+    """Minimal node surface required by install_node_limits, without API import side effects."""
+
+    def __init__(self, ledger: Ledger):
+        self.ledger = ledger
+        self.genesis = ledger.genesis
+        self.mempool: dict[str, Transaction] = {}
+        self.lock = Lock()
+
+    def _select_transactions(self, limit: int = 1000) -> list[Transaction]:
+        with self.lock:
+            txs = list(self.mempool.values())[:limit]
+        valid: list[Transaction] = []
+        for tx in txs:
+            try:
+                self.ledger.validate_transaction(tx)
+                valid.append(tx)
+            except LedgerError:
+                with self.lock:
+                    self.mempool.pop(tx.txid, None)
+        return valid
 
 
 def make_node(tmp_path):
@@ -45,10 +69,9 @@ def make_node(tmp_path):
         ),
         encoding="utf-8",
     )
-    validator_path = tmp_path / "validator.json"
-    validator.save(validator_path)
-    node = Node(str(genesis_path), str(validator_path), str(tmp_path / "data"))
-    return node, sender1, sender2, receiver
+    genesis = Genesis.load(genesis_path)
+    ledger = Ledger(tmp_path / "data" / "chain.sqlite3", genesis)
+    return FakeNode(ledger), sender1, sender2, receiver
 
 
 def signed_tx(node, sender, receiver, *, memo=""):
