@@ -173,28 +173,53 @@ A runnable research/devnet and external CometBFT application path exist. This do
 - [x] Aggregate operational-review-candidate readiness report
 - [x] Signed v0.24 evidence bound to exact source commit and artifact hashes
 - [x] v0.24 regression tests and documentation
-- [ ] Monitoring alert/incident escalation evidence format
 - [ ] Actual independent-host execution of the modeled campaigns
-- [ ] Frozen independent-review package built from real evidence
 
-### v0.25 — real independent-host execution / review freeze
+### v0.25 — independent-host evidence / review freeze tooling
 
+- [x] Package/CLI `0.25.0a1`
+- [x] Incident-response record format with started/acknowledged/resolved timing checks
+- [x] Escalation target required for high/critical incidents
+- [x] Recovery verification required before incident closure
+- [x] Signed per-operator host attestation format
+- [x] Separate evidence-signing identity from validator/private operational keys
+- [x] Exact source commit/package/CometBFT/application-genesis/consensus-genesis binding
+- [x] Require 7-day soak assertion per host attestation
+- [x] Require protected signer, backup/restore, clean-host state sync and validator-governance assertions
+- [x] Require restart/process-kill/partition/latency/packet-loss/load/storage coverage
+- [x] Require 4+ unique operators, validators and evidence signers
+- [x] Require provider and region diversity
+- [x] Require single candidate source/network identity across host attestations
+- [x] Require successful v0.24 operational-readiness artifact
+- [x] Require closed incident-response drill evidence
+- [x] Signed exact review-candidate freeze bound to review gate/genesis/artifact hashes
+- [x] Explicit independent-review scope list
+- [x] v0.25 regression tests + independent-review handoff documentation
 - [ ] Provision 4+ independently managed validators across suitable operators/providers/regions
 - [ ] Perform real multi-operator genesis ceremony with independently held keys
-- [ ] Deploy governed execution/ABCI services with private operator surfaces
-- [ ] Deploy redundant public RPC/gateway/explorer/faucet edges behind TLS/WAF/DDoS controls
-- [ ] Run genuine 24-hour soak and publish evidence
-- [ ] Run genuine 72-hour soak and publish evidence
-- [ ] Run genuine 7-day soak and publish evidence
-- [ ] Execute authorized restart/process-kill campaigns
-- [ ] Execute authorized partition/latency/packet-loss campaigns
-- [ ] Execute authorized sustained-load/storage-fault campaigns
-- [ ] Execute validator join/remove/replace activation campaigns
-- [ ] Complete backup/restore and clean-host state-sync disaster-recovery drills
-- [ ] Deploy/drill protected remote signer or HSM-equivalent custody
-- [ ] Add alerting/incident-response evidence and operator escalation drills
-- [ ] Sign and publish raw operational evidence bound to exact source/CometBFT/genesis versions
-- [ ] Freeze an exact independent-review candidate only after evidence exists
+- [ ] Run genuine 24-hour, 72-hour and 7-day independent-host soaks
+- [ ] Execute real authorized fault/load/storage campaigns
+- [ ] Execute real validator join/remove/replace activation campaigns
+- [ ] Complete real backup/restore and clean-host state-sync drills
+- [ ] Deploy/drill a protected remote signer or HSM-equivalent custody path
+- [ ] Deploy redundant public edges behind production-style TLS/WAF/DDoS controls
+- [ ] Build the v0.25 review gate from real evidence
+- [ ] Freeze an exact candidate from real evidence and hand it to independent reviewers
+
+Operator host attestations are self-attested and must not be described as independent verification.
+
+### v0.26 — independent review findings / remediation / re-freeze
+
+- [ ] Import structured independent-review findings with stable IDs
+- [ ] Track severity, affected commit/component and reproduction conditions
+- [ ] Bind remediation commits/config changes to findings
+- [ ] Record independent retest evidence
+- [ ] Hard-block release candidacy while unresolved high/critical findings exist
+- [ ] Add candidate supersession rules when source/genesis/dependency/evidence changes
+- [ ] Add signed re-freeze after remediation and retest
+- [ ] Add independent reproducible-build/supply-chain attestation hooks
+- [ ] Add public-edge capacity/TLS/WAF/DDoS evidence formats without provider secrets
+- [ ] Keep production-mainnet readiness false until all external review/operations/economic/legal gates are actually satisfied
 
 Testnet CRKBIT units represent test units only and should not be represented as production-value assets.
 
