@@ -4,23 +4,24 @@
 
 > Secure Code. Secure Chains. Build the Future.
 
-Crakbit AI is an independent technology project building defensive-security tooling for developers, researchers, students and open-source communities. The repository currently contains an early secure-code scanner plus the Crakbit Chain research/public-testnet stack.
+Crakbit AI is an independent technology project building defensive-security tooling for developers, researchers, students and open-source communities. The repository contains an early secure-code scanner plus the Crakbit Chain research/public-testnet stack.
 
 ## Current status
 
 - Security scanner: early alpha
 - Security CLI: early alpha
 - AI Security Assistant: in development
-- Crakbit Chain: **v0.22.0a1 public-testnet / review-candidate alpha**
+- Crakbit Chain: **v0.23.0a1 public-testnet / review-candidate alpha**
 - External consensus candidate: CometBFT `v0.40.0`
 - Governed execution protocol: `crakbit-execution/3`
 - Browser wallet/public gateway: alpha
+- Public-testnet deployment/monitoring tooling: implemented
 - Production CRKBIT: **not launched**
 - Official CRKBIT presale: **none**
 
 Crakbit Chain is **not a production mainnet** and should not be used to custody real value.
 
-## Crakbit Chain v0.22
+## Crakbit Chain v0.23
 
 The chain research path currently includes:
 
@@ -28,20 +29,22 @@ The chain research path currently includes:
 - signed test CRKBIT transfers,
 - CometBFT ABCI integration,
 - crash-safe staged FinalizeBlock → atomic Commit,
-- deterministic application hashes,
-- native ABCI state sync,
+- deterministic application hashes and native ABCI state sync,
 - validator `join` / `remove` / `replace` governance with strict `>2/3` current voting-power approval,
-- governance state committed into the application hash,
-- deterministic ABCI validator updates,
+- governance state committed into the application hash and deterministic ABCI validator updates,
 - schema migration/rollback rehearsal,
 - browser wallet, public gateway, explorer, faucet and test-only Mining Lab,
 - reproducible-build/SBOM/release-evidence tooling,
-- v0.22 governed four-node lab generation,
-- cluster app-hash/governance divergence monitoring,
-- governance history export,
-- signed validator-governance campaign evidence.
+- governed multi-node campaign tooling from v0.22,
+- **public validator identity export with secret-field rejection**,
+- **4+ validator public-testnet inventory and operator/provider/region diversity gates**,
+- **shared application + CometBFT genesis bundles without private material**,
+- **per-operator deployment bundles and systemd service templates**,
+- **independent-node height/app-hash monitoring and divergence detection**,
+- **24h+ soak collection and readiness gates**,
+- **signed public-testnet operations evidence tied to exact Git/artifact hashes**.
 
-See [`blockchain/V0.22.md`](blockchain/V0.22.md) and [`blockchain/README.md`](blockchain/README.md).
+See [`blockchain/V0.23.md`](blockchain/V0.23.md) and [`blockchain/README.md`](blockchain/README.md).
 
 ## Quick test
 
@@ -53,23 +56,26 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-## Governed local testnet lab
+## v0.23 public-testnet workflow
 
-With the pinned CometBFT candidate binary installed:
+Each independent validator operator first exports **public metadata only** from their own node. After collecting at least four identities, build the shared inventory/genesis/operator bundles and then collect live operational evidence.
 
 ```bash
-crakchain governed-lab-create \
-  --cometbft /path/to/cometbft \
-  --output runtime/governed-v22-lab \
-  --chain-id crakbit-v22-local \
-  --nodes 4
+crakchain public-testnet-inventory-build \
+  --chain-id crakbit-public-testnet-1 \
+  --network-name "Crakbit Public Testnet 1" \
+  --identity validator-1-public.json \
+  --identity validator-2-public.json \
+  --identity validator-3-public.json \
+  --identity validator-4-public.json \
+  --output public-testnet-inventory.json
 ```
 
-The generated validator/treasury/governance keys are disposable local-lab keys only and must never be reused for a public or production network.
+The repository provides deployment and evidence tooling, but **does not claim an independent-host public testnet has been operated merely because the tooling exists**.
 
 ## Mainnet path
 
-The codebase has moved beyond a basic blockchain demo, but production launch remains gated by real operational evidence and independent review. Required work still includes independent-host validators, long-duration soak/fault/load/state-sync campaigns, protected remote/HSM signing, production RPC/TLS/WAF/DDoS/secret-management engineering, independent consensus/application/network/cryptography/browser-wallet review, final validator/CRKBIT economics and applicable legal/regulatory review.
+Production launch remains gated by actual long-running independent-host evidence and independent review. Required work still includes real VPS validator operation, 24h → 72h → 7-day soak/fault/load/state-sync campaigns, protected remote/HSM signing, production RPC/TLS/WAF/DDoS/secret-management engineering, independent consensus/application/governance/network/cryptography/browser-wallet review, final validator/CRKBIT economics and applicable legal/regulatory review.
 
 See [`blockchain/docs/MAINNET_GATES.md`](blockchain/docs/MAINNET_GATES.md).
 
