@@ -1,0 +1,70 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Validator Heights",
+      "id": 1,
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "crakbit_chain_height", "legendFormat": "{{instance}}", "refId": "A"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Consensus Round",
+      "id": 2,
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {"expr": "crakbit_consensus_round", "legendFormat": "{{instance}}", "refId": "A"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Mempool Transactions",
+      "id": 3,
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {"expr": "crakbit_mempool_transactions", "legendFormat": "{{instance}}", "refId": "A"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Authenticated Validator Views",
+      "id": 4,
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {"expr": "crakbit_authenticated_validator_views", "legendFormat": "{{instance}}", "refId": "A"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Equivocation Evidence",
+      "id": 5,
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "targets": [
+        {"expr": "crakbit_equivocation_evidence_total", "legendFormat": "{{instance}}", "refId": "A"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Consensus Lock",
+      "id": 6,
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "targets": [
+        {"expr": "crakbit_consensus_locked", "legendFormat": "{{instance}}", "refId": "A"}
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["crakbit", "devnet", "validators"],
+  "templating": {"list": []},
+  "time": {"from": "now-30m", "to": "now"},
+  "timezone": "browser",
+  "title": "Crakbit Chain Devnet",
+  "uid": "crakbit-chain-devnet",
+  "version": 1
+}
