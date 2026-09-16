@@ -6,7 +6,7 @@ This roadmap describes the intended development order for Crakbit AI. Dates are 
 
 **Technology first. Security first. Tokens later.**
 
-The immediate product focus remains a useful defensive-security MVP. In parallel, the Crakbit Chain local research network has progressed through signed quorum finality, certified view changes, a two-phase prevote/precommit pipeline, authenticated validator requests, durable replay protection, quorum-certified snapshots and v0.8 chunked/resumable snapshot recovery. Public testnet/mainnet work still depends on a mature BFT lock/unlock design, mutually authenticated encrypted validator transport, adversarial testing and independent security review.
+The immediate product focus remains a useful defensive-security MVP. In parallel, Crakbit Chain is being used as a research network to turn blockchain, validator-security and recovery ideas into testable code. Production mainnet planning remains gated on reviewed consensus, long-running public testing and independent security review.
 
 ## Phase 1 — Foundation
 **Target: Q3–Q4 2026**
@@ -76,64 +76,77 @@ A developer should be able to submit or scan a small codebase and receive a clea
 
 A runnable local devnet exists to turn network research into testable code. This does **not** mean a production blockchain or public-value CRKBIT asset has launched.
 
-### Completed through v0.8
+### Completed research/devnet milestones through v0.10
 
-- [x] Native devnet CRKBIT accounting unit
-- [x] 8-decimal atomic-unit model
-- [x] Proposed 21,000,000 maximum genesis supply encoded for devnet
+- [x] Native test-only CRKBIT accounting unit
 - [x] Ed25519 wallet/key generation and `crk1...` addresses
 - [x] Signed transfers, nonces/replay protection and minimum fees
-- [x] Signed block proposals
-- [x] Previous-block hash linking
-- [x] Transaction Merkle roots and deterministic state roots
+- [x] Signed block proposals, previous-hash linking, Merkle roots and deterministic state roots
 - [x] SQLite chain/account/consensus persistence
 - [x] Round-specific deterministic proposer schedule
 - [x] Signed quorum-certified view changes
-- [x] Signed prevote + precommit phases
-- [x] >2/3 prevote and precommit certificates before finalization
+- [x] Signed prevote + precommit phases with >2/3 certificates
 - [x] Persistent anti-double-vote records and conservative per-height lock
-- [x] Persistent consensus event journal and equivocation evidence
+- [x] Consensus event journal and equivocation evidence
 - [x] Ed25519-authenticated validator internal requests
 - [x] Signed validator challenge/response identity handshake
 - [x] Durable SQLite-backed validator request replay protection
-- [x] Optional HTTPS peer-URL enforcement mode
-- [x] Signed state snapshot generation and verification
-- [x] >2/3 quorum snapshot certificates over identical state
+- [x] Signed state snapshots and >2/3 quorum snapshot certificates
+- [x] Resumable verified chunked snapshot transfer
 - [x] Safe snapshot import/bootstrap for fresh node databases
-- [x] Snapshot recovery metadata and recovery-status endpoint
-- [x] Bounded chunked snapshot transfer manifest
-- [x] Per-chunk + complete artifact hash validation
-- [x] Resumable verified chunk cache in `snapshot-fetch-chunked`
-- [x] Crash-visible snapshot import sidecar journal
-- [x] Snapshot-base-aware history status/block API
-- [x] Prometheus-style development metrics endpoint
-- [x] Finalized-block broadcast and catch-up synchronization
-- [x] REST/RPC endpoints and CLI key/balance/send/recovery tooling
-- [x] Validator health/height/round telemetry
-- [x] 4-validator Docker Compose devnet with default 3-of-4 quorum
-- [x] Simple development explorer
-- [x] Automated consensus/peer-authentication/snapshot/recovery tests and CI
-- [x] v0.8 recovery-hardening documentation
+- [x] Snapshot-base-aware history semantics
+- [x] Local integrity verification and verified backups/restore drills
+- [x] Prometheus/Grafana development observability and alerts
+- [x] Bounded RPC, transaction, mempool and block resource controls
+- [x] Public-testnet deployment/operator scaffold
+- [x] Automated blockchain CI
 
-### v0.9 consensus/network/public-testnet hardening — next
+### v0.11 — validator transport hardening
 
-- [ ] Review/replace the conservative cross-round lock with mature proof-based BFT lock/unlock, or migrate to a reviewed BFT core
-- [ ] Add mutually authenticated encrypted validator transport
-- [ ] Add certificate pinning and validator certificate/key rotation lifecycle
-- [ ] Add archive/history synchronization design for snapshot-bootstrapped nodes
-- [ ] Add database corruption, abrupt-power-loss and crash/restart recovery testing
-- [ ] Add long-running partition, latency, Byzantine-behavior and load tests
-- [ ] Add validator key-management and incident-response specification
-- [ ] Add Grafana dashboards and alert rules
-- [ ] Add public-testnet deployment configuration and operator runbooks
-- [ ] Add faucet policy and abuse controls
-- [ ] Add stronger explorer/wallet testnet UX
-- [ ] Add economic/incentive design review
-- [ ] Commission external consensus/network review
+- [x] Record consensus architecture decision: do not treat the bespoke Python consensus as a production BFT path
+- [x] Set reviewed/established BFT core migration evaluation as a release gate
+- [x] Add operator-managed outbound validator mTLS trust configuration
+- [x] Add dedicated inbound mutual-TLS validator launcher
+- [x] Add validator-address → TLS leaf certificate SHA-256 pin enforcement
+- [x] Add `/transport/status`
+- [x] Add certificate fingerprint helper
+- [x] Add repeatable Toxiproxy latency/timeout/reachability fault harness
+- [x] Add validator TLS/consensus-key rotation and incident-response runbook
+- [x] Add public-testnet reverse-proxy hardening example
+
+### v0.12 — large archive, recovery and testnet-hardening phase
+
+- [x] Genesis-anchored full-history archive export
+- [x] Full archive verification by replaying proposer signatures, quorum certificates, transactions, balances, nonces, state roots and hash continuity
+- [x] Snapshot-node pre-snapshot history backfill without mutating current state
+- [x] `archive-export`, `archive-verify` and `archive-import` CLI commands
+- [x] `/archive/status` and history-status integration
+- [x] Add consensus/execution boundary groundwork for future reviewed-BFT integration
+- [x] Add dual certificate-pin overlap for coordinated TLS certificate rotation
+- [x] Add optional bearer authentication for monitoring/operator endpoints
+- [x] Add explicit duplicate/conflicting/forged validator-vote adversarial fixtures
+- [x] Add repeatable multi-node soak/divergence monitor
+- [x] Add deny-by-default nftables public-testnet example
+- [x] Expand public-testnet operator guidance
+- [x] Add v0.12 automated tests and documentation
+
+### v0.13 — reviewed BFT integration proof-of-concept
+
+- [ ] Define a versioned process/protocol boundary between external consensus and Crakbit execution/state
+- [ ] Evaluate an established independently reviewed BFT core against the v0.12 execution adapter
+- [ ] Define deterministic application-hash/state-transition request/response contracts
+- [ ] Add consensus-adapter compatibility and integration tests
+- [ ] Add signed genesis/release artifact generation and verification
+- [ ] Add validator provisioning automation for multiple independent hosts
+- [ ] Add a strictly test-only public faucet with abuse limits
+- [ ] Improve read-only explorer/history access
+- [ ] Run sustained independent-host partition/latency/load/soak campaigns
+- [ ] Publish reproducible test results and incident logs
+- [ ] Prepare an external consensus/network/security review package
 
 ### Current consensus/network warning
 
-v0.8 materially improves authenticated recovery and state-transfer operations, but it is still **not** a production BFT or production P2P implementation. The consensus lock has no mature proof-based unlock rule, HTTPS enforcement is not a reviewed mTLS/certificate lifecycle, snapshot bootstrap does not reconstruct pre-snapshot historical block bodies, and no formal safety/liveness proof or independent audit exists.
+v0.12 materially improves recoverability, history verification, validator transport operations and testability, but it is still **not** a production BFT or production P2P implementation. The current Python consensus is research-only and is not the intended production mainnet path. No formal safety/liveness proof or independent audit exists.
 
 ## Phase 7 — Public Testnet
 **Only after Phase 6 security gates are met**
@@ -147,6 +160,7 @@ v0.8 materially improves authenticated recovery and state-transfer operations, b
 - [ ] Network monitoring
 - [ ] Stress testing
 - [ ] Community test program
+- [ ] Sustained soak/partition testing with published evidence
 
 Any CRKBIT units used on testnet are test-only and should have no represented production value.
 
@@ -165,7 +179,7 @@ Before any production network launch:
 
 ## Phase 9 — Mainnet Consideration
 
-A production mainnet should only be considered after successful long-lived public testing, independent security review and a clear operational/economic model.
+A production mainnet should only be considered after successful long-lived public testing, independently reviewed consensus, external security review and a clear operational/economic model.
 
 Potential items:
 
