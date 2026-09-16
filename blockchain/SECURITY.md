@@ -2,31 +2,30 @@
 
 The current Crakbit Chain implementation is a **research/devnet prototype**. It is not an audited production blockchain and must not be used to custody real value.
 
-## Security Goals of v0.6
+## Security Goals of v0.7
 
-v0.6 retains the v0.5 multiphase consensus safeguards and adds application-level validator-network authentication plus signed state-snapshot verification.
+v0.7 keeps the v0.6 multiphase consensus and signed validator-network controls while improving replay durability and state-recovery trust.
 
 Current development protections include:
 
 - Ed25519 signatures for transactions, proposals, prevotes, precommits and view changes,
-- sender/public-key binding,
-- nonce-based transaction replay protection,
-- deterministic transaction/state commitments,
-- strict greater-than-two-thirds prevote quorum,
-- strict greater-than-two-thirds precommit quorum,
-- certified non-zero-round view changes,
+- strict greater-than-two-thirds prevote and precommit certificates,
+- certified later-round view changes,
 - persistent same-phase anti-double-vote records,
 - persistent per-height consensus locks,
 - persistent consensus event history,
 - conflicting signed-proposal evidence,
 - Ed25519-authenticated `/internal/*` validator requests,
-- peer request signatures bound to method, path and request-body hash,
-- timestamp-window and nonce replay checks for validator HTTP requests,
+- request signatures bound to method, path, body hash, validator, timestamp and nonce,
+- **SQLite-persistent replay-nonce tracking across process restarts**,
 - signed validator challenge/response identity handshake,
 - optional HTTPS peer-URL enforcement,
-- validator-signed state snapshot export and verification,
-- finalized-block revalidation during sync,
-- validator health/height/round telemetry.
+- validator-signed state snapshots,
+- **strict >2/3 quorum snapshot certificates**, 
+- **fresh-database snapshot bootstrap/import**, 
+- issued-supply conservation checks during snapshot verification,
+- finalized-block revalidation during normal sync,
+- validator metrics and recovery metadata.
 
 These controls improve the research network but remain **insufficient for a public-value production chain**.
 
@@ -41,106 +40,61 @@ signed proposal
 → finalized block
 ```
 
-A validator does not sign a precommit until it has locally validated the prevote certificate for the exact proposal hash, height and round.
-
-Before/while precommitting, it persists a local lock on that block hash. A restart does not erase the lock or phase-vote record.
-
 ### Conservative lock limitation
 
-The current lock has **no mature proof-based unlock rule**. Once locked on a block hash at a height, a validator refuses to vote for another block hash at that height.
+The current lock still has **no mature proof-based cross-round unlock rule**. Once locked on a block hash at a height, a validator refuses to vote for another block hash at that height.
 
-This is intentionally safety-biased, but it can hurt liveness. Under some failure/partition sequences the devnet may halt rather than unlock.
-
-This is not a complete Tendermint/HotStuff-style or otherwise formally reviewed BFT implementation.
-
-### Certified view changes
-
-Later proposal rounds require >2/3 signed view-change messages. View changes carry local lock metadata but do not override the current conservative lock.
-
-### Equivocation evidence
-
-The node records the first valid signed proposal for `(height, round, proposer)`. A conflicting valid signed proposal from the same proposer is stored as evidence and rejected for voting.
-
-There is no automatic slashing, validator removal or evidence gossip/consensus processing.
+This is safety-biased and may halt liveness during some partition/failure sequences. v0.7 must not be described as a complete Tendermint/HotStuff-style or formally reviewed BFT protocol.
 
 ## Validator Request Authentication
 
-v0.6 signs validator-to-validator internal HTTP requests. The signed request commitment includes:
+Internal requests are authenticated at the application layer. The receiver verifies validator membership, Ed25519 signature, body binding, timestamp freshness and nonce uniqueness.
 
-```text
-HTTP method
-request path
-SHA-256(request body)
-validator address
-timestamp
-random nonce
-```
+### Durable replay cache
 
-The receiver checks that the signer belongs to the configured validator set, verifies the Ed25519 signature, rejects timestamps outside the configured window and rejects a recently repeated nonce.
+When `CRAKBIT_DATA_DIR` is configured, accepted replay keys are persisted in `peer-replay.sqlite3`. A simple process restart therefore does not erase recent nonce history.
 
-### Replay limitation
-
-The nonce replay cache is currently process-local. Restarting a node clears that in-memory cache. Timestamp validation bounds the replay window, but this is not equivalent to a mature mutually authenticated session protocol with durable anti-replay state.
-
-## Validator Identity Handshake
-
-`POST /internal/hello` implements a signed challenge/response handshake. The signed response binds chain ID, validator address/public key, caller challenge and timestamp.
-
-This proves possession of the configured validator private key at handshake time.
-
-Peer status telemetry fetched afterward remains operational data and should not be treated as signed consensus evidence.
+This is still not equivalent to a reviewed mutually authenticated transport/session protocol. Replay protection depends on clock-window assumptions and the integrity of the local replay database.
 
 ## Encryption / TLS Limitations
 
-The default local Docker devnet still uses ordinary HTTP.
+The default Docker devnet still uses ordinary HTTP. `--require-peer-tls` / `CRAKBIT_REQUIRE_PEER_TLS=1` rejects non-HTTPS configured peers, but it does **not** automatically provide:
 
-Operators can enable:
-
-```text
-CRAKBIT_REQUIRE_PEER_TLS=1
-```
-
-or the CLI flag:
-
-```text
---require-peer-tls
-```
-
-which makes a node reject non-HTTPS validator peer URLs.
-
-This is **URL-policy enforcement only**. It does not automatically provide:
-
-- TLS certificate issuance,
 - mutual TLS,
 - certificate pinning,
+- certificate issuance,
 - certificate/key rotation,
-- secure discovery,
-- session-level replay protection,
-- eclipse/Sybil resistance.
+- secure peer discovery,
+- eclipse/Sybil defenses.
 
-A future public testnet requires a reviewed mutually authenticated encrypted validator transport.
+A public testnet should use a reviewed mutually authenticated encrypted validator transport.
 
-## Signed Snapshot Security
+## Quorum Snapshot Security
 
-`GET /snapshot/latest` exports a validator-signed snapshot envelope containing chain identity, genesis fingerprint, finalized height/hash, sorted account balances/nonces, a deterministic accounts root and a snapshot hash.
+A single validator-signed snapshot is no longer sufficient for v0.7 recovery bootstrap.
 
-`crakchain snapshot-verify` verifies the snapshot contents and validator signature against genesis.
+`build_snapshot_certificate` groups signatures by exact snapshot hash and requires the configured strict `>2/3` validator quorum. Signatures over different state roots/heights cannot be combined.
 
-v0.6 does **not** implement snapshot quorum certification or snapshot import / fast state sync. A single validator signature is useful for integrity testing but is not enough to establish production trust in state recovery.
+Snapshot verification checks:
 
-## Persistent Consensus State
+- chain ID,
+- genesis fingerprint,
+- sorted account encoding,
+- account root,
+- total issued supply conservation,
+- snapshot hash,
+- configured validator identity/public key,
+- signature validity,
+- unique signer count,
+- validator quorum.
 
-SQLite persists:
+## Snapshot Import Safety
 
-- local prevotes,
-- local precommits,
-- local consensus locks,
-- consensus round advancement,
-- local view-change actions,
-- proposal/equivocation records,
-- consensus event journal entries.
+Snapshot import is restricted to a fresh height-zero database. The command refuses to overwrite a node that already has local finalized height.
 
-SQLite remains a development storage choice and is not a production storage architecture decision.
+The imported certificate establishes an account-state base height and block hash. It does **not** recreate historical blocks/transactions before that height. Operators and API users must understand that pre-snapshot historical queries may be unavailable locally.
+
+Snapshot transfer is not yet chunked/resumable and has no production bandwidth/size policy.
 
 ## Private Keys
 
@@ -156,20 +110,19 @@ Rules:
 
 ## Monitoring / DoS Limitations
 
-`/health`, `/status`, `/peers`, `/metrics`, `/metrics/prometheus`, `/consensus/events` and `/evidence` are development diagnostics, not production observability/security infrastructure.
+Current health, metrics, evidence and recovery endpoints are development diagnostics. Before public testnet, add explicit controls for request body size, transaction/memo size, snapshot/certificate size, RPC rate, mempool size, concurrent connections, sync bandwidth and consensus-request frequency.
 
-Before public testnet, add explicit controls for request size, transaction/memo size, certificate size, RPC rate, mempool size, concurrent connections, sync bandwidth and consensus-request frequency.
+## State / Recovery Risks Still Open
 
-## State / Recovery Risk
+v0.7 still lacks:
 
-v0.6 now has signed snapshot export/verification but still lacks:
-
-- snapshot quorum certification,
-- verified snapshot import / fast state sync,
-- pruning/archival policy,
-- corruption recovery procedures,
-- crash-consistency stress testing,
-- long-running restart/partition tests.
+- chunked/resumable snapshot transfer,
+- snapshot retention/pruning policy,
+- explicit historical API behavior below snapshot base height,
+- corruption-repair tooling,
+- interrupted-import recovery journal,
+- long-running crash/restart testing,
+- adversarial partition/latency/Byzantine testing.
 
 ## Economic Security
 
@@ -179,13 +132,12 @@ No production economics or investment value should be inferred from the devnet i
 
 ## Required Before Public Testnet
 
-- reviewed cross-round unlock/mature BFT design,
+- reviewed cross-round unlock or mature BFT core,
 - mutually authenticated encrypted validator transport,
-- certificate/key rotation and key-management runbook,
-- durable/session-grade replay protection,
-- snapshot quorum and recovery/import design,
+- certificate/key rotation and production key-management runbook,
+- snapshot transfer/retention hardening,
 - parser fuzzing and malformed-message testing,
-- partition/restart/load testing,
+- partition/restart/corruption/load testing,
 - RPC abuse controls,
 - reproducible build/container review,
 - external consensus/network review.
