@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crakbit-chain"
-version = "0.20.0a1"
-description = "Crakbit Chain upgrade-compatibility alpha with versioned schema migrations, rollback rehearsal, signed migration evidence and validator-lifecycle drill plans"
+version = "0.21.0a1"
+description = "Crakbit Chain deterministic validator-governance alpha with replicated lifecycle state, live ABCI validator updates, governance-aware app hashes and state sync"
 requires-python = ">=3.11"
 dependencies = [
   "cryptography>=42.0.0",
@@ -18,7 +18,7 @@ dependencies = [
 dev = ["pytest>=8.0.0", "build>=1.2.2"]
 
 [project.scripts]
-crakchain = "crakbit_chain.cli_v20:main"
+crakchain = "crakbit_chain.cli_v21:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
