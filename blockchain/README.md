@@ -1,60 +1,37 @@
-# Crakbit Chain — v0.26 Independent-Review Remediation Alpha
+# Crakbit Chain — v0.27 Final Mainnet-Candidate Policy Alpha
 
-**Current package:** `0.26.0a1`  
+**Current package:** `0.27.0a1`  
 **Consensus candidate:** CometBFT `v0.40.0`  
 **Execution path:** `crakbit-execution/3`  
-**Status:** research/public-testnet/independent-review-remediation tooling — **not production mainnet**.
+**Status:** final mainnet-candidate policy/evidence tooling — **not production mainnet**.
 
 Production CRKBIT has **not** launched. There is no official presale or production token contract. Do not use this software to custody real value.
 
-## Current architecture
+## v0.27 scope
 
-```text
-Browser wallet / CLI
-        │ signed transaction / governed validator change
-        ▼
-Public gateway / redundant public RPC
-        │
-        ▼
-CometBFT v0.40.0 validator network
-        │ ABCI
-        ▼
-Crakbit Go bridge
-        │ authenticated loopback/private HTTP
-        ▼
-crakbit-execution/3
-        │
-        ├── deterministic transfers
-        ├── validator governance (>2/3 approval)
-        ├── staged FinalizeBlock → atomic Commit
-        ├── governance-aware application hash
-        ├── validator updates
-        └── governance-aware state sync
-```
+v0.27 builds on the v0.26 remediation/re-freeze gate and adds the final modeled policy/evidence layer before any production-mainnet consideration:
 
-The older Python prevote/precommit implementation remains research-only and is not the intended production BFT path.
+- signed coordinated upgrade plan,
+- exact source/package/schema/migration/rollback binding,
+- strict `>2/3` validator-readiness threshold,
+- signed normal/emergency governance timelock policy,
+- pre-activation cancellation window,
+- emergency strict-supermajority requirement,
+- emergency policy cannot authorize arbitrary user-balance reassignment or silent supply changes,
+- signed CRKBIT economics/genesis parameter freeze,
+- supply/decimals/fees/incentive/distribution commitment hash binding,
+- explicit no-investment-return and no-token-sale-authorization claims,
+- signed independent economic-security review attestation,
+- signed independent legal/regulatory review attestation,
+- exact review binding to the frozen economics manifest and candidate source commit,
+- deterministic candidate-identity SHA-256,
+- separate signed release approvals,
+- minimum three unique release approvers/signers,
+- final candidate gate consuming operational readiness + v0.26 remediation + governance + economics + upgrade + external review + release approvals,
+- signed final readiness report,
+- v0.27 regression tests.
 
-## v0.26 scope
-
-v0.26 builds on the v0.25 exact review freeze and adds the **post-review remediation / re-freeze boundary**:
-
-- signed review findings register,
-- stable `CRK-REV-...` finding IDs,
-- severity/component/title/affected-commit/reproduction metadata,
-- remediation commit/config/regression-test binding,
-- signed independent retest records,
-- hard re-freeze gate for unresolved or un-retested high/critical findings,
-- retests must pass against the **exact candidate source commit** being re-frozen,
-- signed supply-chain/reproducible-build attestation hooks,
-- dependency-lock and SBOM hash binding,
-- signed public-edge TLS/WAF/DDoS/load/failover evidence without provider secrets,
-- minimum two passing public-edge attestations,
-- stale candidate supersession reasons when source/package/CometBFT/genesis/dependency/review evidence changes,
-- signed post-remediation review re-freeze,
-- explicit `independent_security_review_completed=false` and `production_mainnet_ready=false`,
-- v0.26 regression tests.
-
-See [`V0.26.md`](V0.26.md).
+See [`V0.27.md`](V0.27.md).
 
 ## Install / test
 
@@ -73,65 +50,78 @@ go mod download
 go test -mod=mod ./...
 ```
 
-## v0.26 commands
+## v0.27 commands
 
 ```text
-review-findings-v26-build
-review-findings-v26-verify
-review-retest-v26-build
-review-retest-v26-verify
-supply-attestation-v26-build
-supply-attestation-v26-verify
-edge-attestation-v26-build
-edge-attestation-v26-verify
-remediation-gate-v26-build
-review-refreeze-v26-build
-review-refreeze-v26-verify
+upgrade-plan-v27-build
+upgrade-plan-v27-verify
+governance-policy-v27-build
+governance-policy-v27-verify
+economics-freeze-v27-build
+economics-freeze-v27-verify
+external-review-v27-build
+external-review-v27-verify
+candidate-identity-v27-build
+release-approval-v27-build
+release-approval-v27-verify
+final-gate-v27-build
+final-report-v27-build
+final-report-v27-verify
 ```
 
-All v0.25 and earlier commands remain available through CLI delegation.
+All v0.26 and earlier review/public-testnet/governance commands remain available through CLI delegation.
 
-## High/critical remediation rule
+## Final candidate identity
 
-A high/critical finding cannot unlock a re-freeze merely because an operator marks it `remediated`. The finding must include remediation/regression metadata and the latest signed retest for that finding on the **exact candidate commit** must be `passed`.
+The v0.27 candidate identity commits to:
 
-A successful retest against an older commit does not satisfy the gate. A later failing retest on the candidate commit blocks the re-freeze.
+- exact Git source commit,
+- package and CometBFT versions,
+- application + consensus genesis hashes,
+- dependency-lock + SBOM hashes inherited from v0.26,
+- v0.24 operational-readiness artifact hash,
+- v0.26 remediation-gate artifact hash,
+- governance-policy manifest hash,
+- economics-freeze manifest hash,
+- coordinated-upgrade manifest hash,
+- economic-security review manifest hash,
+- legal/regulatory review manifest hash.
 
-## Supply-chain gate
+Release approvals must sign this exact identity. An approval for a different identity or source commit is rejected.
 
-The v0.26 supply-chain attestation binds:
+## Release approval model
 
-- candidate Git commit,
-- package version,
-- dependency-lock SHA-256,
-- SBOM SHA-256,
-- Python reproducible-build result,
-- Go bridge reproducible-build result,
-- dependency-review completion assertion,
-- transitive-SBOM completion assertion.
+A single release signer is intentionally insufficient. The modeled final gate requires at least three unique approver IDs and three unique signing identities, and every decision must be `approve`.
 
-This remains an attestation format. A signature proves who signed the record; it does not independently prove the real-world build/review process.
+This is evidence tooling, not an automatic launch mechanism. The final gate never starts validators, changes DNS, publishes a token contract, moves funds or changes chain state.
 
-## Public-edge gate
+## Economics boundary
 
-Each signed edge record captures public, non-secret operational facts such as minimum TLS version, TLS automation, WAF/DDoS controls, load-test/failover results and measured capacity. Provider API keys, certificate private keys and WAF secrets must never be embedded.
+v0.27 accepts economics parameters only from an explicit JSON file. It does not invent final economics. The 21,000,000 / 8-decimal values used during development remain proposals unless they are deliberately frozen and independently reviewed.
 
-The v0.26 remediation gate requires at least two passing public-edge attestations tied to the candidate source commit.
+The economics artifact explicitly records:
 
-## Candidate supersession
-
-An old frozen candidate is never silently modified. If a previous freeze is supplied, v0.26 records supersession reasons such as source/package/CometBFT/genesis/dependency changes. New review/remediation evidence also results in a newly signed re-freeze.
-
-## Existing v0.25/v0.24 layers retained
-
-v0.25 remains responsible for independent-host operator evidence, incident-response drills and the initial exact review candidate freeze. v0.24 remains responsible for preflight, authorized fault/recovery records, clean-host state sync/backup recovery, protected signer evidence, redundant-edge convergence and separate 24h/72h/7-day operational gates.
-
-## Mining note
-
-The Mining Lab is a **test-only work-reward service**, not consensus mining. It does not mint new supply and does not create CometBFT blocks.
+```text
+investment_return_promised=false
+token_sale_authorized_by_this_artifact=false
+requires_independent_economic_and_legal_review=true
+production_mainnet_ready=false
+```
 
 ## Production boundary
 
-A passing v0.26 re-freeze gate is not a completed audit and is not production-mainnet approval. Real independent-host operation, independently reviewed consensus/application/governance/network/cryptography/browser-wallet behavior, protected key custody, production public-edge engineering, economic-security review, finalized validator/CRKBIT economics and applicable legal/regulatory review remain mandatory.
+Even when `mainnet_candidate_gate_satisfied=true`, v0.27 deliberately keeps:
+
+```text
+production_mainnet_ready=false
+production_mainnet_launched=false
+production_crkbit_launched=false
+```
+
+Actual production launch still requires real independently managed validators, independently corroborated operations and review evidence, protected key custody, production public-edge engineering/capacity, final operator procedures, an explicit human launch decision and any required legal/regulatory steps.
 
 See [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md).
+
+## Mining note
+
+The Mining Lab remains a **test-only work-reward service**, not consensus mining. It does not mint new supply and does not create CometBFT blocks.
