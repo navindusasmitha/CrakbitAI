@@ -59,110 +59,82 @@ Crakbit AI remains primarily a defensive-security and secure-development project
 
 A runnable research/devnet and external CometBFT application path exist. This does **not** mean a production blockchain or production-value CRKBIT asset has launched.
 
-### Foundation through v0.14
+### Foundation through v0.19
 
 - [x] Native test-only CRKBIT accounting, Ed25519 wallets and signed transfers
 - [x] Research consensus/network/recovery experiments
 - [x] Integrity, backups, metrics and resource controls
 - [x] Deterministic external application boundary
-- [x] Signed release/genesis tooling
 - [x] CometBFT `v0.40.0` ABCI integration PoC
-- [x] `crakbit-execution/2` crash-safe FinalizeBlock → Commit path
-- [x] Combined Python + Go CI
+- [x] Crash-safe external FinalizeBlock → Commit path
+- [x] Browser wallet/public gateway/faucet/Mining Lab test tooling
+- [x] Native ABCI state sync
+- [x] Explorer reconciliation, soak/fault evidence tooling
+- [x] Review freeze, remediation matrix, reproducible-build checks, SBOM and signed release provenance
 
-### v0.15 — wallet/public gateway/Mining Lab
+### v0.20 — upgrade compatibility / lifecycle rehearsal
 
-- [x] Browser wallet/explorer UI
-- [x] Local encrypted Ed25519 vault + client-side signing
-- [x] Public gateway with research + CometBFT modes
-- [x] Persistent faucet controls
-- [x] Test-only browser work-reward Mining Lab
-- [x] Explicit mainnet release gates
+- [x] Explicit application schema versioning
+- [x] v19 → v20 offline-copy migration
+- [x] Logical state preservation and rollback verification
+- [x] Package/schema/CometBFT compatibility checks
+- [x] Signed migration/rollback evidence
+- [x] Signed validator join/remove/replace drill plans
+- [x] Explicit update emission/effective-height modeling
 
-### v0.16 — recovery/indexing/web hardening
+### v0.21 — deterministic validator governance / activation
 
-- [x] Multi-node CometBFT lab generator
-- [x] Deterministic external checkpoint export/verify/restore
-- [x] Trusted height/application-hash verification
-- [x] Dedicated external explorer index
-- [x] Durable public-service limits
-- [x] Same-origin gateway/CSP security profile
-- [x] Multi-host health checker and crash/replay matrix
-- [x] Wallet threat model + remote-signer/HSM guidance
+- [x] Bump package/CLI to `0.21.0a1`
+- [x] Add `crakbit-execution/3` governed application path
+- [x] Add canonical validator join/remove/replace governance transaction format
+- [x] Add strict `>2/3` current voting-power approval rule
+- [x] Replicate active and pending validator lifecycle state
+- [x] Include validator-governance state in the deterministic application hash
+- [x] Derive live ABCI validator updates only from validated replicated input
+- [x] Record deterministic validator-update emission for crash/replay recovery
+- [x] Model application-side validator activation at `H+2`
+- [x] Add schema 21 and v20 → v21 offline-copy migration/rollback rehearsal
+- [x] Add governance-aware external snapshots and native ABCI state sync
+- [x] Add multi-operator governance request build/sign/verify CLI
+- [x] Add Python governance/migration/state-sync tests
+- [x] Add Go bridge validator-update tests
+- [ ] Execute independent multi-host join/remove/replace campaigns
+- [ ] Independently review the update-height/activation semantics
+- [ ] Drill protected remote/HSM governance signing
 
-### v0.17 — native state sync / operational evidence tooling
+### v0.22 — governed multi-node campaigns / coordinated upgrades
 
-- [x] Native ABCI `ListSnapshots`, `OfferSnapshot`, `LoadSnapshotChunk`, `ApplySnapshotChunk`
-- [x] Trusted app-hash binding and chunk/artifact verification
-- [x] Pristine-state restore + snapshot-base semantics
-- [x] Signed exact-commit public-testnet evidence bundles
-- [x] Dry-run controlled fault-campaign runner
-- [x] Single-edge TLS/rate-limit NGINX profile
-- [x] Guarded remote-signer configuration helper
-- [x] Expanded Python + Go tests
-
-### v0.18 — review freeze / reconciliation / sustained evidence tooling
-
-- [x] Signed review-candidate freeze manifest
-- [x] Exact source/package/CometBFT/genesis identity binding
-- [x] Review artifact hashing and conservative readiness claims
-- [x] Clean explorer rebuild/reconciliation tooling
-- [x] Deterministic explorer table fingerprints
-- [x] Sustained health/soak evidence collector
-- [x] v0.18 regression tests and documentation
-
-### v0.19 — review remediation / reproducible release engineering
-
-- [x] Machine-readable review-finding remediation matrix
-- [x] High/critical finding automated release gate
-- [x] Regression-test references for remediated high/critical findings
-- [x] Reproducible artifact SHA-256 comparison tooling
-- [x] CI double-build verification for Python wheel + Go bridge
-- [x] Direct-dependency CycloneDX 1.5 SBOM generation
-- [x] Signed release provenance
-- [x] Signed operations-drill evidence
-- [ ] Ingest real independent-review findings when received
-- [ ] Complete transitive release SBOM in final release environment
-- [ ] Independent reproducible-build evidence
-
-### v0.20 — upgrade compatibility / validator lifecycle rehearsal
-
-- [x] Bump package/CLI to `0.20.0a1`
-- [x] Add explicit external-application schema versioning
-- [x] Add v19 → v20 offline-copy migration framework
-- [x] Verify pre-existing logical application state across migration
-- [x] Add disposable rollback verification
-- [x] Add protocol/schema/CometBFT compatibility matrix
-- [x] Add full offline upgrade rehearsal with SQLite/genesis checks
-- [x] Add signed migration/rollback evidence
-- [x] Add signed validator join/remove/replace drill plans
-- [x] Model CometBFT validator-update emission/effective-height relationship
-- [x] Prevent lifecycle plan from claiming a live consensus change
-- [x] Add v0.20 regression tests/documentation
-- [ ] Define a deterministic replicated authorization path for live validator-set updates
-- [ ] Emit live ABCI validator updates from committed replicated application state
-- [ ] Execute multi-node join/remove/replace drills after that deterministic path exists
+- [ ] One-command four-node governed CometBFT campaign lab
+- [ ] Controlled broadcast helper for quorum-approved governance transactions
+- [ ] Automated join/remove/replace campaigns with convergence checks
+- [ ] Restart/process-kill tests at `H`, `H+1`, and `H+2`
+- [ ] Partition/latency tests across a pending validator activation
+- [ ] Native state-sync bootstrap while governance state is pending
+- [ ] Coordinated schema/protocol upgrade activation across all validators
+- [ ] Explorer/index representation of governance transactions and validator history
+- [ ] Signed campaign evidence + application/validator-set divergence detection
+- [ ] Governance-key/consensus-key separation and remote-signer design
+- [ ] Research timelock/emergency/cancel semantics before any production consideration
 
 ### External evidence still required
 
-- [ ] Run four validators continuously on independently managed VPS/providers
-- [ ] Demonstrate live clean-host CometBFT state sync and app-hash convergence
+- [ ] Run validators continuously on independently managed VPS/providers
+- [ ] Demonstrate live clean-host CometBFT state sync and app-hash/governance-state convergence
 - [ ] Execute real partition, packet-loss, latency, process-kill and sustained-load campaigns
-- [ ] Publish signed raw health/fault/recovery/soak evidence tied to exact source/CometBFT version
-- [ ] Rebuild/reconcile explorer indexes from clean independent hosts
-- [ ] Deploy and drill a real remote-signer/HSM-compatible validator flow
+- [ ] Publish signed raw health/fault/recovery/soak/governance evidence tied to exact source/CometBFT version
+- [ ] Deploy and drill a real remote-signer/HSM-compatible validator/governance flow
 - [ ] Perform a multi-operator genesis ceremony with independently held validator keys
 - [ ] Deploy/review multi-edge shared rate limiting, WAF/DDoS and TLS automation
-- [ ] Freeze a candidate with real evidence and commission independent consensus/application/network/wallet review
+- [ ] Freeze a candidate with real evidence and commission independent consensus/application/governance/network/wallet review
 
 ## Phase 7 — Long-Lived Public Testnet / Review Candidate
 
 - [ ] Independent-host validator deployment
 - [ ] Long-duration soak monitoring with published evidence
 - [ ] Live state-sync/bootstrap recovery drills
-- [ ] Fault/partition/load campaigns
+- [ ] Fault/partition/load/governance campaigns
 - [ ] Signed source/genesis/release/evidence publication
-- [ ] Protected validator signer drill
+- [ ] Protected validator/governance signer drill
 - [ ] Incident-response exercises
 - [ ] Community test program
 - [ ] Frozen independent-review candidate
@@ -171,7 +143,7 @@ Testnet CRKBIT units represent test units only and should not be represented as 
 
 ## Phase 8 — Independent Security Review
 
-- [ ] Independent consensus/application review
+- [ ] Independent consensus/application/governance review
 - [ ] Independent network/RPC review
 - [ ] Independent browser-wallet review
 - [ ] Cryptography/key-management review
@@ -180,21 +152,18 @@ Testnet CRKBIT units represent test units only and should not be represented as 
 - [ ] Applicable legal/regulatory review
 - [ ] Remediate or explicitly accept every high/critical finding
 
-## Phase 9 — v0.21 Deterministic Validator Governance / Upgrade Activation
+## Phase 9 — Release / Operations Hardening
 
-- [ ] Replicated validator-change authorization object
-- [ ] Pending validator lifecycle state committed in the application state machine
-- [ ] Lifecycle state included in application hash
-- [ ] Deterministic ABCI validator-update emission from committed state
-- [ ] Activation-height replay/restart safety tests
-- [ ] Multi-node join/remove/replace lab campaign
-- [ ] Coordinated schema activation/rollback across a full testnet
-- [ ] Explorer/history reconciliation after coordinated upgrades
-- [ ] Continue regression fixes for real review findings
+- [ ] Independent reproducible build environment
+- [ ] Complete transitive SBOM/supply-chain review
+- [ ] Multi-edge DDoS/WAF/capacity testing
+- [ ] Protected signing/recovery procedures
+- [ ] Coordinated upgrade/rollback campaigns
+- [ ] Governance emergency/recovery procedures
 
 ## Phase 10 — Mainnet Consideration
 
-A production mainnet can only be considered after successful long-lived public testing, reviewed external consensus/application behavior, independent security review and a clear operational/economic/legal model.
+A production mainnet can only be considered after successful long-lived public testing, reviewed external consensus/application/governance behavior, independent security review and a clear operational/economic/legal model.
 
 ## CRKBIT Status
 
