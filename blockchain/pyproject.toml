@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crakbit-chain"
-version = "0.24.0a1"
-description = "Crakbit Chain operational hardening alpha with host preflight, fault/recovery evidence, redundancy checks, protected signer records and 24h/72h/7d readiness gates"
+version = "0.25.0a1"
+description = "Crakbit Chain independent-host evidence and review-candidate freeze alpha with incident response, signed host attestations and strict review gates"
 requires-python = ">=3.11"
 dependencies = [
   "cryptography>=42.0.0",
@@ -18,7 +18,7 @@ dependencies = [
 dev = ["pytest>=8.0.0", "build>=1.2.2"]
 
 [project.scripts]
-crakchain = "crakbit_chain.cli_v24:main"
+crakchain = "crakbit_chain.cli_v25:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
