@@ -1,9 +1,9 @@
-# Crakbit Chain — v0.25 Independent-Review-Candidate Tooling Alpha
+# Crakbit Chain — v0.26 Independent-Review Remediation Alpha
 
-**Current package:** `0.25.0a1`  
+**Current package:** `0.26.0a1`  
 **Consensus candidate:** CometBFT `v0.40.0`  
 **Execution path:** `crakbit-execution/3`  
-**Status:** research/public-testnet/independent-review-candidate tooling — **not production mainnet**.
+**Status:** research/public-testnet/independent-review-remediation tooling — **not production mainnet**.
 
 Production CRKBIT has **not** launched. There is no official presale or production token contract. Do not use this software to custody real value.
 
@@ -34,28 +34,27 @@ crakbit-execution/3
 
 The older Python prevote/precommit implementation remains research-only and is not the intended production BFT path.
 
-## v0.25 scope
+## v0.26 scope
 
-v0.25 builds on v0.24 operational hardening and adds the **evidence and freeze boundary before independent review**:
+v0.26 builds on the v0.25 exact review freeze and adds the **post-review remediation / re-freeze boundary**:
 
-- incident-response records with acknowledgement/resolution ordering,
-- escalation requirement for high/critical incidents,
-- recovery-verification requirement before incident closure,
-- signed per-operator host attestations using dedicated evidence-signing keys,
-- exact source commit / package / CometBFT / application-genesis / consensus-genesis binding,
-- required 7-day soak, backup/restore, clean-host state sync, validator-governance and protected-signer assertions,
-- required restart/process-kill/partition/latency/packet-loss/load/storage coverage,
-- at least four unique operator IDs, validator IDs and evidence signers,
-- provider and region diversity gates,
-- one exact source/package/CometBFT/application-genesis/consensus-genesis identity across the candidate,
-- dependency on a successful v0.24 operational-readiness artifact,
-- dependency on closed incident-response drill evidence,
-- signed exact review-candidate freeze,
-- explicit independent-review scope,
-- hard-coded `independent_security_review_completed=false` and `production_mainnet_ready=false` claims,
-- v0.25 regression tests.
+- signed review findings register,
+- stable `CRK-REV-...` finding IDs,
+- severity/component/title/affected-commit/reproduction metadata,
+- remediation commit/config/regression-test binding,
+- signed independent retest records,
+- hard re-freeze gate for unresolved or un-retested high/critical findings,
+- retests must pass against the **exact candidate source commit** being re-frozen,
+- signed supply-chain/reproducible-build attestation hooks,
+- dependency-lock and SBOM hash binding,
+- signed public-edge TLS/WAF/DDoS/load/failover evidence without provider secrets,
+- minimum two passing public-edge attestations,
+- stale candidate supersession reasons when source/package/CometBFT/genesis/dependency/review evidence changes,
+- signed post-remediation review re-freeze,
+- explicit `independent_security_review_completed=false` and `production_mainnet_ready=false`,
+- v0.26 regression tests.
 
-See [`V0.25.md`](V0.25.md) and [`docs/INDEPENDENT_REVIEW_HANDOFF_V25.md`](docs/INDEPENDENT_REVIEW_HANDOFF_V25.md).
+See [`V0.26.md`](V0.26.md).
 
 ## Install / test
 
@@ -74,64 +73,58 @@ go mod download
 go test -mod=mod ./...
 ```
 
-## v0.25 commands
+## v0.26 commands
 
 ```text
-incident-v25-record
-host-attestation-v25-build
-host-attestation-v25-verify
-review-gate-v25-build
-review-freeze-v25-build
-review-freeze-v25-verify
+review-findings-v26-build
+review-findings-v26-verify
+review-retest-v26-build
+review-retest-v26-verify
+supply-attestation-v26-build
+supply-attestation-v26-verify
+edge-attestation-v26-build
+edge-attestation-v26-verify
+remediation-gate-v26-build
+review-refreeze-v26-build
+review-refreeze-v26-verify
 ```
 
-All v0.24 host-preflight/fault/recovery/signer/redundancy/readiness commands and earlier public-testnet/governance/release commands remain available through CLI delegation.
+All v0.25 and earlier commands remain available through CLI delegation.
 
-## Evidence key separation
+## High/critical remediation rule
 
-Each operator should use a dedicated **evidence-signing key** for v0.25 host attestations. It should not be the validator consensus key, governance wallet key, user wallet key, TLS key or release key.
+A high/critical finding cannot unlock a re-freeze merely because an operator marks it `remediated`. The finding must include remediation/regression metadata and the latest signed retest for that finding on the **exact candidate commit** must be `passed`.
 
-A valid cryptographic signature proves that the holder of the evidence key signed the record. It does **not** independently prove the operator/provider/region/soak/drill claims. Every v0.25 host attestation therefore records:
+A successful retest against an older commit does not satisfy the gate. A later failing retest on the candidate commit blocks the re-freeze.
 
-```text
-operator_self_attested=true
-independently_verified=false
-production_mainnet_ready=false
-```
+## Supply-chain gate
 
-## Review gate
+The v0.26 supply-chain attestation binds:
 
-The aggregate v0.25 review gate requires:
+- candidate Git commit,
+- package version,
+- dependency-lock SHA-256,
+- SBOM SHA-256,
+- Python reproducible-build result,
+- Go bridge reproducible-build result,
+- dependency-review completion assertion,
+- transitive-SBOM completion assertion.
 
-- v0.24 `operational_review_candidate=true`,
-- at least four signed host attestations,
-- unique operator / validator / evidence-signer identities,
-- >=2 providers and >=2 regions,
-- every per-host gate satisfied,
-- single source commit and exact network identity,
-- at least one incident-response drill,
-- every incident closed with recovery verified.
+This remains an attestation format. A signature proves who signed the record; it does not independently prove the real-world build/review process.
 
-Only then can `candidate_freeze_allowed=true` be produced.
+## Public-edge gate
 
-## Freeze candidate for independent review
+Each signed edge record captures public, non-secret operational facts such as minimum TLS version, TLS automation, WAF/DDoS controls, load-test/failover results and measured capacity. Provider API keys, certificate private keys and WAF secrets must never be embedded.
 
-`review-freeze-v25-build` refuses to create a freeze if the supplied v0.25 review gate is unsatisfied. The freeze binds the exact source commit, package, CometBFT version, both genesis files, the review-gate hash and each review artifact SHA-256, then signs the manifest.
+The v0.26 remediation gate requires at least two passing public-edge attestations tied to the candidate source commit.
 
-The freeze does **not** claim an audit has happened. It explicitly keeps independent review and production-mainnet readiness false.
+## Candidate supersession
 
-## v0.24 operational layer retained
+An old frozen candidate is never silently modified. If a previous freeze is supplied, v0.26 records supersession reasons such as source/package/CometBFT/genesis/dependency changes. New review/remediation evidence also results in a newly signed re-freeze.
 
-v0.24 remains the source of:
+## Existing v0.25/v0.24 layers retained
 
-- validator host preflight,
-- exact package/CometBFT/genesis identity checks,
-- authorized typed fault/recovery records,
-- backup/restore and clean-host state-sync convergence,
-- protected remote-signer/HSM-style drill evidence,
-- redundant RPC/explorer convergence checks,
-- separate 24h/72h/7-day readiness gates,
-- signed operational evidence.
+v0.25 remains responsible for independent-host operator evidence, incident-response drills and the initial exact review candidate freeze. v0.24 remains responsible for preflight, authorized fault/recovery records, clean-host state sync/backup recovery, protected signer evidence, redundant-edge convergence and separate 24h/72h/7-day operational gates.
 
 ## Mining note
 
@@ -139,6 +132,6 @@ The Mining Lab is a **test-only work-reward service**, not consensus mining. It 
 
 ## Production boundary
 
-Tooling, signatures and operator attestations are not substitutes for actual independent-host operation or independent review. Before production-value mainnet consideration the project still needs real independently managed validators, real multi-operator genesis, genuine long-running/fault/recovery evidence, protected signer deployment, production RPC/TLS/WAF/DDoS/secret-management engineering, independent consensus/application/governance/network/cryptography/browser-wallet review, remediation/retest of high/critical findings, finalized economics/incentives and applicable legal/regulatory review.
+A passing v0.26 re-freeze gate is not a completed audit and is not production-mainnet approval. Real independent-host operation, independently reviewed consensus/application/governance/network/cryptography/browser-wallet behavior, protected key custody, production public-edge engineering, economic-security review, finalized validator/CRKBIT economics and applicable legal/regulatory review remain mandatory.
 
 See [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md).
