@@ -113,20 +113,35 @@ A runnable research/devnet and external CometBFT application path exist. This do
 
 ### v0.19 — review remediation / reproducible release engineering
 
-- [x] Bump package/CLI to `0.19.0a1`
-- [x] Add machine-readable review-finding remediation matrix
-- [x] Block automated gate on unresolved high/critical findings
-- [x] Require regression-test references for remediated high/critical findings
-- [x] Add reproducible artifact SHA-256 comparison tooling
-- [x] Add CI double-build verification for Python wheel
-- [x] Add CI double-build verification for Go bridge
-- [x] Add direct-dependency CycloneDX 1.5 SBOM generation
-- [x] Add signed release provenance tied to exact source/genesis/artifact hashes
-- [x] Add signed upgrade/rollback/incident/DR/validator-lifecycle drill evidence format
-- [x] Add v0.19 release-engineering tests and documentation
+- [x] Machine-readable review-finding remediation matrix
+- [x] High/critical finding automated release gate
+- [x] Regression-test references for remediated high/critical findings
+- [x] Reproducible artifact SHA-256 comparison tooling
+- [x] CI double-build verification for Python wheel + Go bridge
+- [x] Direct-dependency CycloneDX 1.5 SBOM generation
+- [x] Signed release provenance
+- [x] Signed operations-drill evidence
 - [ ] Ingest real independent-review findings when received
-- [ ] Produce a complete transitive release SBOM from the final release environment
-- [ ] Reproduce release artifacts in a genuinely independent build environment
+- [ ] Complete transitive release SBOM in final release environment
+- [ ] Independent reproducible-build evidence
+
+### v0.20 — upgrade compatibility / validator lifecycle rehearsal
+
+- [x] Bump package/CLI to `0.20.0a1`
+- [x] Add explicit external-application schema versioning
+- [x] Add v19 → v20 offline-copy migration framework
+- [x] Verify pre-existing logical application state across migration
+- [x] Add disposable rollback verification
+- [x] Add protocol/schema/CometBFT compatibility matrix
+- [x] Add full offline upgrade rehearsal with SQLite/genesis checks
+- [x] Add signed migration/rollback evidence
+- [x] Add signed validator join/remove/replace drill plans
+- [x] Model CometBFT validator-update emission/effective-height relationship
+- [x] Prevent lifecycle plan from claiming a live consensus change
+- [x] Add v0.20 regression tests/documentation
+- [ ] Define a deterministic replicated authorization path for live validator-set updates
+- [ ] Emit live ABCI validator updates from committed replicated application state
+- [ ] Execute multi-node join/remove/replace drills after that deterministic path exists
 
 ### External evidence still required
 
@@ -165,15 +180,16 @@ Testnet CRKBIT units represent test units only and should not be represented as 
 - [ ] Applicable legal/regulatory review
 - [ ] Remediate or explicitly accept every high/critical finding
 
-## Phase 9 — v0.20 Upgrade Compatibility / Validator Lifecycle
+## Phase 9 — v0.21 Deterministic Validator Governance / Upgrade Activation
 
-- [ ] Versioned application/database migration framework
-- [ ] Offline migration dry-run and rollback verification
-- [ ] Protocol/application compatibility matrix
-- [ ] Validator-set lifecycle application boundary
-- [ ] Safe join/remove/replace testnet drills
-- [ ] Explorer/history migration verification
-- [ ] Signed migration and rollback evidence
+- [ ] Replicated validator-change authorization object
+- [ ] Pending validator lifecycle state committed in the application state machine
+- [ ] Lifecycle state included in application hash
+- [ ] Deterministic ABCI validator-update emission from committed state
+- [ ] Activation-height replay/restart safety tests
+- [ ] Multi-node join/remove/replace lab campaign
+- [ ] Coordinated schema activation/rollback across a full testnet
+- [ ] Explorer/history reconciliation after coordinated upgrades
 - [ ] Continue regression fixes for real review findings
 
 ## Phase 10 — Mainnet Consideration
