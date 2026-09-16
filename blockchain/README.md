@@ -1,8 +1,8 @@
 # Crakbit Chain — Development Network Prototype
 
-**Status: early devnet / research prototype (`0.7.0-alpha`)**
+**Status: early devnet / research prototype (`0.8.0-alpha`)**
 
-Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosystem. The current devnet includes native test-only **CRKBIT** accounting, signed transactions, certified view changes, a two-phase **prevote → precommit** finality pipeline, durable local consensus locks, authenticated validator requests, persistent replay protection, quorum-certified state snapshots, snapshot bootstrap/recovery tooling, metrics, CLI tooling and a development explorer.
+Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosystem. The current devnet implements native test-only **CRKBIT** accounting, signed transactions, certified view changes, a two-phase **prevote → precommit** finality pipeline, durable local consensus locks, authenticated validator requests, durable peer replay protection, quorum-certified state snapshots, resumable chunked snapshot transfer, recovery journaling, validator telemetry, peer synchronization, RPC/CLI tooling and a development explorer.
 
 > This is **not a production mainnet**, has not been independently audited, and must not be used to custody real value.
 
@@ -22,65 +22,20 @@ Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosyst
 
 The 21M cap is a **devnet configuration parameter**, not a promise of future token value or final mainnet economics.
 
-## v0.7 Recovery + Replay Hardening
+## v0.8 Recovery Upgrade
 
-v0.7 keeps the v0.6 consensus semantics and hardens validator recovery.
+v0.8 keeps the existing research consensus flow unchanged and hardens snapshot transport and operational recovery.
 
-### Persistent peer replay protection
+New work includes:
 
-Signed validator requests commit to the HTTP method, path, body hash, validator identity, timestamp and nonce. When `CRAKBIT_DATA_DIR` is configured, accepted replay nonces are now persisted in:
-
-```text
-<CRAKBIT_DATA_DIR>/peer-replay.sqlite3
-```
-
-This prevents a simple validator-process restart from immediately erasing the replay cache.
-
-### Quorum-certified snapshots
-
-A single validator snapshot is no longer sufficient for recovery bootstrap. v0.7 can combine signatures only when a strict `>2/3` validator quorum signed the **same snapshot hash**.
-
-For the default four-validator devnet, this means **3 matching signatures**.
-
-### Snapshot fetch / verify / import
-
-Fetch matching snapshots from configured validators and build a certificate:
-
-```bash
-crakchain snapshot-fetch \
-  --genesis runtime/genesis.json \
-  --output runtime/snapshot-cert.json
-```
-
-Verify it:
-
-```bash
-crakchain snapshot-verify \
-  --snapshot runtime/snapshot-cert.json \
-  --genesis runtime/genesis.json
-```
-
-Import only into a fresh height-zero database:
-
-```bash
-crakchain snapshot-import \
-  --snapshot runtime/snapshot-cert.json \
-  --genesis runtime/genesis.json \
-  --data runtime/recovered-node
-```
-
-Or bootstrap a validator directly:
-
-```bash
-crakchain node \
-  --genesis runtime/genesis.json \
-  --key runtime/node4/validator.json \
-  --data runtime/node4-recovered \
-  --bootstrap-snapshot runtime/snapshot-cert.json \
-  --port 9104
-```
-
-Pre-snapshot historical blocks are **not reconstructed**. The imported state establishes a certified base height/hash; normal synchronization can continue from blocks newer than that height.
+- bounded chunked snapshot manifests,
+- per-chunk SHA-256 validation,
+- complete artifact hash validation,
+- resumable verified chunk cache in the CLI,
+- quorum certificate creation after chunk reassembly,
+- crash-visible snapshot import journal,
+- snapshot-base-aware history status/block endpoints,
+- explicit distinction between certified current state and locally available historical blocks.
 
 ## Consensus Flow
 
@@ -94,46 +49,89 @@ proposal
 finalized block
 ```
 
-Certified view changes remain required for later rounds. A validator persists its local lock when precommitting. The current lock is deliberately conservative: a validator that precommits one block hash at a height refuses to vote for another hash at that height.
+Certified view changes remain required for later rounds. A validator persists its local lock when precommitting. The current lock remains deliberately conservative and is **not yet a complete production BFT unlock protocol**.
 
-This is **not yet a mature production BFT unlock protocol**.
+## Validator Request Authentication
 
-## What Works
+Internal validator requests are signed with Ed25519 and commit to the HTTP method, request path, request-body hash, validator identity, timestamp and random nonce.
 
-- Ed25519 wallet/key generation
-- `crk1...` address derivation
-- Signed CRKBIT transfers
-- Transaction nonces and replay protection
-- Minimum transaction fees
-- Genesis allocation
-- Signed block proposals
-- Transaction Merkle root and deterministic state root
-- Round-specific proposer selection
-- Quorum-certified view changes
-- Signed prevotes and precommits
-- >2/3 prevote and precommit certificate validation
-- Durable same-phase anti-double-vote records
-- Durable per-height consensus lock
-- Conflicting signed-proposal evidence
-- Persistent consensus event journal
-- Ed25519-authenticated `/internal/*` validator requests
-- Timestamp + nonce request validation
-- **SQLite-persistent peer replay cache**
-- Signed validator challenge/response identity handshake
-- Optional HTTPS peer-URL enforcement mode
-- Signed state snapshot export
-- **>2/3 quorum snapshot certification**
-- **Certified snapshot verification and fresh-database import**
-- **Node bootstrap from a certified snapshot**
-- Recovery metadata endpoint
-- JSON and Prometheus-style development metrics
-- Finalized-block peer sync
-- Validator health/height/round telemetry
-- REST/RPC endpoints
-- CLI key/balance/send/snapshot tooling
-- 4-validator Docker Compose devnet
-- Browser development explorer
-- Automated ledger/consensus/peer-auth/recovery tests in GitHub Actions
+Accepted replay nonces are persisted in SQLite under the node data directory so a process restart does not immediately erase replay state.
+
+A signed challenge/response endpoint verifies possession of the configured validator key.
+
+`--require-peer-tls` can enforce HTTPS peer URLs, but this is not yet a complete mTLS/certificate lifecycle.
+
+## Quorum Snapshot Recovery
+
+A quorum snapshot certificate requires strict `>2/3` signatures over the exact same snapshot hash. For the default four-validator devnet, at least three matching validator signatures are required.
+
+Build a certificate using resumable verified chunks:
+
+```bash
+crakchain snapshot-fetch-chunked \
+  --genesis runtime/genesis.json \
+  --output runtime/snapshot-cert.json \
+  --cache-dir runtime/snapshot-cache
+```
+
+The transfer manifest commits to every chunk and to the complete canonical JSON artifact. Re-running the command reuses valid cached chunks for the same artifact hash.
+
+Verify the resulting certificate:
+
+```bash
+crakchain snapshot-verify \
+  --snapshot runtime/snapshot-cert.json \
+  --genesis runtime/genesis.json
+```
+
+Import into a **fresh** database only:
+
+```bash
+crakchain snapshot-import \
+  --snapshot runtime/snapshot-cert.json \
+  --genesis runtime/genesis.json \
+  --data runtime/recovered-node
+```
+
+Or bootstrap a node before startup:
+
+```bash
+crakchain node \
+  --genesis runtime/genesis.json \
+  --key runtime/node4/validator.json \
+  --data runtime/node4-recovered \
+  --bootstrap-snapshot runtime/snapshot-cert.json \
+  --port 9204
+```
+
+Snapshot bootstrap restores certified account balances/nonces and the finalized base hash. It does **not** reconstruct block bodies or transaction history before that snapshot base.
+
+## Crash-Visible Import Journal
+
+Before snapshot import mutates the database, v0.8 writes:
+
+```text
+snapshot-import.journal.json
+```
+
+next to the chain database. SQLite still provides the atomic database transaction; the sidecar records recovery intent and the target certificate hash/height/state root.
+
+After success, the journal is removed. If a crash leaves it behind, re-running the same certificate can reconcile a completed commit or retry a rolled-back fresh database. A different certificate is refused until the unfinished journal is reviewed.
+
+Status:
+
+```bash
+curl http://127.0.0.1:9101/recovery/import-journal
+```
+
+## Snapshot-Aware History
+
+```bash
+curl http://127.0.0.1:9101/history/status
+curl http://127.0.0.1:9101/history/block/1
+```
+
+A snapshot-bootstrapped node reports its snapshot base height/hash and local history start. Requests for unavailable pre-snapshot local block bodies return an explicit `410 Gone` explanation through the history-aware endpoint.
 
 ## Quick Start — Fresh Local Devnet
 
@@ -167,13 +165,8 @@ curl http://127.0.0.1:9101/consensus/events
 curl http://127.0.0.1:9101/metrics
 curl http://127.0.0.1:9101/metrics/prometheus
 curl http://127.0.0.1:9101/recovery/status
+curl http://127.0.0.1:9101/history/status
 ```
-
-## Peer Security Model
-
-Application-level request authentication protects validator request identity and body integrity. It does **not** by itself encrypt traffic.
-
-Local Docker development remains HTTP. `--require-peer-tls` rejects non-HTTPS peer URLs, but v0.7 still does not provision certificates, implement mTLS certificate pinning, or automate certificate/key rotation.
 
 ## Wallet / Test CRKBIT
 
@@ -217,7 +210,12 @@ Public development endpoints include:
 - `GET /metrics`
 - `GET /metrics/prometheus`
 - `GET /snapshot/latest`
+- `GET /snapshot/bundle/manifest`
+- `GET /snapshot/bundle/chunk/{artifact_sha256}/{index}`
 - `GET /recovery/status`
+- `GET /recovery/import-journal`
+- `GET /history/status`
+- `GET /history/block/{height}`
 - `GET /balance/{address}`
 - `GET /blocks/{height}`
 - `GET /transactions/{txid}`
@@ -245,24 +243,25 @@ GitHub Actions also runs the blockchain test suite on repository changes.
 
 ## Important Limitations
 
-- The conservative cross-round lock still has no mature proof-based unlock rule.
-- Local Docker peer traffic is not encrypted by default.
-- HTTPS enforcement is not the same as reviewed mTLS/certificate lifecycle management.
-- Snapshot import reconstructs state, **not historical blocks before the snapshot base height**.
-- Snapshot transfer is not chunked/resumable and does not yet include bandwidth/size controls.
+- The conservative cross-round lock has no mature proof-based unlock rule.
+- HTTPS enforcement does not provide a reviewed mTLS/certificate pinning/rotation lifecycle.
+- Snapshot bootstrap does not reconstruct historical blocks before the snapshot base.
+- Chunk caching resumes the same immutable bundle; it is not a production streaming protocol.
 - No validator-set changes, staking/slashing or production governance exists.
-- No formal consensus proof or independent consensus/network audit has been completed.
+- Long-running Byzantine/partition/load testing remains incomplete.
+- No independent consensus/network security audit has been completed.
 
-See [`V0.7.md`](V0.7.md), [`SPEC.md`](SPEC.md) and [`SECURITY.md`](SECURITY.md) for protocol and security notes.
+See [`V0.8.md`](V0.8.md), [`SPEC.md`](SPEC.md) and [`SECURITY.md`](SECURITY.md) for protocol and security notes.
 
-## Next Engineering Milestones — v0.8
+## Next Engineering Milestones — v0.9
 
-1. Review/replace the conservative lock with a mature proof-based cross-round BFT lock/unlock design or migrate to a reviewed BFT core.
-2. Add mutually authenticated TLS validator transport, certificate pinning and rotation.
-3. Add snapshot chunking, transfer limits and resumable state sync.
-4. Add explicit snapshot-base awareness to historical block APIs.
-5. Add crash/corruption/interrupted-import recovery tests.
-6. Run long-lived partition, latency, Byzantine-behavior and load tests.
-7. Add Grafana dashboards and alert rules.
-8. Add public-testnet deployment manifests, faucet controls and operator runbooks.
-9. Commission independent consensus/network review before any real-value launch.
+1. Review/replace the conservative cross-round lock with a mature proof-based BFT design or reviewed BFT core.
+2. Add mutually authenticated encrypted validator transport with certificate pinning/rotation.
+3. Design archive/history synchronization for snapshot-bootstrapped nodes.
+4. Add crash/corruption/abrupt-power-loss recovery harnesses.
+5. Run long-lived partition, latency, Byzantine-behavior and load tests.
+6. Add Grafana dashboards and alert rules.
+7. Add public-testnet deployment manifests and operator runbooks.
+8. Add faucet abuse controls and stronger wallet/explorer testnet UX.
+9. Define validator key-management and incident-response procedures.
+10. Commission independent consensus/network review before any public-value use.
