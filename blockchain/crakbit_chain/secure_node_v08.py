@@ -68,14 +68,23 @@ def create_app():
         node = app.state.node
         base_raw = _metadata(node, "snapshot_base_height")
         base_height = int(base_raw) if base_raw is not None else None
+        imported_raw = _metadata(node, "archive_history_imported_to")
+        imported_to = int(imported_raw) if imported_raw is not None else None
+        archive_covers_base = (
+            base_height is not None
+            and imported_to is not None
+            and imported_to >= base_height
+        )
         return {
             "chain_id": node.genesis.chain_id,
             "current_height": node.ledger.height,
             "snapshot_bootstrapped": base_height is not None,
             "snapshot_base_height": base_height,
             "snapshot_base_hash": _metadata(node, "snapshot_base_hash"),
-            "local_block_history_start": (base_height + 1) if base_height is not None else 1,
-            "pre_snapshot_history_local": base_height is None,
+            "archive_history_imported_to": imported_to,
+            "archive_history_hash": _metadata(node, "archive_history_hash"),
+            "local_block_history_start": 1 if (base_height is None or archive_covers_base) else base_height + 1,
+            "pre_snapshot_history_local": base_height is None or archive_covers_base,
         }
 
     @app.get("/history/block/{height}")
