@@ -95,7 +95,7 @@ Crakbit AI remains primarily a defensive-security and secure-development project
 - [x] Aggregate rehearsal gate + exact release freeze
 - [x] Manual `hold` / `approve-launch-window` record with no automatic launch
 
-## Phase 9 — Real Independent-Host Execution
+## Phase 9 — Real Independent-Host Execution / Continuous Evidence
 
 ### v0.29 — live host / cluster / genesis / soak / fault evidence
 - [x] Package/CLI `0.29.0a1`
@@ -116,27 +116,44 @@ Crakbit AI remains primarily a defensive-security and secure-development project
 - [x] Signed v0.29 real-evidence freeze
 - [x] v0.29 regression tests + docs
 
-### v0.29 real external execution still required
+### v0.30 — continuous operations / retention / publication
+- [x] Package/CLI `0.30.0a1`
+- [x] Signed non-secret 4+ validator monitoring inventory
+- [x] Reject secret-bearing monitor inventory fields
+- [x] Read-only live CometBFT cluster monitoring samples
+- [x] Height-spread + same-height app-hash divergence checks
+- [x] Resumable hash-chained monitor checkpoints
+- [x] Default seven-day target + >=0.99 success ratio
+- [x] Continuous checkpoint/resume collector script
+- [x] Raw evidence archive SHA-256 + retention manifest
+- [x] Minimum 30-day archive retention policy
+- [x] Active RPC/explorer/gateway health probes
+- [x] Redundant public-edge gate with minimum two endpoints per role by default
+- [x] Protected signer/HSM-equivalent TCP connectivity check without private-key access
+- [x] Public evidence bundle bound to exact v0.29 real-evidence freeze
+- [x] Signed final operator checklist with explicit manual DNS/treasury/launch controls
+- [x] v0.30 regression tests + docs
+
+### Real external execution still required
 - [ ] Provision 4+ truly independent validator hosts
-- [ ] Run live observations from real authorized operator infrastructure
+- [ ] Run v0.29/v0.30 observations from real authorized operator infrastructure
 - [ ] Perform genuine multi-operator genesis ceremony with separately held validator keys
 - [ ] Complete continuous 24h → 72h → 7-day or longer campaign
 - [ ] Execute authorized real fault/load/storage/state-sync/governance/upgrade campaigns
 - [ ] Deploy and inspect protected HSM/remote-signer custody
-- [ ] Operate redundant public RPC/explorer/gateway edges
+- [ ] Operate redundant public RPC/explorer/gateway edges and collect real SLO/failover evidence
 - [ ] Complete genuine independent technical/security review and remediation/retest
 - [ ] Import external reproducible-build/transitive dependency evidence
 - [ ] Finalize production economics/incentives and applicable legal/regulatory position
 
-### v0.30 — next target: operator automation / evidence retention / publication
-- [ ] Non-secret multi-host deployment inventory/Ansible generation
-- [ ] Continuous resumable signed cluster-observation collector
-- [ ] Seven-day evidence rotation/checkpoint/resume support
-- [ ] Raw log/archive bundle hashing + retention manifest
-- [ ] Active redundant RPC/explorer health/failover collector
-- [ ] Remote-signer connectivity/rotation status checks without private-key access
-- [ ] Public release-candidate evidence bundle with hashes/SBOM/genesis/review summaries/runbooks
-- [ ] Final operator launch checklist that still requires explicit human execution
+### v0.31 — next target: deployment ergonomics / drift detection / publication index
+- [ ] Generate non-secret Ansible/systemd deployment bundles from v0.30 inventory
+- [ ] Signed configuration-drift detection for validator/CometBFT/firewall/public-edge configs
+- [ ] Alert/SLO incident correlation across monitor samples and public edges
+- [ ] Signed backup-age/state-sync freshness checks
+- [ ] Public JSON/HTML evidence index exposing hashes/status without private infrastructure details
+- [ ] Release-candidate supersession rules when source/genesis/evidence changes
+- [ ] Final multi-operator checklist aggregation while retaining explicit human launch/no-launch execution
 
 ## Phase 10 — Mainnet Consideration
 
