@@ -4,91 +4,109 @@
 
 ## Current Stage
 
-**Early development / Security MVP alpha + Crakbit Chain v0.15 public-testnet infrastructure alpha**
+**Early development / Security MVP alpha + Crakbit Chain v0.16 public-testnet/mainnet-candidate infrastructure alpha**
 
-Crakbit AI has a public website, a Giveth-listed fundraising project, an open GitHub repository, technical documentation, a deterministic security-scanner alpha and a runnable experimental blockchain stack with a browser wallet/public gateway and a CometBFT integration proof-of-concept.
+Crakbit AI has a public website, a Giveth-listed fundraising project, an open GitHub repository, technical documentation, a deterministic security-scanner alpha and a runnable experimental blockchain/application stack with a browser wallet, public gateway, CometBFT integration proof-of-concept and public-testnet recovery/operations tooling.
 
-None of these alpha components should be described as production-ready.
+None of these alpha components should be described as a production mainnet or as safe for custody of real value.
 
 ## Current Snapshot
 
 | Area | Status | Notes |
 | --- | --- | --- |
 | Public website | Active | Project information and funding positioning available |
-| GitHub repository | Active | Documentation, scanner alpha and blockchain code published |
-| Fundraising | Publicly listed on Giveth | GIVbacks verification/review is a separate process |
-| AI Security Assistant | In development | MVP architecture/workflow definition |
-| Secure Code Scanner | Early alpha | Initial deterministic rules and normalized findings implemented |
-| Security CLI | Early alpha | `crak` command included with scanner package |
-| Security API | Planned | To follow scanner core |
-| Smart Contract Scanner | Planned | Blockchain-security phase |
-| Crakbit Chain package | **v0.15 alpha** | Research/public-testnet infrastructure under `blockchain/` |
-| Research Python consensus | Research only | Prevote/precommit/view-change prototype retained for local research |
-| CometBFT integration | **v0.14+ PoC implemented** | Go ABCI bridge pinned to CometBFT `v0.40.0` |
-| External execution protocol | **`crakbit-execution/2` prototype** | Persisted FinalizeBlock staging + atomic SQLite Commit |
-| Signed genesis ceremony | **Prototype implemented** | Strict >2/3 configured validator attestations |
-| Browser wallet/Web UI | **v0.15 alpha implemented** | Client-side Ed25519 signing and encrypted local vault |
-| Public wallet gateway | **v0.15 alpha implemented** | Research and CometBFT backend modes |
-| Test faucet | **Persistent v0.15 implementation** | SQLite address cooldown/distribution records |
-| Mining Lab | **Test-reward prototype** | Browser proof-of-work reward; not consensus block mining |
-| Snapshots/recovery/archives | Prototype implemented | Quorum snapshots, resumable recovery and verified research history tooling |
-| Validator mTLS/pinning | Prototype/operator tooling | Research path transport hardening |
-| Monitoring/limits | Prototype implemented | Prometheus/Grafana tooling and bounded node resources |
-| Independent multi-host public testnet | Not completed | Sustained external-BFT operation/evidence still required |
-| Independent consensus/network/wallet audit | Not completed | Required before production use |
+| GitHub repository | Active | Open documentation, scanner and blockchain research code |
+| Fundraising | Publicly listed on Giveth | Fundraising campaign is not a CRKBIT token sale |
+| AI Security Assistant | In development | Security MVP work remains active |
+| Secure Code Scanner | Early alpha | Deterministic static-analysis rules implemented |
+| Security CLI | Early alpha | `crak` CLI available |
+| Security API | Planned | Follows scanner stabilization |
+| Smart-contract scanner | Planned | Blockchain-security roadmap |
+| Crakbit Chain package | **v0.16.0a1** | Public-testnet/mainnet-candidate infrastructure alpha |
+| Python research consensus | Research-only | Retained for local experiments; not production BFT path |
+| CometBFT bridge | **Integration PoC implemented** | Candidate pinned at CometBFT `v0.40.0` |
+| External execution | **Prototype implemented** | Crash-safe staged FinalizeBlock → atomic Commit |
+| Browser wallet | **Alpha implemented** | Local Ed25519 signing + encrypted browser vault |
+| Public gateway | **v0.16 hardened alpha** | Same-origin default, CSP/security headers, durable write limits |
+| Test faucet | **Prototype implemented** | Persistent distribution/cooldown + durable request limits |
+| Mining Lab | **Test-only prototype** | Browser work reward; not consensus block mining or minting |
+| External state checkpoint | **v0.16 adapter implemented** | Export/verify/restore; native CometBFT state-sync wiring still pending |
+| External explorer index | **v0.16 prototype implemented** | Dedicated commit/tx/address/account SQLite index |
+| Local CometBFT lab generator | **v0.16 implemented** | Creates independent validator homes/shared consensus genesis |
+| Multi-host health checker | **v0.16 implemented** | Reachability, catch-up and height-spread checks |
+| Crash/replay evidence matrix | **v0.16 implemented** | Deterministic application restart/replay/checkpoint checks |
+| Independent-host public testnet | Not yet evidenced | Sustained external operation/results still required |
+| Independent consensus/security audit | Not completed | Mandatory before production-value consideration |
 | Production CRKBIT | **Not launched** | No official presale or production token contract |
 
-## v0.15 User-Facing Additions
+## v0.16 Completed Blockchain Work
 
-- responsive overview/wallet/explorer/validator Web UI,
-- locally generated Ed25519 browser wallet,
-- `crk1...` address compatibility,
-- PBKDF2-SHA256 + AES-GCM encrypted browser vault,
-- encrypted wallet backup/import,
-- client-side canonical signed transfers,
-- unified public gateway for research or CometBFT backends,
-- CometBFT transaction broadcast path,
-- external-state read APIs for accounts, transactions and commit history,
-- persistent test faucet,
-- opt-in SHA-256 proof-of-work Mining Lab with persistent server-side reward limits,
-- explicit production mainnet release-gate checklist.
+- package/CLI advanced to `0.16.0a1`,
+- repeatable multi-node CometBFT lab generator,
+- shared consensus-genesis/persistent-peer generation from independent validator homes,
+- deterministic external-application checkpoint export/verify/import,
+- optional trusted CometBFT height/application-hash binding during checkpoint verification,
+- explicit checkpoint-base metadata instead of invented historical commits,
+- post-checkpoint next-height commit support,
+- dedicated external explorer index and service,
+- restart-persistent SQLite public write-rate limiting,
+- durable faucet/mining challenge request controls,
+- same-origin gateway default and restrictive CSP/security headers,
+- multi-host validator health/divergence checker,
+- external FinalizeBlock/Commit crash/replay/checkpoint evidence matrix,
+- wallet threat-model documentation,
+- validator remote-signer/HSM-equivalent guidance,
+- automated v0.16 tests plus existing CometBFT Go bridge CI.
 
-The Mining Lab does not decide blocks or mint new supply. Valid work is rewarded through an ordinary test CRKBIT transaction from a dedicated funded non-validator reward wallet.
+## What v0.16 Does Not Prove
+
+v0.16 is not evidence that a production network is ready. Specifically:
+
+- the application checkpoint adapter is not fully wired into native CometBFT state-sync snapshot lifecycle,
+- a long-running four-validator network on independently managed VPS/providers has not yet been published as sustained evidence,
+- no completed real partition/packet-loss/latency/load campaign is claimed,
+- SQLite durable limits do not provide horizontally shared distributed rate limiting,
+- remote-signer/HSM-equivalent validator custody is documented but not deployed/audited,
+- browser wallet and gateway have not completed independent security review,
+- external explorer indexing has not completed production reconciliation/rebuild drills,
+- production economics and validator incentives are not finalized,
+- applicable legal/regulatory review for any future production asset is not complete.
 
 ## Immediate Security-Platform Priorities
 
 1. Expand scanner unit tests and rule coverage.
 2. Add structured configuration checks.
-3. Reduce false positives and document rule behavior.
-4. Build AI-assisted explanation/remediation on deterministic evidence.
-5. Publish a simple public Security MVP demo.
-6. Begin security API work after scanner core stabilizes.
+3. Reduce false positives and document rules.
+4. Build AI-assisted explanation/remediation on deterministic findings.
+5. Publish a simple Security MVP demo.
+6. Begin developer API work after scanner core stabilization.
 
-## Immediate Blockchain Priorities — v0.16
+## Immediate Blockchain Priorities — v0.17
 
-1. Build a repeatable local 4-node CometBFT lab.
-2. Complete external-consensus state-sync integration.
-3. Add exhaustive FinalizeBlock/Commit/restart replay testing.
-4. Deploy multiple independent testnet hosts and automate health/inventory checks.
-5. Add a dedicated indexed external-consensus explorer database.
-6. Run sustained partition, latency, packet-loss, restart and load campaigns.
-7. Harden browser-wallet CSP/origin and publish wallet threat model.
-8. Add remote-signer/HSM-equivalent validator key guidance.
-9. Publish signed genesis/release/fault/soak evidence bundles.
-10. Prepare independent consensus/application/network/wallet review.
-
-## Production Mainnet Position
-
-A Web UI, browser wallet, faucet, Mining Lab and CometBFT bridge do not by themselves make a production mainnet. The explicit production checklist is maintained in [`../blockchain/docs/MAINNET_GATES.md`](../blockchain/docs/MAINNET_GATES.md).
-
-Key remaining gates include long-lived independent-host testing, external state sync, hardened Internet infrastructure, production key custody, indexed explorer/recovery systems, independent security review, incident-response readiness, and final economic/legal review.
+1. Wire the v0.16 application checkpoint format into reviewed CometBFT state-sync lifecycle.
+2. Operate generated validators continuously across independent hosts/providers.
+3. Execute and publish partition, latency, packet-loss, restart and sustained-load evidence.
+4. Add explorer reconciliation and clean-host rebuild drills.
+5. Deploy shared upstream rate limiting, reverse-proxy and TLS profiles.
+6. Integrate/test a protected remote-signer/HSM-compatible validator workflow.
+7. Produce reproducible signed public-testnet release bundles.
+8. Run a documented multi-operator genesis ceremony without sharing private keys.
+9. Freeze a review candidate and commission independent consensus/application/network/wallet review.
 
 ## CRKBIT Status
 
-**Production CRKBIT has not launched. There is no official CRKBIT presale or production token contract.**
+Production CRKBIT has **not** launched. There is no official presale and no production token contract.
 
-The current chain code uses test-only CRKBIT units. The proposed 21,000,000 maximum genesis supply and 8-decimal setting are development parameters subject to technical, security, economic and legal review.
+The repository contains test-only CRKBIT accounting for research/public-testnet work. The proposed development parameters of 21,000,000 maximum genesis units and 8 decimals are not final production economics and remain subject to technical, security, economic and applicable legal review.
 
 ## Evidence and Transparency
 
-Crakbit AI aims to distinguish clearly between completed work, active development, prototypes, public-testnet infrastructure, planned features and production systems. Testnet units and prototype features must not be presented as production assets or guaranteed future functionality.
+Crakbit AI aims to distinguish clearly between implemented code, test evidence, public-testnet operation and production readiness. A feature being present in source code is not the same as that feature being independently reviewed, operated at scale or approved for real-value use.
+
+See:
+
+- `blockchain/V0.16.md`
+- `blockchain/docs/MAINNET_GATES.md`
+- `blockchain/docs/WALLET_THREAT_MODEL.md`
+- `blockchain/docs/VALIDATOR_REMOTE_SIGNER.md`
+- GitHub Issue #1 implementation tracker
