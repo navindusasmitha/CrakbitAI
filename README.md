@@ -41,7 +41,7 @@ Planned security tooling includes:
 - Security-focused developer guidance
 - Human-readable security reports
 
-### Crakbit Chain — Devnet v0.5 Alpha
+### Crakbit Chain — Devnet v0.6 Alpha
 A runnable experimental blockchain prototype exists in [`blockchain/`](blockchain/).
 
 The current development network includes:
@@ -60,23 +60,28 @@ The current development network includes:
 - Persistent per-height conservative consensus lock
 - Persistent consensus event journal
 - Conflicting signed proposal/equivocation evidence
+- Ed25519-authenticated validator-to-validator internal requests
+- Signed validator challenge/response identity handshake
+- Optional HTTPS peer-URL enforcement mode
+- Signed state snapshot generation and verification
+- Prometheus-style development metrics
 - Transaction Merkle roots and deterministic state roots
 - SQLite-backed chain and consensus state
 - Finalized-block broadcast and catch-up synchronization
 - Validator health/height/round telemetry
 - REST/RPC API
-- CLI wallet/transfer commands
+- CLI wallet/transfer/snapshot verification commands
 - 4-validator Docker Compose devnet with a default 3-of-4 quorum
 - Browser development explorer
-- Automated ledger/multiphase-consensus/view-change/evidence tests and CI
+- Automated ledger/multiphase-consensus/view-change/evidence/peer-auth/snapshot tests and CI
 
 The proposed devnet parameters use 8 decimals and a 21,000,000 CRKBIT maximum genesis supply. These parameters remain subject to technical, security, economic and legal review before any production network.
 
-**Important:** v0.5 is still not a production BFT protocol. The prevote/precommit pipeline and durable lock are research implementations. The lock does not yet have a mature proof-based unlock rule, validator networking is not authenticated/encrypted, and the network has not been independently audited.
+**Important:** v0.6 is still not a production BFT/mainnet protocol. The current cross-round lock still lacks a mature proof-based unlock rule, local Docker networking is not encrypted by default, snapshot import/fast sync is not implemented, and the network has not been independently audited.
 
 Test CRKBIT units created by this devnet are not a production token, investment product or public presale.
 
-See [`blockchain/README.md`](blockchain/README.md), [`blockchain/SPEC.md`](blockchain/SPEC.md) and [`blockchain/SECURITY.md`](blockchain/SECURITY.md).
+See [`blockchain/README.md`](blockchain/README.md), [`blockchain/V0.6.md`](blockchain/V0.6.md), [`blockchain/SPEC.md`](blockchain/SPEC.md) and [`blockchain/SECURITY.md`](blockchain/SECURITY.md).
 
 ### Developer Platform
 Planned developer-facing components include:
@@ -135,6 +140,8 @@ curl http://127.0.0.1:9101/validators
 curl http://127.0.0.1:9101/evidence
 curl http://127.0.0.1:9101/consensus/events
 curl http://127.0.0.1:9101/metrics
+curl http://127.0.0.1:9101/metrics/prometheus
+curl http://127.0.0.1:9101/snapshot/latest
 ```
 
 ## Architecture Direction
@@ -154,10 +161,11 @@ Developer / Researcher
    Security Engine        Crakbit Chain Devnet
    |-- Static analysis    |-- Wallet/signatures
    |-- Secret detection   |-- Transactions/fees
-   |-- Dependency checks  |-- Blocks/state
-   |-- Solidity analysis  |-- Certified view changes
-   `-- AI remediation     |-- Prevote / precommit quorum
-                          |-- Durable lock/evidence
+   |-- Dependency checks  |-- Certified view changes
+   |-- Solidity analysis  |-- Prevote / precommit quorum
+   `-- AI remediation     |-- Durable lock/evidence
+                          |-- Authenticated peer requests
+                          |-- Signed state snapshots
                           `-- Validator/RPC telemetry
 ```
 
@@ -175,16 +183,15 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the evolving platform des
 | Security CLI | Early alpha |
 | Developer API | Planned |
 | Smart Contract Scanner | Planned |
-| Crakbit Chain local devnet | **v0.5 alpha available** |
+| Crakbit Chain local devnet | **v0.6 alpha available** |
 | Quorum-certified view changes | **Devnet prototype implemented** |
 | Prevote/precommit finality | **Devnet prototype implemented** |
 | Persistent phase-vote state | **Prototype implemented** |
 | Conservative per-height consensus lock | **Research rule implemented** |
-| Consensus event journal | **Prototype implemented** |
-| Equivocation evidence | **Prototype implemented** |
-| Validator telemetry | **Prototype implemented** |
-| Chain CLI / wallet key tooling | **Early alpha available** |
-| Devnet explorer | **Prototype available** |
+| Validator request authentication | **v0.6 prototype implemented** |
+| Validator identity handshake | **v0.6 prototype implemented** |
+| Signed state snapshots | **Export/verification implemented** |
+| Prometheus-style metrics | **Prototype implemented** |
 | Public blockchain testnet | Not launched |
 | Production CRKBIT | **Not launched** |
 
@@ -204,10 +211,11 @@ Our development sequence includes:
 8. Proposer failover and persistent consensus state
 9. Quorum-certified view changes and equivocation evidence
 10. Multi-phase prevote/precommit finality + durable lock
-11. Authenticated validator networking + state recovery
-12. Public testnet preparation
-13. Long-lived public testnet and independent security review
-14. Mainnet consideration only after technical, economic and legal validation
+11. Authenticated validator requests + signed snapshot foundation
+12. Mature encrypted validator transport + state recovery / fast sync
+13. Public testnet preparation
+14. Long-lived public testnet and independent security review
+15. Mainnet consideration only after technical, economic and legal validation
 
 See [`ROADMAP.md`](ROADMAP.md) for milestones and target phases.
 
