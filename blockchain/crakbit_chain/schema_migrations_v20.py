@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
-import shutil
 import sqlite3
 import tempfile
 import time
@@ -166,7 +164,9 @@ def _sqlite_backup(source: Path, target: Path) -> None:
 
 
 def _apply_19_to_20(conn: sqlite3.Connection, source_fingerprint: str) -> None:
-    conn.executescript(
+    # Do not use executescript here: Python's sqlite3 executescript performs
+    # transaction-boundary handling that can invalidate our explicit BEGIN/COMMIT.
+    conn.execute(
         """
         CREATE TABLE IF NOT EXISTS crakbit_schema_migrations (
             migration_id TEXT PRIMARY KEY,
@@ -174,7 +174,11 @@ def _apply_19_to_20(conn: sqlite3.Connection, source_fingerprint: str) -> None:
             to_version INTEGER NOT NULL,
             source_fingerprint TEXT NOT NULL,
             applied_at_ms INTEGER NOT NULL
-        );
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS validator_lifecycle_drills (
             plan_hash TEXT PRIMARY KEY,
             kind TEXT NOT NULL,
@@ -183,7 +187,7 @@ def _apply_19_to_20(conn: sqlite3.Connection, source_fingerprint: str) -> None:
             artifact_json TEXT NOT NULL,
             status TEXT NOT NULL,
             recorded_at_ms INTEGER NOT NULL
-        );
+        )
         """
     )
     conn.execute(
@@ -246,7 +250,8 @@ def migrate_database_copy(
                 _apply_19_to_20(conn, source_fingerprint_before)
                 conn.execute("COMMIT")
             except Exception:
-                conn.execute("ROLLBACK")
+                if conn.in_transaction:
+                    conn.execute("ROLLBACK")
                 raise
         migrated = True
 
@@ -268,7 +273,8 @@ def migrate_database_copy(
                     _rollback_20_to_19(conn)
                     conn.execute("COMMIT")
                 except Exception:
-                    conn.execute("ROLLBACK")
+                    if conn.in_transaction:
+                        conn.execute("ROLLBACK")
                     raise
             rollback_verified = (
                 detect_schema_version(rollback_db) == BASELINE_EXTERNAL_SCHEMA_VERSION
