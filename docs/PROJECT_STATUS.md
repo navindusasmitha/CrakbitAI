@@ -4,9 +4,9 @@
 
 ## Current Stage
 
-**Early development / Security MVP alpha + Crakbit Chain v0.16 public-testnet/mainnet-candidate infrastructure alpha**
+**Early development / Security MVP alpha + Crakbit Chain v0.17 public-testnet/mainnet-candidate infrastructure alpha**
 
-Crakbit AI has a public website, a Giveth-listed fundraising project, an open GitHub repository, technical documentation, a deterministic security-scanner alpha and a runnable experimental blockchain/application stack with a browser wallet, public gateway, CometBFT integration proof-of-concept and public-testnet recovery/operations tooling.
+Crakbit AI has a public website, a Giveth-listed fundraising project, an open GitHub repository, technical documentation, a deterministic security-scanner alpha and a runnable experimental blockchain/application stack with browser wallet, public gateway, CometBFT integration, native ABCI state-sync code and public-testnet evidence tooling.
 
 None of these alpha components should be described as a production mainnet or as safe for custody of real value.
 
@@ -22,54 +22,55 @@ None of these alpha components should be described as a production mainnet or as
 | Security CLI | Early alpha | `crak` CLI available |
 | Security API | Planned | Follows scanner stabilization |
 | Smart-contract scanner | Planned | Blockchain-security roadmap |
-| Crakbit Chain package | **v0.16.0a1** | Public-testnet/mainnet-candidate infrastructure alpha |
-| Python research consensus | Research-only | Retained for local experiments; not production BFT path |
-| CometBFT bridge | **Integration PoC implemented** | Candidate pinned at CometBFT `v0.40.0` |
+| Crakbit Chain package | **v0.17.0a1** | Public-testnet/mainnet-candidate infrastructure alpha |
+| Python research consensus | Research-only | Retained for local experiments; not intended production BFT path |
+| CometBFT bridge | **v0.17 integration implemented** | Candidate dependency remains CometBFT `v0.40.0` |
 | External execution | **Prototype implemented** | Crash-safe staged FinalizeBlock → atomic Commit |
+| Native ABCI state sync | **v0.17 code implemented** | List/Offer/Load/Apply snapshot lifecycle; live independent-host recovery evidence still required |
 | Browser wallet | **Alpha implemented** | Local Ed25519 signing + encrypted browser vault |
-| Public gateway | **v0.16 hardened alpha** | Same-origin default, CSP/security headers, durable write limits |
+| Public gateway | **Hardened alpha** | Same-origin default, CSP/security headers, durable write limits |
 | Test faucet | **Prototype implemented** | Persistent distribution/cooldown + durable request limits |
 | Mining Lab | **Test-only prototype** | Browser work reward; not consensus block mining or minting |
-| External state checkpoint | **v0.16 adapter implemented** | Export/verify/restore; native CometBFT state-sync wiring still pending |
-| External explorer index | **v0.16 prototype implemented** | Dedicated commit/tx/address/account SQLite index |
-| Local CometBFT lab generator | **v0.16 implemented** | Creates independent validator homes/shared consensus genesis |
-| Multi-host health checker | **v0.16 implemented** | Reachability, catch-up and height-spread checks |
-| Crash/replay evidence matrix | **v0.16 implemented** | Deterministic application restart/replay/checkpoint checks |
+| External explorer index | **Prototype implemented** | Dedicated commit/tx/address/account SQLite index |
+| CometBFT lab generator | **Implemented** | Creates independent validator homes/shared consensus genesis |
+| Multi-host health checker | **Implemented** | Reachability, catch-up and height-spread checks |
+| Fault campaign runner | **v0.17 implemented** | Dry-run by default; operator must execute real campaigns separately |
+| Signed evidence bundle | **v0.17 implemented** | Binds exact source commit, CometBFT version, genesis and evidence hashes |
+| Public-testnet edge profile | **v0.17 scaffold** | TLS/rate limits for one controlled edge; not a complete distributed WAF/DDoS system |
+| Remote-signer config helper | **v0.17 scaffold** | Configures CometBFT signer address only; does not implement/protect an HSM signer |
 | Independent-host public testnet | Not yet evidenced | Sustained external operation/results still required |
 | Independent consensus/security audit | Not completed | Mandatory before production-value consideration |
 | Production CRKBIT | **Not launched** | No official presale or production token contract |
 
-## v0.16 Completed Blockchain Work
+## v0.17 Completed Blockchain Work
 
-- package/CLI advanced to `0.16.0a1`,
-- repeatable multi-node CometBFT lab generator,
-- shared consensus-genesis/persistent-peer generation from independent validator homes,
-- deterministic external-application checkpoint export/verify/import,
-- optional trusted CometBFT height/application-hash binding during checkpoint verification,
-- explicit checkpoint-base metadata instead of invented historical commits,
-- post-checkpoint next-height commit support,
-- dedicated external explorer index and service,
-- restart-persistent SQLite public write-rate limiting,
-- durable faucet/mining challenge request controls,
-- same-origin gateway default and restrictive CSP/security headers,
-- multi-host validator health/divergence checker,
-- external FinalizeBlock/Commit crash/replay/checkpoint evidence matrix,
-- wallet threat-model documentation,
-- validator remote-signer/HSM-equivalent guidance,
-- automated v0.16 tests plus existing CometBFT Go bridge CI.
+- package/CLI advanced to `0.17.0a1`,
+- deterministic CometBFT state-sync snapshot materialization,
+- ABCI `ListSnapshots`, `OfferSnapshot`, `LoadSnapshotChunk` and `ApplySnapshotChunk` bridge wiring,
+- snapshot acceptance bound to the application hash supplied by CometBFT,
+- whole-artifact and per-chunk SHA-256 verification,
+- pristine-database-only state restore with explicit snapshot-base semantics,
+- authenticated v0.17 execution-service state-sync endpoints,
+- signed public-testnet evidence bundles tied to exact Git source commit and declared CometBFT version,
+- dry-run-by-default controlled fault-campaign evidence runner,
+- single-edge NGINX TLS/rate-limit public-testnet profile,
+- guarded CometBFT remote-signer configuration helper,
+- expanded Python and Go state-sync/evidence tests,
+- updated v0.17 security/operations documentation.
 
-## What v0.16 Does Not Prove
+## What v0.17 Does Not Prove
 
-v0.16 is not evidence that a production network is ready. Specifically:
+v0.17 is not evidence that a production network is ready. Specifically:
 
-- the application checkpoint adapter is not fully wired into native CometBFT state-sync snapshot lifecycle,
 - a long-running four-validator network on independently managed VPS/providers has not yet been published as sustained evidence,
-- no completed real partition/packet-loss/latency/load campaign is claimed,
-- SQLite durable limits do not provide horizontally shared distributed rate limiting,
-- remote-signer/HSM-equivalent validator custody is documented but not deployed/audited,
-- browser wallet and gateway have not completed independent security review,
-- external explorer indexing has not completed production reconciliation/rebuild drills,
-- production economics and validator incentives are not finalized,
+- live clean-host CometBFT state-sync recovery still needs to be demonstrated on that network,
+- no completed real partition/packet-loss/latency/process-kill/load campaign is claimed merely because tooling exists,
+- the NGINX profile is a single-edge scaffold and not horizontally distributed DDoS/WAF infrastructure,
+- remote-signer/HSM-equivalent validator custody is not deployed or independently reviewed,
+- browser wallet, consensus/application integration and network surfaces have not completed independent security review,
+- explorer indexing still needs clean-host reconciliation/rebuild evidence,
+- a final multi-operator production genesis ceremony has not occurred,
+- production economics/validator incentives are not finalized,
 - applicable legal/regulatory review for any future production asset is not complete.
 
 ## Immediate Security-Platform Priorities
@@ -81,17 +82,17 @@ v0.16 is not evidence that a production network is ready. Specifically:
 5. Publish a simple Security MVP demo.
 6. Begin developer API work after scanner core stabilization.
 
-## Immediate Blockchain Priorities — v0.17
+## Immediate Blockchain Priorities — v0.18 evidence freeze
 
-1. Wire the v0.16 application checkpoint format into reviewed CometBFT state-sync lifecycle.
-2. Operate generated validators continuously across independent hosts/providers.
-3. Execute and publish partition, latency, packet-loss, restart and sustained-load evidence.
-4. Add explorer reconciliation and clean-host rebuild drills.
-5. Deploy shared upstream rate limiting, reverse-proxy and TLS profiles.
-6. Integrate/test a protected remote-signer/HSM-compatible validator workflow.
-7. Produce reproducible signed public-testnet release bundles.
-8. Run a documented multi-operator genesis ceremony without sharing private keys.
-9. Freeze a review candidate and commission independent consensus/application/network/wallet review.
+1. Operate four validators continuously across independently managed hosts/providers.
+2. Demonstrate live clean-host state sync and application-hash convergence.
+3. Execute controlled partition, latency, packet-loss, process-kill and sustained-load campaigns using v0.17 tooling.
+4. Publish signed raw health/fault/recovery/soak evidence tied to exact source commit and CometBFT version.
+5. Reconcile/rebuild explorer indexes from clean hosts.
+6. Deploy and drill a protected remote-signer/HSM-compatible validator workflow.
+7. Exercise a multi-operator genesis ceremony without sharing validator private keys.
+8. Freeze a review candidate and commission independent consensus/application/network/wallet review.
+9. Remediate review findings before any production-mainnet decision.
 
 ## CRKBIT Status
 
@@ -101,11 +102,11 @@ The repository contains test-only CRKBIT accounting for research/public-testnet 
 
 ## Evidence and Transparency
 
-Crakbit AI aims to distinguish clearly between implemented code, test evidence, public-testnet operation and production readiness. A feature being present in source code is not the same as that feature being independently reviewed, operated at scale or approved for real-value use.
+Crakbit AI distinguishes between implemented code, test evidence, public-testnet operation and production readiness. A feature being present in source code is not the same as that feature being independently reviewed, operated at scale or approved for real-value use.
 
 See:
 
-- `blockchain/V0.16.md`
+- `blockchain/V0.17.md`
 - `blockchain/docs/MAINNET_GATES.md`
 - `blockchain/docs/WALLET_THREAT_MODEL.md`
 - `blockchain/docs/VALIDATOR_REMOTE_SIGNER.md`
