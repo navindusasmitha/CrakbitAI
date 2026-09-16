@@ -18,7 +18,7 @@ dependencies = [
 dev = ["pytest>=8.0.0", "build>=1.2.2"]
 
 [project.scripts]
-crakchain = "crakbit_chain.cli_v27:main"
+crakchain = "crakbit_chain.cli_v27_entry:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
