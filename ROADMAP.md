@@ -6,7 +6,7 @@ This roadmap describes the intended development order for Crakbit AI. Dates are 
 
 **Technology first. Security first. Tokens later.**
 
-The immediate product focus remains a useful defensive-security MVP. In parallel, the Crakbit Chain local research network has progressed through signed quorum finality, certified view changes and a v0.5 two-phase prevote/precommit prototype. Public testnet/mainnet work still depends on safer cross-round unlock behavior or a mature BFT core, authenticated networking, state recovery, adversarial testing and independent security review.
+The immediate product focus remains a useful defensive-security MVP. In parallel, the Crakbit Chain local research network has progressed through signed quorum finality, certified view changes, a two-phase prevote/precommit pipeline and v0.6 authenticated validator requests plus signed state-snapshot verification. Public testnet/mainnet work still depends on a mature cross-round unlock/BFT design, stronger encrypted validator transport, state recovery, adversarial testing and independent security review.
 
 ## Phase 1 — Foundation
 **Target: Q3–Q4 2026**
@@ -76,7 +76,7 @@ A developer should be able to submit or scan a small codebase and receive a clea
 
 A runnable local devnet exists to turn network research into testable code. This does **not** mean a production blockchain or public-value CRKBIT asset has launched.
 
-### Completed through v0.5
+### Completed through v0.6
 
 - [x] Native devnet CRKBIT accounting unit
 - [x] 8-decimal atomic-unit model
@@ -99,36 +99,44 @@ A runnable local devnet exists to turn network research into testable code. This
 - [x] Persistent local consensus-round/view-change state
 - [x] Persistent consensus event journal
 - [x] Conflicting signed proposal/equivocation evidence persistence
+- [x] Ed25519-authenticated validator internal requests
+- [x] Request signatures bind HTTP method/path/body hash/timestamp/nonce
+- [x] Timestamp-window validation and duplicate nonce rejection
+- [x] Signed validator challenge/response identity handshake
+- [x] Optional HTTPS peer-URL enforcement mode
+- [x] Signed state snapshot generation and verification
+- [x] `crakchain snapshot-verify`
+- [x] `/snapshot/latest`
+- [x] Prometheus-style development metrics endpoint
 - [x] Finalized-block broadcast and catch-up synchronization
 - [x] REST/RPC endpoints and CLI key/balance/send tooling
 - [x] Validator health/height/round telemetry
-- [x] Development metrics and consensus-event endpoints
 - [x] 4-validator Docker Compose devnet with default 3-of-4 quorum
 - [x] Simple development explorer
-- [x] Automated multiphase consensus/persistence/evidence tests and CI
-- [x] v0.5 protocol specification and security notes
+- [x] Automated consensus/peer-authentication/snapshot tests and CI
+- [x] v0.6 security-phase documentation
 
-### v0.6 consensus/network/recovery hardening — next
+### v0.7 consensus/network/recovery hardening — next
 
-- [ ] Define/review a proof-based cross-round unlock rule or migrate to a mature BFT core
-- [ ] Authenticated validator identity handshake
-- [ ] Encrypted validator transport / deployment TLS requirements
-- [ ] Validator certificate/key rotation plan
-- [ ] Peer discovery / bootnode design
-- [ ] Stronger mempool and multi-nonce handling
-- [ ] Signed state snapshots and verified fast state sync
-- [ ] Restart/recovery and database-corruption testing
-- [ ] Adversarial multi-validator and network-partition tests
-- [ ] Validator key-management specification
-- [ ] Prometheus-style metrics, dashboard and alerts
-- [ ] Public-testnet deployment configuration and operator runbooks
-- [ ] Faucet policy and abuse controls
-- [ ] Economic/incentive design review
-- [ ] External consensus/network review
+- [ ] Review/replace the conservative cross-round lock with a mature proof-based unlock/BFT design
+- [ ] Add mutually authenticated encrypted validator transport
+- [ ] Add certificate/key rotation and validator transport identity lifecycle
+- [ ] Persist or otherwise harden peer-session replay state across restarts
+- [ ] Add snapshot quorum certification
+- [ ] Add verified snapshot import and fast state sync
+- [ ] Add restart/recovery and database-corruption testing
+- [ ] Add adversarial multi-validator, partition, latency and load tests
+- [ ] Add validator key-management specification
+- [ ] Add Grafana dashboards and alert rules
+- [ ] Add public-testnet deployment configuration and operator runbooks
+- [ ] Add faucet policy and abuse controls
+- [ ] Add stronger explorer/wallet testnet UX
+- [ ] Add economic/incentive design review
+- [ ] Commission external consensus/network review
 
-### Current consensus warning
+### Current consensus/network warning
 
-v0.5 adds a genuine two-phase prevote/precommit research pipeline and durable local locks, but it is still **not** a complete production BFT protocol. The lock has no mature proof-based unlock rule, validator transport remains unauthenticated HTTP, and no formal safety/liveness proof or independent audit exists.
+v0.6 adds authenticated application-level peer requests and a signed identity handshake, but it is still **not** a production BFT or production P2P implementation. The consensus lock has no mature proof-based unlock rule, replay-nonce memory is process-local, local Docker peer traffic is not encrypted by default, HTTPS enforcement does not automatically configure certificates/mTLS, and signed snapshots cannot yet be imported for fast state sync.
 
 ## Phase 7 — Public Testnet
 **Only after Phase 6 security gates are met**
