@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
-import math
 import sqlite3
 import time
 from dataclasses import dataclass
@@ -609,8 +607,6 @@ class PowChain:
         transactions = self._mempool_transactions(self.config.max_transactions_per_block - 1)
         valid_txs: list[dict[str, Any]] = []
         fees = 0
-        # Mempool entries were valid at admission. Revalidate sequentially against the
-        # current UTXO set; conflicting/stale entries are skipped from this template.
         seen: set[tuple[str, int]] = set()
         for tx in transactions:
             try:
@@ -651,6 +647,12 @@ class PowChain:
             "fees": fees,
             "coinbase_value": subsidy_for_height(self.config, height) + fees,
             "transaction_count": len(all_txs),
+            "pow": {
+                "algo": self.config.pow_algo,
+                "scrypt_n": self.config.scrypt_n,
+                "scrypt_r": self.config.scrypt_r,
+                "scrypt_p": self.config.scrypt_p,
+            },
             "production_mainnet_ready": False,
         }
 
@@ -665,8 +667,6 @@ class PowChain:
         if any(is_coinbase(tx) for tx in txs[1:]):
             raise PowV31Error("multiple coinbase transactions")
 
-        # Build an overlay from the persistent UTXO set so signatures/fees are checked
-        # without mutating disk until every consensus rule has passed.
         overlay: dict[tuple[str, int], dict[str, Any]] = {}
         for row in self.db.execute("SELECT txid,vout,address,amount,coinbase_height FROM utxos"):
             overlay[(str(row["txid"]), int(row["vout"]))] = {
@@ -675,6 +675,7 @@ class PowChain:
             }
         spent: list[tuple[str, int]] = []
         created: list[tuple[str, int, str, int, int | None]] = []
+        created_outpoints: set[tuple[str, int]] = set()
         fees = 0
         for tx in txs[1:]:
             if int(tx.get("version", 0)) != TX_VERSION:
@@ -704,14 +705,20 @@ class PowChain:
                 if amount <= 0 or not address.startswith("crk1"):
                     raise PowV31Error("block transaction output invalid")
                 output_total += amount
-                overlay[(txid, vout)] = {"txid": txid, "vout": vout, "address": address, "amount": amount, "coinbase_height": None}
+                outpoint = (txid, vout)
+                overlay[outpoint] = {"txid": txid, "vout": vout, "address": address, "amount": amount, "coinbase_height": None}
                 created.append((txid, vout, address, amount, None))
+                created_outpoints.add(outpoint)
             if output_total > input_total:
                 raise PowV31Error("block transaction creates value")
             fees += input_total - output_total
             for outpoint in used:
                 del overlay[outpoint]
-                spent.append(outpoint)
+                if outpoint in created_outpoints:
+                    created = [entry for entry in created if (entry[0], entry[1]) != outpoint]
+                    created_outpoints.remove(outpoint)
+                else:
+                    spent.append(outpoint)
 
         coinbase_outputs = list(coinbase.get("outputs", []))
         if not coinbase_outputs:
@@ -776,7 +783,6 @@ class PowChain:
                 self.db.execute("INSERT INTO utxos(txid,vout,address,amount,coinbase_height) VALUES(?,?,?,?,?)", (txid, vout, address, amount, coinbase_height))
             for txid in txids[1:]:
                 self.db.execute("DELETE FROM mempool WHERE txid=?", (txid,))
-            # Remove stale mempool entries whose inputs are now spent.
             stale = []
             for row in self.db.execute("SELECT txid,tx_json FROM mempool"):
                 tx = json.loads(row["tx_json"])
