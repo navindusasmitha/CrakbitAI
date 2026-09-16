@@ -1,168 +1,150 @@
 # Crakbit AI Roadmap
 
-This roadmap describes intended development order. Dates are targets, not guarantees, and may change based on research, funding, testing and security findings.
+This roadmap describes intended development order. Dates and architecture can change based on testing, security findings, economics and review.
 
 ## Guiding Principle
 
 **Technology first. Security first. Tokens later.**
 
-Crakbit AI remains primarily a defensive-security and secure-development project. Crakbit Chain is developed in parallel as a testable blockchain-security/infrastructure research platform. Production-mainnet consideration stays gated on long-running public testing, independently reviewed consensus/application behavior, wallet/network review, protected operations, economic-security review and applicable legal/regulatory review.
+Production CRKBIT is not launched. There is no official presale or production token contract.
 
-## Phase 1 — Foundation
-**Target: Q3–Q4 2026**
-- [x] Project identity, public website and GitHub repository
-- [x] Initial roadmap/security documentation
-- [x] Public Giveth project listing
-- [ ] Consistent public development/update cadence
-- [ ] Complete official community/social channels
+## Security Platform
 
-## Phase 2 — Security MVP
-**Target: Q4 2026**
-- [x] Initial secure-code scanning pipeline alpha
+### Foundation / Security MVP
+- [x] Project identity, website and GitHub repository
+- [x] Initial secure-code scanner alpha
 - [x] Python + JavaScript/TypeScript rules and secret detection
-- [x] Human-readable/JSON findings and severity/confidence model
+- [x] `crak` CLI early alpha
 - [ ] AI Security Assistant prototype
 - [ ] Structured configuration checks
-- [ ] Public web demo
+- [ ] Solidity/smart-contract security prototype
+- [ ] Developer API / SDK / CI integration
 
-## Phase 3 — Developer Tooling
-**Target: Q1 2027**
-- [x] `crak` CLI early alpha
-- [x] JSON output
-- [ ] Developer API alpha
-- [ ] SARIF exploration
-- [ ] Repository/CI integration prototypes
-- [ ] Expanded documentation/examples
+## Legacy Blockchain Research — v0.1 through v0.30
 
-## Phase 4 — Blockchain Security
-**Target: Q2 2027**
-- [ ] Solidity analysis prototype
-- [ ] Smart-contract security rules
-- [ ] Contract permission/risk analysis
-- [ ] Human-readable contract reports
-- [ ] Public blockchain-data analysis experiments
+The earlier chain path used CometBFT/BFT validator consensus. It produced useful work in:
 
-## Phase 5 — Developer Ecosystem
-**Target: Q2–Q3 2027**
-- [ ] SDK design
-- [ ] Git/CI/CD/IDE integration research
-- [ ] Plugin architecture
-- [ ] Open-source rule contribution framework
+- [x] signed transaction/accounting primitives,
+- [x] browser wallet/gateway/explorer/faucet tooling,
+- [x] ABCI/state-sync research,
+- [x] validator governance research,
+- [x] crash/replay/recovery testing,
+- [x] deployment/monitoring tooling,
+- [x] release/evidence signing,
+- [x] audit/remediation/retest gates,
+- [x] long-running evidence/archive/public-edge tooling.
 
-## Phase 6 — Crakbit Chain Research → Public-Testnet Candidate
-- [x] Native test-only CRKBIT accounting, Ed25519 wallets and signed transfers
-- [x] CometBFT `v0.40.0` ABCI integration PoC
-- [x] Crash-safe FinalizeBlock → Commit path
-- [x] Native ABCI state sync
-- [x] Browser wallet/public gateway/explorer/faucet/test-only Mining Lab
-- [x] Validator join/remove/replace governance with strict `>2/3` approval
-- [x] Versioned schema migration/rollback rehearsal
-- [x] Reproducible-build/SBOM/release evidence tooling
-- [x] v0.23 validator inventory/genesis/deployment/monitoring tooling
+This code remains available as legacy/research infrastructure. It is **not silently combined** with the new PoW consensus path.
 
-## Phase 7 — Review / Candidate Policy
+## Native PoW Roadmap
 
-### v0.24–v0.26
-- [x] Operational preflight/fault/recovery/redundancy/signer evidence
-- [x] 24h / 72h / 7-day readiness semantics
-- [x] Signed operator evidence and exact review freezes
-- [x] Findings/remediation/retest gates
-- [x] Supply-chain/public-edge evidence hooks
+### v0.31 — working CPU-mineable PoW devnet
 
-### v0.27 — final mainnet-candidate policy
-- [x] Package/CLI `0.27.0a1`
-- [x] Coordinated upgrade + rollback policy
-- [x] Strict `>2/3` validator readiness
-- [x] Governance timelocks/cancellation/emergency policy
-- [x] Economics/genesis freeze format
-- [x] Economic-security + legal/regulatory review hooks
-- [x] Deterministic candidate identity
-- [x] Minimum three unique release approvers/signers
-- [x] Final candidate evidence gate + signed report
+- [x] Package/CLI `0.31.0a1`
+- [x] Separate native PoW consensus path
+- [x] Bitcoin-style UTXO ledger
+- [x] Existing Ed25519 `crk1...` ownership keys
+- [x] Signed UTXO transactions + fees
+- [x] Mempool double-spend protection
+- [x] Coinbase rewards + maturity
+- [x] Merkle roots
+- [x] Working memory-hard `crakpow-scrypt-v1`
+- [x] 256-bit network target validation
+- [x] Bounded automatic difficulty retargeting
+- [x] Cumulative chainwork tracking
+- [x] Actual CPU solo mining
+- [x] SQLite chain/UTXO/mempool persistence
+- [x] PoW node HTTP RPC
+- [x] First-party `crakbit-pool/1` mining pool
+- [x] Separate easier pool share target
+- [x] PPLNS test accounting
+- [x] Native CPU pool miner
+- [x] PoW regression tests
 
-## Phase 8 — Launch Rehearsal
+### v0.31 limitations that remain explicit
 
-### v0.28
-- [x] Package/CLI `0.28.0a1`
-- [x] Signed launch runbook
-- [x] DNS/RPC/explorer cutover rehearsal
-- [x] Public-edge SLO/capacity/failover evidence
-- [x] Protected signer rotation/recovery drill
-- [x] Coordinated upgrade/rollback rehearsal
-- [x] Final risk register
-- [x] Independent technical reviewer sign-off format
-- [x] External reproducible-build/transitive-dependency attestation
-- [x] Aggregate rehearsal gate + exact release freeze
-- [x] Manual `hold` / `approve-launch-window` record with no automatic launch
+- [ ] P2P peer network
+- [ ] Block/transaction gossip
+- [ ] Header-first sync
+- [ ] Competing-fork storage
+- [ ] Highest-cumulative-work reorganization
+- [ ] UTXO undo/rollback records
+- [ ] Orphan handling
+- [ ] Production timestamp/mempool/fee policy
+- [ ] Final PoW algorithm selection
+- [ ] RandomX native integration/benchmark
+- [ ] Standard Stratum/XMRig compatibility
+- [ ] Automatic mature pool payouts
+- [ ] Long-lived multi-node public PoW testnet
 
-## Phase 9 — Real Independent-Host Execution / Continuous Evidence
+### v0.32 target — decentralized PoW networking / chain selection
 
-### v0.29 — live host / cluster / genesis / soak / fault evidence
-- [x] Package/CLI `0.29.0a1`
-- [x] Live CometBFT `/status` + `/abci_info` probing
-- [x] Signed per-validator live observations
-- [x] Exact source/candidate/application-genesis/consensus-genesis binding
-- [x] Reject RPC evidence URLs containing embedded credentials
-- [x] 4+ unique validator/operator/evidence-signer cluster gate
-- [x] Provider + region diversity gate
-- [x] Height spread + observation-window bounds
-- [x] Same-height application-hash divergence detection
-- [x] Signed multi-operator genesis attestations + ceremony gate
-- [x] Signed soak evidence with >=0.99 configured success ratio
-- [x] Default seven-day candidate soak target
-- [x] Signed raw-evidence-bound fault/recovery results
-- [x] Require restart/process-kill/partition/latency/packet-loss/load/storage/state-sync/governance/upgrade coverage
-- [x] Bind real-execution gate to exact v0.28 release freeze + rehearsal gate
-- [x] Signed v0.29 real-evidence freeze
-- [x] v0.29 regression tests + docs
+- [ ] Define versioned P2P wire protocol
+- [ ] Peer identity + handshake + network/chain ID checks
+- [ ] Peer discovery / static seed nodes
+- [ ] Headers/inventory/block/transaction messages
+- [ ] Header-first synchronization
+- [ ] Side-chain block storage
+- [ ] Chainwork comparison across branches
+- [ ] Safe canonical reorg engine
+- [ ] UTXO undo journal
+- [ ] Reorg mempool reconciliation
+- [ ] Orphan block handling
+- [ ] Median-time-past style timestamp rules
+- [ ] Peer scoring / message-size / rate-limit protections
 
-### v0.30 — continuous operations / retention / publication
-- [x] Package/CLI `0.30.0a1`
-- [x] Signed non-secret 4+ validator monitoring inventory
-- [x] Reject secret-bearing monitor inventory fields
-- [x] Read-only live CometBFT cluster monitoring samples
-- [x] Height-spread + same-height app-hash divergence checks
-- [x] Resumable hash-chained monitor checkpoints
-- [x] Default seven-day target + >=0.99 success ratio
-- [x] Continuous checkpoint/resume collector script
-- [x] Raw evidence archive SHA-256 + retention manifest
-- [x] Minimum 30-day archive retention policy
-- [x] Active RPC/explorer/gateway health probes
-- [x] Redundant public-edge gate with minimum two endpoints per role by default
-- [x] Protected signer/HSM-equivalent TCP connectivity check without private-key access
-- [x] Public evidence bundle bound to exact v0.29 real-evidence freeze
-- [x] Signed final operator checklist with explicit manual DNS/treasury/launch controls
-- [x] v0.30 regression tests + docs
+### v0.33 target — CPU mining algorithm / interoperability hardening
 
-### Real external execution still required
-- [ ] Provision 4+ truly independent validator hosts
-- [ ] Run v0.29/v0.30 observations from real authorized operator infrastructure
-- [ ] Perform genuine multi-operator genesis ceremony with separately held validator keys
-- [ ] Complete continuous 24h → 72h → 7-day or longer campaign
-- [ ] Execute authorized real fault/load/storage/state-sync/governance/upgrade campaigns
-- [ ] Deploy and inspect protected HSM/remote-signer custody
-- [ ] Operate redundant public RPC/explorer/gateway edges and collect real SLO/failover evidence
-- [ ] Complete genuine independent technical/security review and remediation/retest
-- [ ] Import external reproducible-build/transitive dependency evidence
-- [ ] Finalize production economics/incentives and applicable legal/regulatory position
+- [ ] Integrate a real RandomX native implementation as a candidate
+- [ ] Benchmark scrypt vs RandomX on CPUs/GPUs
+- [ ] Review validation CPU/memory DoS exposure
+- [ ] Define deterministic RandomX seed/key schedule if selected
+- [ ] Multi-core optimized native miner
+- [ ] Standard Stratum compatibility for the selected algorithm
+- [ ] XMRig interoperability if technically compatible
+- [ ] Pool variable difficulty (vardiff)
+- [ ] Stale/duplicate/share-replay defenses
+- [ ] Pool TLS/auth/rate limits
 
-### v0.31 — next target: deployment ergonomics / drift detection / publication index
-- [ ] Generate non-secret Ansible/systemd deployment bundles from v0.30 inventory
-- [ ] Signed configuration-drift detection for validator/CometBFT/firewall/public-edge configs
-- [ ] Alert/SLO incident correlation across monitor samples and public edges
-- [ ] Signed backup-age/state-sync freshness checks
-- [ ] Public JSON/HTML evidence index exposing hashes/status without private infrastructure details
-- [ ] Release-candidate supersession rules when source/genesis/evidence changes
-- [ ] Final multi-operator checklist aggregation while retaining explicit human launch/no-launch execution
+### v0.34 target — wallet/pool/explorer production-testnet features
 
-## Phase 10 — Mainnet Consideration
+- [ ] Mature coinbase-aware pool payout transaction builder
+- [ ] PPLNS payout batching / fee policy
+- [ ] Pool hot/cold key separation
+- [ ] PoW explorer difficulty/hashrate/coinbase/miner views
+- [ ] Wallet confirmations / fee estimation / reorg awareness
+- [ ] Watch-only addresses and safe backup/recovery flows
+- [ ] Public node/RPC rate limiting and reverse proxy guidance
 
-A production mainnet can only be considered after successful long-lived real-host testing, reviewed external consensus/application/governance behavior, protected operations, independent security/economic/legal review, final economics and an explicit human launch decision.
+### v0.35 target — real multi-node PoW public testnet
 
-A passing software evidence gate must never automatically launch the network.
+- [ ] 4+ independently operated full nodes
+- [ ] Multiple independent miners/pools
+- [ ] Continuous 24h → 72h → 7-day+ operation
+- [ ] Natural and forced competing forks/reorg testing
+- [ ] Peer partition/reconnect tests
+- [ ] Invalid block/tx/fuzz/DoS campaigns
+- [ ] Snapshot/bootstrap/reindex/recovery testing
+- [ ] Reproducible tagged releases + SBOM
+- [ ] Independent consensus/network/wallet/pool review
+
+## Mainnet Consideration
+
+Production mainnet should only be considered after:
+
+- a real decentralized P2P PoW network exists,
+- highest-chainwork fork/reorg logic has been independently tested/reviewed,
+- the final PoW algorithm and mining interoperability are frozen,
+- long-lived independent public testing succeeds,
+- wallet/node/pool security reviews are complete,
+- high/critical findings are remediated/retested,
+- production economics/rewards/fees/supply are finalized,
+- economic attack incentives are reviewed,
+- applicable legal/regulatory review is complete,
+- an explicit human launch/no-launch decision is made.
 
 ## CRKBIT Status
 
 **Production CRKBIT is not launched. No official presale. No production token contract.**
 
-The research/public-testnet code uses test-only CRKBIT accounting. The 21,000,000 maximum-supply and 8-decimal values remain development proposals unless intentionally frozen and independently reviewed through the v0.27 economics process.
+v0.31 subsidy, halving and target parameters are configurable devnet settings. The previously discussed 21,000,000 maximum-supply and 8-decimal design remain proposals until deliberately finalized and independently reviewed.
