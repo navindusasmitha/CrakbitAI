@@ -8,11 +8,18 @@ import httpx
 import uvicorn
 
 from .crypto import KeyPair
-from .genesis import Genesis
+from .genesis import Genesis, Validator
 from .models import ATOMIC_UNITS, Transaction
+from .snapshot_transfer import (
+    decode_chunk_response,
+    load_cached_chunks,
+    validate_manifest,
+    verify_snapshot_bundle,
+)
 from .snapshots import (
     build_snapshot_certificate,
     import_snapshot_certificate,
+    snapshot_import_journal_status,
     verify_snapshot_artifact,
     verify_snapshot_certificate,
 )
@@ -126,6 +133,107 @@ def cmd_snapshot_fetch(args: argparse.Namespace) -> int:
     return 0
 
 
+def _fetch_chunked_envelope(
+    peer: Validator,
+    *,
+    cache_root: Path,
+    timeout: float,
+    chunk_size: int,
+) -> tuple[dict, dict]:
+    base = peer.peer_url.rstrip("/")
+    manifest_response = httpx.get(
+        f"{base}/snapshot/bundle/manifest",
+        params={"chunk_size": int(chunk_size)},
+        timeout=timeout,
+    )
+    manifest_response.raise_for_status()
+    manifest = manifest_response.json()
+    validate_manifest(manifest)
+    artifact_hash = str(manifest["artifact_sha256"])
+
+    bundle_dir = cache_root / peer.address / artifact_hash
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    (bundle_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    cached, reused = load_cached_chunks(bundle_dir, manifest)
+    downloaded = 0
+
+    for entry in manifest["chunks"]:
+        index = int(entry["index"])
+        if cached[index] is not None:
+            continue
+        response = httpx.get(
+            f"{base}/snapshot/bundle/chunk/{artifact_hash}/{index}",
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        chunk = decode_chunk_response(response.json(), entry, artifact_hash)
+        (bundle_dir / f"{index:06d}.part").write_bytes(chunk)
+        cached[index] = chunk
+        downloaded += 1
+
+    if any(chunk is None for chunk in cached):
+        raise RuntimeError("snapshot transfer remained incomplete after chunk download")
+    envelope = verify_snapshot_bundle(manifest, [chunk for chunk in cached if chunk is not None])
+    return envelope, {
+        "validator": peer.address,
+        "artifact_sha256": artifact_hash,
+        "total_chunks": int(manifest["total_chunks"]),
+        "reused_chunks": reused,
+        "downloaded_chunks": downloaded,
+        "cache_dir": str(bundle_dir),
+    }
+
+
+def cmd_snapshot_fetch_chunked(args: argparse.Namespace) -> int:
+    genesis = Genesis.load(args.genesis)
+    cache_root = Path(args.cache_dir)
+    cache_root.mkdir(parents=True, exist_ok=True)
+    envelopes: list[dict] = []
+    transfers: list[dict] = []
+    failures: list[dict[str, str]] = []
+
+    for peer in genesis.validators:
+        try:
+            envelope, transfer = _fetch_chunked_envelope(
+                peer,
+                cache_root=cache_root,
+                timeout=args.timeout,
+                chunk_size=args.chunk_size,
+            )
+            envelopes.append(envelope)
+            transfers.append(transfer)
+        except Exception as exc:
+            failures.append({
+                "validator": peer.address,
+                "error": type(exc).__name__,
+                "detail": str(exc)[:240],
+            })
+
+    certificate = build_snapshot_certificate(envelopes, genesis)
+    snapshot = verify_snapshot_certificate(certificate, genesis)
+    target = Path(args.output)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(certificate, indent=2) + "\n", encoding="utf-8")
+    print(
+        json.dumps(
+            {
+                "saved": str(target),
+                "height": snapshot["height"],
+                "snapshot_hash": certificate["snapshot_hash"],
+                "signatures": len(certificate["signatures"]),
+                "required_quorum": genesis.quorum_size,
+                "transfers": transfers,
+                "peer_failures": failures,
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
 def cmd_snapshot_import(args: argparse.Namespace) -> int:
     genesis = Genesis.load(args.genesis)
     certificate = _load_json(args.snapshot)
@@ -142,6 +250,7 @@ def cmd_snapshot_import(args: argparse.Namespace) -> int:
                 "last_hash": snapshot["last_hash"],
                 "accounts_root": snapshot["accounts_root"],
                 "history_before_snapshot_available": False,
+                "import_journal": snapshot_import_journal_status(ledger),
             },
             indent=2,
         )
@@ -164,7 +273,7 @@ def cmd_node(args: argparse.Namespace) -> int:
         certificate = _load_json(args.bootstrap_snapshot)
         import_snapshot_certificate(ledger, certificate)
 
-    from .secure_node_v07 import create_app
+    from .secure_node_v08 import create_app
 
     uvicorn.run(create_app(), host=args.host, port=args.port, reload=False)
     return 0
@@ -204,12 +313,23 @@ def main() -> int:
 
     snapshot_fetch = sub.add_parser(
         "snapshot-fetch",
-        help="Fetch validator snapshots and save the newest state hash that reaches quorum",
+        help="Fetch validator snapshots directly and save the newest state hash that reaches quorum",
     )
     snapshot_fetch.add_argument("--genesis", required=True)
     snapshot_fetch.add_argument("--output", required=True)
     snapshot_fetch.add_argument("--timeout", type=float, default=5.0)
     snapshot_fetch.set_defaults(func=cmd_snapshot_fetch)
+
+    chunked_fetch = sub.add_parser(
+        "snapshot-fetch-chunked",
+        help="Fetch validator snapshots in verified resumable chunks and build a quorum certificate",
+    )
+    chunked_fetch.add_argument("--genesis", required=True)
+    chunked_fetch.add_argument("--output", required=True)
+    chunked_fetch.add_argument("--cache-dir", default="runtime/snapshot-cache")
+    chunked_fetch.add_argument("--chunk-size", type=int, default=64 * 1024)
+    chunked_fetch.add_argument("--timeout", type=float, default=10.0)
+    chunked_fetch.set_defaults(func=cmd_snapshot_fetch_chunked)
 
     snapshot_import = sub.add_parser(
         "snapshot-import",
