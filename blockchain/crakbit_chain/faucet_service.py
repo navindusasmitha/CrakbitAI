@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 import time
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
@@ -25,9 +26,10 @@ def _truthy(value: str | None) -> bool:
 
 
 def valid_crakbit_address(address: str) -> bool:
-    if len(address) != 44 or not address.startswith("crk1"):
+    value = str(address).strip().lower()
+    if len(value) != 44 or not value.startswith("crk1"):
         return False
-    return all(ch in "0123456789abcdef" for ch in address[4:].lower())
+    return all(ch in "0123456789abcdef" for ch in value[4:])
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,8 @@ class FaucetConfig:
     genesis_path: str = "runtime/genesis.json"
     key_path: str = ""
     rpc_url: str = "http://127.0.0.1:9101"
+    gateway_url: str = ""
+    state_path: str = "runtime/faucet-state.sqlite3"
     amount_atomic: int = 10 * ATOMIC_UNITS
     address_cooldown_seconds: int = 3600
     global_requests_per_minute: int = 10
@@ -51,7 +55,9 @@ class FaucetConfig:
             enabled=_truthy(os.environ.get("CRAKBIT_FAUCET_ENABLED")),
             genesis_path=os.environ.get("CRAKBIT_FAUCET_GENESIS", "runtime/genesis.json"),
             key_path=os.environ.get("CRAKBIT_FAUCET_KEY", ""),
-            rpc_url=os.environ.get("CRAKBIT_FAUCET_RPC", "http://127.0.0.1:9101"),
+            rpc_url=os.environ.get("CRAKBIT_FAUCET_RPC", "http://127.0.0.1:9101").rstrip("/"),
+            gateway_url=os.environ.get("CRAKBIT_FAUCET_GATEWAY", "").rstrip("/"),
+            state_path=os.environ.get("CRAKBIT_FAUCET_STATE", "runtime/faucet-state.sqlite3"),
             amount_atomic=amount_atomic,
             address_cooldown_seconds=int(os.environ.get("CRAKBIT_FAUCET_ADDRESS_COOLDOWN", "3600")),
             global_requests_per_minute=int(os.environ.get("CRAKBIT_FAUCET_GLOBAL_RPM", "10")),
@@ -66,12 +72,14 @@ class FaucetConfig:
             raise ValueError("faucet address cooldown must be at least 60 seconds")
         if self.global_requests_per_minute <= 0 or self.global_requests_per_minute > 120:
             raise ValueError("faucet global RPM must be between 1 and 120")
+        if self.gateway_url and not self.gateway_url.startswith(("http://", "https://")):
+            raise ValueError("test faucet gateway must use http or https")
         if self.enabled:
             if not self.key_path or not Path(self.key_path).is_file():
                 raise ValueError("test faucet is enabled but CRAKBIT_FAUCET_KEY is missing")
             if not Path(self.genesis_path).is_file():
                 raise ValueError("test faucet genesis file was not found")
-            if not self.rpc_url.startswith(("http://", "https://")):
+            if not self.gateway_url and not self.rpc_url.startswith(("http://", "https://")):
                 raise ValueError("test faucet RPC must use http or https")
 
 
@@ -79,24 +87,86 @@ class FaucetState:
     def __init__(self, config: FaucetConfig):
         self.config = config
         self.global_limiter = FixedWindowLimiter(config.global_requests_per_minute, 60)
-        self.last_address_request: dict[str, float] = {}
+        self.state_path = Path(config.state_path)
+        self.state_path.parent.mkdir(parents=True, exist_ok=True)
+        self._init_db()
+
+    def connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.state_path, timeout=30, isolation_level=None)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    def _init_db(self) -> None:
+        with self.connect() as conn:
+            conn.executescript(
+                """
+                PRAGMA journal_mode=WAL;
+                CREATE TABLE IF NOT EXISTS faucet_distributions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    address TEXT NOT NULL,
+                    amount_atomic INTEGER NOT NULL,
+                    txid TEXT NOT NULL,
+                    created_at_ms INTEGER NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_faucet_address_time
+                    ON faucet_distributions(address, created_at_ms);
+                """
+            )
 
     def cooldown_remaining(self, address: str, now: float | None = None) -> int:
         current = time.time() if now is None else float(now)
-        previous = self.last_address_request.get(address)
-        if previous is None:
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT created_at_ms FROM faucet_distributions WHERE address=? "
+                "ORDER BY created_at_ms DESC LIMIT 1",
+                (address,),
+            ).fetchone()
+        if row is None:
             return 0
+        previous = int(row["created_at_ms"]) / 1000
         remaining = self.config.address_cooldown_seconds - int(current - previous)
         return max(0, remaining)
 
-    def mark_success(self, address: str, now: float | None = None) -> None:
-        self.last_address_request[address] = time.time() if now is None else float(now)
+    def mark_success(self, address: str, txid: str = "", now: float | None = None) -> None:
+        created_at_ms = int((time.time() if now is None else float(now)) * 1000)
+        with self.connect() as conn:
+            conn.execute(
+                "INSERT INTO faucet_distributions(address,amount_atomic,txid,created_at_ms) VALUES(?,?,?,?)",
+                (address, self.config.amount_atomic, txid, created_at_ms),
+            )
+
+    def distribution_count(self) -> int:
+        with self.connect() as conn:
+            return int(conn.execute("SELECT COUNT(*) AS n FROM faucet_distributions").fetchone()["n"])
+
+
+async def _gateway_account(config: FaucetConfig, client: httpx.AsyncClient, address: str) -> dict:
+    if config.gateway_url:
+        response = await client.get(f"{config.gateway_url}/api/account/{address}")
+        response.raise_for_status()
+        body = response.json()
+        return body.get("account", body)
+    response = await client.get(f"{config.rpc_url}/balance/{address}")
+    response.raise_for_status()
+    return response.json()
+
+
+async def _broadcast_transaction(config: FaucetConfig, client: httpx.AsyncClient, tx: Transaction) -> httpx.Response:
+    if config.gateway_url:
+        return await client.post(
+            f"{config.gateway_url}/api/transactions",
+            json={"transaction": tx.to_dict()},
+        )
+    return await client.post(
+        f"{config.rpc_url}/transactions",
+        json={"transaction": tx.to_dict()},
+    )
 
 
 def create_app(config: FaucetConfig | None = None) -> FastAPI:
     config = config or FaucetConfig.from_env()
     state = FaucetState(config)
-    app = FastAPI(title="Crakbit Testnet Faucet", version="0.13.0a1")
+    app = FastAPI(title="Crakbit Testnet Faucet", version="0.15.0a1")
     app.state.faucet = state
 
     @app.get("/health")
@@ -108,6 +178,9 @@ def create_app(config: FaucetConfig | None = None) -> FastAPI:
             "amount_atomic": config.amount_atomic,
             "address_cooldown_seconds": config.address_cooldown_seconds,
             "global_requests_per_minute": config.global_requests_per_minute,
+            "persistent_address_cooldown": True,
+            "distribution_count": state.distribution_count(),
+            "broadcast_via_gateway": bool(config.gateway_url),
             "real_value_supported": False,
         }
 
@@ -118,8 +191,10 @@ def create_app(config: FaucetConfig | None = None) -> FastAPI:
         address = payload.address.strip().lower()
         if not valid_crakbit_address(address):
             raise HTTPException(400, "invalid Crakbit address")
-        client = request.client.host if request.client else "unknown"
-        allowed, _ = state.global_limiter.allow(client)
+        client_address = request.headers.get("X-Crakbit-Client-IP") or (
+            request.client.host if request.client else "unknown"
+        )
+        allowed, _ = state.global_limiter.allow(client_address)
         if not allowed:
             raise HTTPException(429, "test faucet global rate limit exceeded")
         remaining = state.cooldown_remaining(address)
@@ -133,12 +208,8 @@ def create_app(config: FaucetConfig | None = None) -> FastAPI:
         if address == key.address:
             raise HTTPException(400, "faucet cannot send to itself")
 
-        async with httpx.AsyncClient(timeout=8.0) as client_http:
-            balance = await client_http.get(
-                f"{config.rpc_url.rstrip('/')}/balance/{key.address}"
-            )
-            balance.raise_for_status()
-            account = balance.json()
+        async with httpx.AsyncClient(timeout=10.0) as client_http:
+            account = await _gateway_account(config, client_http, key.address)
             nonce = int(account.get("nonce", 0)) + 1
             if int(account.get("balance", 0)) < config.amount_atomic + genesis.min_fee:
                 raise HTTPException(503, "test faucet balance is insufficient")
@@ -154,30 +225,28 @@ def create_app(config: FaucetConfig | None = None) -> FastAPI:
                 memo="Crakbit public testnet faucet",
             )
             tx.signature = key.sign(tx.signing_bytes())
-            response = await client_http.post(
-                f"{config.rpc_url.rstrip('/')}/transactions",
-                json={"transaction": tx.to_dict()},
-            )
+            response = await _broadcast_transaction(config, client_http, tx)
             if response.status_code >= 400:
-                # One pending transaction per sender is intentional in the current devnet.
-                # Do not consume the address cooldown on a failed submission.
                 raise HTTPException(
                     503,
                     detail={
                         "reason": "faucet transaction submission failed",
-                        "node_status": response.status_code,
-                        "node_detail": response.text[:240],
+                        "upstream_status": response.status_code,
+                        "upstream_detail": response.text[:240],
                     },
                 )
+            result = response.json()
+            txid = str(result.get("txid") or tx.txid)
 
-        state.mark_success(address)
+        state.mark_success(address, txid)
         return {
             "accepted": True,
             "test_only": True,
-            "txid": tx.txid,
+            "txid": txid,
             "recipient": address,
             "amount_atomic": config.amount_atomic,
             "symbol": genesis.symbol,
+            "persistent_cooldown": True,
             "message": "test units only; no production value is represented",
         }
 
