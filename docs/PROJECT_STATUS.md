@@ -4,9 +4,9 @@
 
 ## Current Stage
 
-**Early development / Security MVP alpha + Crakbit Chain v0.29 real independent-host execution/evidence alpha**
+**Early development / Security MVP alpha + Crakbit Chain v0.30 continuous-operations / evidence-publication alpha**
 
-Crakbit AI has a public website, a Giveth-listed fundraising project, an open GitHub repository, technical documentation, a deterministic security-scanner alpha and an experimental blockchain/application stack with browser wallet, public gateway, CometBFT integration, native ABCI state sync, validator governance, review/remediation controls, launch-rehearsal policy and a v0.29 live-host evidence path.
+Crakbit AI has a public website, a Giveth-listed fundraising project, an open GitHub repository, technical documentation, a deterministic security-scanner alpha and an experimental blockchain/application stack with browser wallet, public gateway, CometBFT integration, native ABCI state sync, validator governance, review/remediation controls, launch-rehearsal policy, live-host evidence and v0.30 long-running operations/evidence tooling.
 
 None of these alpha components should be described as a production mainnet or as safe for custody of real value.
 
@@ -19,43 +19,49 @@ None of these alpha components should be described as a production mainnet or as
 | Fundraising | Publicly listed on Giveth | Campaign is not a CRKBIT token sale |
 | AI Security Assistant | In development | Security MVP work remains active |
 | Secure Code Scanner | Early alpha | Deterministic static-analysis rules implemented |
-| Crakbit Chain package | **v0.29.0a1** | Real independent-host execution/evidence alpha |
+| Crakbit Chain package | **v0.30.0a1** | Continuous-operations / evidence-publication alpha |
 | CometBFT candidate | **v0.40.0** | External BFT candidate used by the ABCI bridge |
 | Governed execution | **`crakbit-execution/3`** | Crash-safe staged FinalizeBlock → atomic Commit |
 | Validator governance | Implemented for testnet research | Strict `>2/3` current voting-power join/remove/replace approvals |
 | Native ABCI state sync | Governance-aware | Real external recovery campaign still required |
 | Final-candidate policy | v0.27 implemented | Upgrade/governance/economics/review/multi-party release gate |
 | Launch rehearsal | v0.28 implemented | Runbook/cutover/SLO/signer/upgrade/risk/review/repro evidence |
-| Live validator probing | **v0.29 implemented** | Reads CometBFT `/status` + `/abci_info` and signs observations |
-| Live cluster gate | **v0.29 implemented** | 4+ validators/operators/signers + provider/region diversity + divergence detection |
-| Genesis ceremony gate | **v0.29 implemented** | 4+ independently signed operator attestations for exact genesis |
-| Long-lived soak gate | **v0.29 implemented** | Signed cluster samples; default seven-day target and >=0.99 success ratio |
-| Fault/recovery gate | **v0.29 implemented** | Ten required campaign categories tied to raw evidence hashes |
-| Real execution aggregate gate | **v0.29 implemented** | Exact v0.28 freeze/rehearsal binding + live/genesis/soak/fault evidence |
-| Independent-host public testnet | **Not yet actually run here** | Tooling exists; real VPS operation/evidence still external |
+| Real-host evidence | v0.29 implemented | Live validator/cluster/genesis/soak/fault evidence path |
+| Monitor inventory | **v0.30 implemented** | Non-secret 4+ validator monitoring inventory with secret-field rejection |
+| Continuous read-only monitor | **v0.30 implemented** | Live CometBFT samples, divergence/height-spread checks |
+| Resumable 7-day checkpointing | **v0.30 implemented** | Hash-chained signed checkpoints, default 604800s and >=0.99 ratio |
+| Evidence archive/retention | **v0.30 implemented** | File size/SHA-256 + minimum 30-day retention manifest |
+| Public-edge monitoring | **v0.30 implemented** | RPC/explorer/gateway health + redundant two-per-role gate |
+| Protected signer monitoring | **v0.30 implemented** | TCP connectivity check without reading private keys |
+| Public evidence publication bundle | **v0.30 implemented** | Exact v0.29 freeze binding + monitor/archive/edge/signer evidence |
+| Independent-host public testnet | **Not yet actually run here** | Tooling exists; real VPS operation/evidence remains external |
 | Independent security audit | **Not completed** | Review tooling does not equal completed independent review |
 | Production mainnet | **Not launched** | No software gate automatically launches production |
 | Production CRKBIT | **Not launched** | No official presale or production token contract |
 
-## v0.29 Completed Code Work
+## v0.30 Completed Code Work
 
-- package/CLI advanced to `0.29.0a1`,
-- live CometBFT RPC probe with credential-bearing endpoint rejection,
-- signed host observations bound to source/candidate/genesis identity,
-- cluster checks for unique validator/operator/evidence signers, provider/region diversity, height spread and same-height app-hash divergence,
-- signed multi-operator genesis attestations + aggregate ceremony gate,
-- signed soak evidence with default seven-day target and minimum 0.99 success threshold,
-- signed fault/recovery evidence bound to raw evidence-file SHA-256,
-- required restart/process-kill/partition/latency/packet-loss/load/storage/state-sync/governance/upgrade coverage,
-- aggregate v0.29 real-execution gate bound to the exact v0.28 release freeze + rehearsal gate,
-- signed v0.29 real-evidence freeze,
-- v0.29 regression tests and documentation.
+- package/CLI advanced to `0.30.0a1`,
+- signed non-secret monitoring inventory for 4+ validators,
+- secret-bearing inventory-field rejection,
+- read-only live CometBFT monitor sampling,
+- height-spread and same-height application-hash divergence checks,
+- resumable signed checkpoint chain with session identity and immutable target parameters,
+- seven-day target + >=0.99 success ratio support,
+- continuous collector script with checkpoint/resume behavior,
+- signed raw-evidence archive/retention manifest,
+- active RPC/explorer/gateway health probes,
+- redundant public-edge gate with minimum two healthy endpoints per role by default,
+- protected signer/HSM-equivalent connectivity monitoring without private-key access,
+- public evidence bundle bound to the exact v0.29 real-evidence freeze,
+- signed final operator checklist with explicit manual DNS/treasury/launch controls,
+- v0.30 regression tests and documentation.
 
-## Important v0.29 Boundary
+## Important v0.30 Boundary
 
-v0.29 can perform real read-only RPC observations and verify signed evidence consistency, but repository code cannot independently prove organizational independence, provider ownership, physical HSM deployment, reviewer independence or that a seven-day campaign actually occurred unless those activities are genuinely performed and externally corroborated.
+The v0.30 monitor can make real read-only network observations and create tamper-evident evidence, but a monitoring signature does not prove that a provider/operator is independent or that a physical HSM is secure. A central monitor also does not replace the v0.29 multi-operator signatures.
 
-A passing `real_execution_gate_satisfied=true` still records:
+A passing public evidence bundle still records:
 
 ```text
 production_mainnet_ready=false
@@ -66,7 +72,7 @@ production_crkbit_launched=false
 ## External Gates Still Open
 
 - provision and operate four or more independently managed validators on real hosts,
-- perform the real multi-operator genesis ceremony with separately held keys,
+- run the real multi-operator genesis ceremony with separately held keys,
 - collect genuine continuous 24h → 72h → 7-day or longer observations,
 - execute authorized real fault/load/storage/state-sync/governance/upgrade campaigns,
 - deploy and independently inspect protected remote-signer/HSM-equivalent custody,
@@ -78,16 +84,16 @@ production_crkbit_launched=false
 - complete applicable legal/regulatory review,
 - make an explicit human launch/no-launch decision after reviewing the real evidence.
 
-## Immediate Blockchain Priorities — v0.30
+## Immediate Blockchain Priorities — v0.31
 
-The next phase should focus on **operator deployment automation and evidence collection**, not declaring mainnet ready:
+The next useful phase should focus on **real operator deployment ergonomics and review publication**, not another readiness label:
 
-1. Add non-secret Ansible/systemd inventory generation for real validator hosts.
-2. Add continuous signed cluster-observation collector/rotation with resumable seven-day evidence.
-3. Add archive/log bundle hashing and evidence-retention policy.
-4. Add public RPC/explorer active health + failover collector.
-5. Add validator remote-signer connectivity/rotation checks without reading private keys.
-6. Add release-candidate publication bundle with hashes, SBOM, genesis, review summaries and operator runbooks.
+1. Generate non-secret Ansible/systemd deployment bundles from the v0.30 inventory.
+2. Add signed configuration-drift detection for validator, CometBFT, firewall and public-edge configs without embedding secrets.
+3. Add alert/SLO incident correlation across monitor samples and public edges.
+4. Add signed backup-age/state-sync freshness checks.
+5. Add public evidence index/HTML or JSON feed that exposes hashes/status without private infrastructure details.
+6. Add release-candidate supersession rules when source/genesis/evidence changes after publication.
 7. Continue to keep production launch as a separate human decision.
 
 ## CRKBIT Status
@@ -96,4 +102,4 @@ Production CRKBIT has **not** launched. There is no official presale and no prod
 
 The repository contains test-only CRKBIT accounting for research/public-testnet work. The 21,000,000 maximum-supply and 8-decimal values remain development proposals unless intentionally frozen and independently reviewed through the v0.27 economics process.
 
-See `blockchain/V0.29.md`, `blockchain/docs/MAINNET_GATES.md`, `ROADMAP.md` and GitHub Issue #1.
+See `blockchain/V0.30.md`, `blockchain/docs/MAINNET_GATES.md`, `ROADMAP.md` and GitHub Issue #1.
