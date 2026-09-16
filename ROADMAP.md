@@ -55,113 +55,73 @@ Crakbit AI remains primarily a defensive-security and secure-development project
 - [ ] Open-source rule contribution framework
 
 ## Phase 6 — Crakbit Chain Research → Public-Testnet Candidate
-**Prototype started September 2026**
-
-A runnable research/devnet and external CometBFT application path exist. This does **not** mean a production blockchain or production-value CRKBIT asset has launched.
-
-### Foundation through v0.20
 
 - [x] Native test-only CRKBIT accounting, Ed25519 wallets and signed transfers
-- [x] Research consensus/network/recovery experiments
-- [x] Deterministic external application boundary
 - [x] CometBFT `v0.40.0` ABCI integration PoC
 - [x] Crash-safe FinalizeBlock → Commit path
-- [x] Browser wallet/public gateway/faucet/Mining Lab test tooling
 - [x] Native ABCI state sync
-- [x] Explorer reconciliation, soak/fault evidence tooling
-- [x] Review freeze/remediation/reproducible-build/SBOM/provenance tooling
+- [x] Browser wallet/public gateway/explorer/faucet/test-only Mining Lab
+- [x] Validator join/remove/replace governance with strict `>2/3` approval
 - [x] Versioned schema migration/rollback rehearsal
-
-### v0.21 — deterministic validator governance
-
-- [x] `crakbit-execution/3`
-- [x] Validator join/remove/replace governance transactions
-- [x] Strict `>2/3` current voting-power approval
-- [x] Active/pending validator state committed into application hash
-- [x] Deterministic ABCI validator updates
-- [x] Governance-aware state sync and migration tests
-- [ ] Independent multi-host activation evidence
-- [ ] Independent review of activation-height semantics
-
-### v0.22 — governed multi-node campaigns
-
-- [x] Governed CometBFT local-lab generator
-- [x] Cluster convergence/divergence monitoring
-- [x] Governance history/update-emission export
-- [x] H/H+1/H+2 campaign plans and signed evidence tooling
-- [ ] Repeat equivalent campaigns across independently managed hosts
-
-### v0.23 — public-testnet deployment / operations tooling
-
-- [x] Public-only validator identity export
-- [x] 4+ validator inventory + operator/provider/region diversity gates
-- [x] Matching application + CometBFT genesis bundles
-- [x] Non-secret per-validator deployment/systemd/persistent-peer bundles
-- [x] Independent-node height/app-hash monitoring
-- [x] JSONL soak collection + 24h readiness semantics
-- [x] Signed public-testnet operations evidence
-- [ ] Real independent-host deployment/evidence
+- [x] Reproducible-build/SBOM/release evidence tooling
+- [x] v0.23 4+ validator inventory/genesis/deployment/monitoring tooling
+- [ ] Real independent-host public testnet operation
 
 ## Phase 7 — Long-Lived Public Testnet / Independent Review Candidate
 
-### v0.24 — operational fault / recovery hardening
+### v0.24 — operational hardening
 
-- [x] Host preflight with package/CometBFT/genesis identity checks
-- [x] Private bind/token-presence/disk checks
-- [x] Typed restart/process-kill/partition/latency/packet-loss/load/storage fault plans
-- [x] Mandatory recovery actions + dry-run default
-- [x] Backup/restore and clean-host state-sync records
+- [x] Host preflight + exact package/CometBFT/genesis identity checks
+- [x] Typed restart/process-kill/partition/latency/packet-loss/load/storage plans
+- [x] Backup/restore + clean-host state-sync records
 - [x] Redundant RPC/explorer consistency checks
 - [x] Protected remote-signer/HSM-style evidence
-- [x] Separate 24h / 72h / 7-day readiness gates
-- [x] Signed operational evidence
+- [x] 24h / 72h / 7-day readiness gates
 - [ ] Execute modeled campaigns on real independent hosts
 
 ### v0.25 — independent-host evidence / initial review freeze
 
 - [x] Package/CLI `0.25.0a1`
-- [x] Incident-response records with high/critical escalation requirements
+- [x] Incident-response records
 - [x] Signed per-operator host attestations
-- [x] Exact source/package/CometBFT/genesis identity binding
-- [x] 4+ unique operators/validators/evidence signers + provider/region diversity gates
-- [x] v0.24 readiness + incident-drill dependency
-- [x] Signed exact independent-review candidate freeze
-- [x] Explicit independent-review scope
+- [x] 4+ unique operators/validators/signers + provider/region diversity gates
+- [x] Signed exact review candidate freeze
 - [ ] Build freeze from real independent-host evidence
 
 ### v0.26 — independent-review remediation / re-freeze
 
 - [x] Package/CLI `0.26.0a1`
-- [x] Signed structured independent-review findings register
-- [x] Stable `CRK-REV-...` finding IDs
-- [x] Severity/component/title/affected-commit/reproduction metadata
+- [x] Signed structured findings register + stable IDs
 - [x] Remediation commit/config/regression-test binding
 - [x] Signed independent retest records
-- [x] Require latest high/critical retest to pass on exact candidate commit
-- [x] Hard re-freeze blocker for unresolved/un-retested high/critical findings
-- [x] Signed supply-chain/reproducible-build attestation hook
-- [x] Dependency-lock + SBOM hash binding
-- [x] Signed public-edge TLS/WAF/DDoS/load/failover evidence without provider secrets
-- [x] Require 2+ passing public-edge attestations
-- [x] Candidate supersession rules for source/package/CometBFT/genesis/dependency/review-evidence changes
-- [x] Signed post-remediation review re-freeze
-- [x] v0.26 regression tests and documentation
-- [ ] Import real independent-review findings
-- [ ] Independently retest every real high/critical remediation on final candidate
-- [ ] Produce re-freeze from real review/supply-chain/public-edge evidence
+- [x] Hard blocker for unresolved/un-retested high/critical findings
+- [x] Supply-chain/reproducible-build attestation hook
+- [x] Public-edge TLS/WAF/DDoS/load/failover evidence
+- [x] Candidate supersession + signed post-remediation re-freeze
+- [ ] Import real independent-review findings and independently retest final fixes
 
-### v0.27 — final release policy / coordinated upgrade / economics freeze
+### v0.27 — final mainnet-candidate policy / economics / release approval
 
-- [ ] Add final mainnet-candidate gate consuming only real operational + review evidence
-- [ ] Add coordinated multi-host protocol/schema upgrade proposal, activation and rollback evidence
-- [ ] Add governance timelock/emergency/cancel research artifacts with conservative defaults
-- [ ] Add final genesis/economics parameter-freeze format
-- [ ] Add economic-security reviewer attestation hook
-- [ ] Add multi-party/threshold release-approval evidence instead of a single release signer
-- [ ] Add complete transitive dependency inventory + external reproducible-build attestation import
-- [ ] Add final launch-readiness report that remains false unless operations, security review, economics and legal gates are explicitly satisfied
+- [x] Package/CLI `0.27.0a1`
+- [x] Signed coordinated upgrade proposal with activation + rollback evidence binding
+- [x] Strict `>2/3` validator-readiness requirement for modeled upgrade activation
+- [x] Conservative governance normal/emergency timelock policy
+- [x] Pre-activation cancellation window
+- [x] Emergency strict-supermajority requirement
+- [x] Economics/genesis parameter-freeze format
+- [x] Explicit no-return-promise / no-token-sale-authorization economics claims
+- [x] Economic-security reviewer attestation hook
+- [x] Legal/regulatory reviewer attestation hook
+- [x] Exact reviewer binding to candidate source + economics freeze
+- [x] Deterministic final candidate identity hash
+- [x] Multi-party release-approval evidence with minimum three unique approvers/signers
+- [x] Final mainnet-candidate gate consuming operations + remediation + governance + economics + review + release approvals
+- [x] Signed final readiness report
+- [x] v0.27 regression tests and documentation
+- [ ] Complete transitive dependency inventory + independent reproducible-build attestation import from real external builders
+- [ ] Build the final gate from real independently corroborated operational/security/economic/legal evidence
 
-## Phase 8 — Independent Security Review
+## Phase 8 — Independent Security / Economic / Legal Review
 
 - [ ] Independent consensus/application/governance review
 - [ ] Independent network/RPC review
@@ -170,23 +130,33 @@ A runnable research/devnet and external CometBFT application path exist. This do
 - [ ] Economic-security review
 - [ ] Incident-response review
 - [ ] Applicable legal/regulatory review
-- [ ] Remediate/retest every high/critical finding before production-value launch consideration
+- [ ] Remediate/retest every high/critical finding against the final exact candidate
 
-## Phase 9 — Release / Operations Hardening
+## Phase 9 — Real Launch Rehearsal / Operations Hardening
 
-- [ ] Independent reproducible build environment
-- [ ] Complete transitive SBOM/supply-chain review
-- [ ] Multi-edge DDoS/WAF/capacity testing
-- [ ] Protected signing/recovery procedures
-- [ ] Coordinated upgrade/rollback campaigns
-- [ ] Governance emergency/recovery procedures
+### v0.28 — launch rehearsal and independently corroborated evidence
+
+- [ ] Run 4+ independently managed validators continuously on real hosts
+- [ ] Perform real multi-operator genesis ceremony with separately held keys
+- [ ] Complete genuine 24h → 72h → 7-day soak windows
+- [ ] Execute real fault/load/storage/state-sync/governance campaigns
+- [ ] Deploy and drill protected remote signer/HSM-equivalent custody
+- [ ] Run multi-edge capacity/SLO/outage/failover tests
+- [ ] Execute coordinated upgrade + rollback rehearsal on independent hosts
+- [ ] Execute DNS/RPC/explorer cutover rehearsal without automatic launch
+- [ ] Aggregate independent reviewer sign-offs and unresolved-risk register
+- [ ] Import external reproducible-build/transitive supply-chain evidence
+- [ ] Freeze final candidate only from real evidence
+- [ ] Keep actual production launch as an explicit human launch/no-launch decision
 
 ## Phase 10 — Mainnet Consideration
 
-A production mainnet can only be considered after successful long-lived public testing, reviewed external consensus/application/governance behavior, independent security review, protected operations, and a clear economic/legal model.
+A production mainnet can only be considered after successful long-lived public testing, reviewed external consensus/application/governance behavior, protected operations, independent security/economic/legal review, final economics and an explicit human launch decision.
+
+A passing software evidence gate must never automatically launch the network.
 
 ## CRKBIT Status
 
 **Production CRKBIT is not launched. No official presale. No production token contract.**
 
-The research/public-testnet code uses test-only CRKBIT accounting with 8 decimals and a proposed 21,000,000 maximum genesis supply. Those parameters remain subject to technical, security, economic and applicable legal review before any production implementation.
+The research/public-testnet code uses test-only CRKBIT accounting. The 21,000,000 maximum-supply and 8-decimal values remain development proposals unless intentionally frozen and independently reviewed through the v0.27 economics process.
