@@ -7,8 +7,10 @@ from pathlib import Path
 import httpx
 import uvicorn
 
+from .backups import create_ledger_backup, verify_ledger_backup
 from .crypto import KeyPair
 from .genesis import Genesis, Validator
+from .integrity import verify_ledger_integrity
 from .models import ATOMIC_UNITS, Transaction
 from .snapshot_transfer import (
     decode_chunk_response,
@@ -258,6 +260,34 @@ def cmd_snapshot_import(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_doctor(args: argparse.Namespace) -> int:
+    genesis = Genesis.load(args.genesis)
+    ledger = Ledger(Path(args.data) / "chain.sqlite3", genesis)
+    report = verify_ledger_integrity(ledger, full=bool(args.full))
+    print(json.dumps(report, indent=2))
+    return 0 if report["ok"] else 2
+
+
+def cmd_backup_create(args: argparse.Namespace) -> int:
+    genesis = Genesis.load(args.genesis)
+    ledger = Ledger(Path(args.data) / "chain.sqlite3", genesis)
+    result = create_ledger_backup(ledger, args.output, overwrite=bool(args.overwrite))
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def cmd_backup_verify(args: argparse.Namespace) -> int:
+    genesis = Genesis.load(args.genesis)
+    result = verify_ledger_backup(
+        args.backup,
+        args.manifest,
+        genesis,
+        full=bool(args.full),
+    )
+    print(json.dumps(result, indent=2))
+    return 0 if result["ok"] else 2
+
+
 def cmd_node(args: argparse.Namespace) -> int:
     import os
 
@@ -273,7 +303,7 @@ def cmd_node(args: argparse.Namespace) -> int:
         certificate = _load_json(args.bootstrap_snapshot)
         import_snapshot_certificate(ledger, certificate)
 
-    from .secure_node_v08 import create_app
+    from .secure_node_v09 import create_app
 
     uvicorn.run(create_app(), host=args.host, port=args.port, reload=False)
     return 0
@@ -339,6 +369,35 @@ def main() -> int:
     snapshot_import.add_argument("--genesis", required=True)
     snapshot_import.add_argument("--data", required=True)
     snapshot_import.set_defaults(func=cmd_snapshot_import)
+
+    doctor = sub.add_parser(
+        "doctor",
+        help="Verify local SQLite, accounting and optional full local block/certificate integrity",
+    )
+    doctor.add_argument("--genesis", required=True)
+    doctor.add_argument("--data", required=True)
+    doctor.add_argument("--full", action="store_true", help="Verify all locally stored blocks/certificates/indexes")
+    doctor.set_defaults(func=cmd_doctor)
+
+    backup_create = sub.add_parser(
+        "backup-create",
+        help="Create an online SQLite backup and SHA-256 manifest after integrity verification",
+    )
+    backup_create.add_argument("--genesis", required=True)
+    backup_create.add_argument("--data", required=True)
+    backup_create.add_argument("--output", required=True)
+    backup_create.add_argument("--overwrite", action="store_true")
+    backup_create.set_defaults(func=cmd_backup_create)
+
+    backup_verify = sub.add_parser(
+        "backup-verify",
+        help="Verify a Crakbit ledger backup manifest, hash and database integrity",
+    )
+    backup_verify.add_argument("--genesis", required=True)
+    backup_verify.add_argument("--backup", required=True)
+    backup_verify.add_argument("--manifest", required=True)
+    backup_verify.add_argument("--full", action="store_true")
+    backup_verify.set_defaults(func=cmd_backup_verify)
 
     node = sub.add_parser("node", help="Run a validator node")
     node.add_argument("--genesis", required=True)
