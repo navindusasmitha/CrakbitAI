@@ -31,19 +31,41 @@ def certificate_sha256_from_pem(path: str | Path) -> str:
     return certificate_sha256_from_der(der)
 
 
-def load_pin_map(path: str | Path | None) -> dict[str, str]:
+def _normalize_pin(value: object, validator: str) -> str:
+    fingerprint = str(value).lower().replace(":", "")
+    if len(fingerprint) != 64 or any(ch not in "0123456789abcdef" for ch in fingerprint):
+        raise TransportSecurityError(f"invalid SHA-256 certificate pin for {validator}")
+    return fingerprint
+
+
+def load_pin_sets(path: str | Path | None) -> dict[str, tuple[str, ...]]:
+    """Load one or more accepted leaf-certificate fingerprints per validator.
+
+    A single string remains backwards-compatible. A JSON array enables a controlled
+    old+new overlap window during certificate rotation.
+    """
     if not path:
         return {}
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise TransportSecurityError("peer certificate pin file must contain a JSON object")
-    pins: dict[str, str] = {}
-    for validator, fingerprint in data.items():
-        value = str(fingerprint).lower().replace(":", "")
-        if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
-            raise TransportSecurityError(f"invalid SHA-256 certificate pin for {validator}")
-        pins[str(validator)] = value
+    pins: dict[str, tuple[str, ...]] = {}
+    for validator, raw in data.items():
+        values = raw if isinstance(raw, list) else [raw]
+        if not values:
+            raise TransportSecurityError(f"empty certificate pin set for {validator}")
+        normalized = tuple(dict.fromkeys(_normalize_pin(item, str(validator)) for item in values))
+        if len(normalized) > 2:
+            raise TransportSecurityError(
+                f"validator {validator} has more than two active certificate pins"
+            )
+        pins[str(validator)] = normalized
     return pins
+
+
+def load_pin_map(path: str | Path | None) -> dict[str, str]:
+    """Backward-compatible single-pin view used by older tooling/tests."""
+    return {validator: values[0] for validator, values in load_pin_sets(path).items()}
 
 
 @dataclass
@@ -56,6 +78,7 @@ class TransportSecurityConfig:
     pin_file: str | None = None
     pin_cache_seconds: int = 60
     _pins: dict[str, str] = field(default_factory=dict, init=False, repr=False)
+    _pin_sets: dict[str, tuple[str, ...]] = field(default_factory=dict, init=False, repr=False)
     _pin_cache: dict[str, tuple[str, float]] = field(default_factory=dict, init=False, repr=False)
 
     @classmethod
@@ -85,8 +108,9 @@ class TransportSecurityConfig:
                 raise TransportSecurityError(f"mTLS file not found: {path}")
         if self.pin_file and not Path(self.pin_file).is_file():
             raise TransportSecurityError(f"peer pin file not found: {self.pin_file}")
-        self._pins = load_pin_map(self.pin_file)
-        if self.require_peer_pins and not self._pins:
+        self._pin_sets = load_pin_sets(self.pin_file)
+        self._pins = {validator: values[0] for validator, values in self._pin_sets.items()}
+        if self.require_peer_pins and not self._pin_sets:
             raise TransportSecurityError("peer certificate pins are required but the pin map is empty")
 
     @property
@@ -129,8 +153,8 @@ class TransportSecurityConfig:
 
     def verify_peer_certificate(self, validator_address: str, peer_url: str) -> str | None:
         self.validate_peer_url(peer_url)
-        expected = self._pins.get(validator_address)
-        if expected is None:
+        expected_set = self._pin_sets.get(validator_address)
+        if expected_set is None:
             if self.require_peer_pins:
                 raise TransportSecurityError(
                     f"missing TLS certificate pin for validator {validator_address}"
@@ -144,18 +168,26 @@ class TransportSecurityConfig:
         else:
             observed = self._live_peer_fingerprint(peer_url)
             self._pin_cache[validator_address] = (observed, now)
-        if observed.lower() != expected.lower():
+        if observed.lower() not in {item.lower() for item in expected_set}:
             raise TransportSecurityError(
                 f"TLS certificate pin mismatch for validator {validator_address}"
             )
         return observed
+
+    def clear_pin_cache(self, validator_address: str | None = None) -> None:
+        if validator_address is None:
+            self._pin_cache.clear()
+        else:
+            self._pin_cache.pop(validator_address, None)
 
     def status(self) -> dict:
         return {
             "require_mtls": self.require_mtls,
             "mtls_configured": self.mtls_configured,
             "require_peer_pins": self.require_peer_pins,
-            "configured_peer_pins": len(self._pins),
+            "configured_peer_pins": len(self._pin_sets),
+            "configured_pin_fingerprints": sum(len(values) for values in self._pin_sets.values()),
+            "dual_pin_rotation_supported": True,
             "pin_cache_seconds": self.pin_cache_seconds,
             "ca_configured": bool(self.ca_file),
             "client_certificate_configured": bool(self.cert_file),
