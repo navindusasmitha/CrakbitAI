@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crakbit-chain"
-version = "0.33.0a1"
-description = "Crakbit Chain PoW mining-hardening alpha with multi-thread CPU mining, optional native RandomX candidate tooling, XMRig job verification and vardiff/TLS pool controls"
+version = "0.34.0a1"
+description = "Crakbit Chain PoW operations alpha with signed algorithm benchmark gates, UTXO undo journals, peer reputation tooling, explorer stats and mature coinbase-aware pool payout planning"
 requires-python = ">=3.11"
 dependencies = [
   "cryptography>=42.0.0",
@@ -18,7 +18,7 @@ dependencies = [
 dev = ["pytest>=8.0.0", "build>=1.2.2"]
 
 [project.scripts]
-crakchain = "crakbit_chain.cli_v33:main"
+crakchain = "crakbit_chain.cli_v34:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
