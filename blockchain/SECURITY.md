@@ -1,4 +1,4 @@
-# Crakbit Chain Security Notes — v0.19 Alpha
+# Crakbit Chain Security Notes — v0.20 Alpha
 
 Crakbit Chain is currently **research/public-testnet/review-candidate infrastructure**, not an audited production mainnet. It must not be used to custody real value.
 
@@ -6,7 +6,7 @@ Production CRKBIT has not launched. There is no official presale or production t
 
 ## Trust-domain separation
 
-The repository separates browser-wallet, public-gateway, CometBFT consensus, ABCI bridge, external execution, explorer, release/review signing, faucet and Mining Lab roles. Keys must not be reused across these roles.
+The repository separates browser-wallet, public-gateway, CometBFT consensus, ABCI bridge, external execution, explorer, release/review/migration signing, faucet and Mining Lab roles. Keys must not be reused across these roles.
 
 ```text
 browser wallet
@@ -25,25 +25,59 @@ crakbit-execution/2
     │
     ├→ application DB
     ├→ native ABCI state sync
-    └→ explorer/review/release evidence tooling
+    ├→ explorer/review/release evidence
+    └→ offline schema/lifecycle rehearsal tooling
 ```
 
 The older Python prevote/precommit chain remains research-only and is not the intended production BFT path.
 
 ## CometBFT state sync
 
-The external application supports the ABCI snapshot lifecycle:
-
-```text
-ListSnapshots
-OfferSnapshot
-LoadSnapshotChunk
-ApplySnapshotChunk
-```
-
-Snapshot acceptance is bound to the application hash supplied through the CometBFT state-sync trust path. Chunk hashes, full artifact hash, chain/genesis identity, fixed supply and deterministic application hash are rechecked before restore. Restore remains restricted to pristine application state.
+The external application supports `ListSnapshots`, `OfferSnapshot`, `LoadSnapshotChunk` and `ApplySnapshotChunk`. Snapshot acceptance is bound to the application hash supplied through the CometBFT state-sync trust path. Chunk hashes, full artifact hash, chain/genesis identity, fixed supply and deterministic application hash are rechecked before restore. Restore remains restricted to pristine application state.
 
 Code-level lifecycle support does not prove production recovery. Clean-host independent-validator recovery, malicious-peer behavior, interrupted transfer, storage faults and large-snapshot behavior still require operational evidence and review.
+
+## v0.20 schema migration safety
+
+v0.20 introduces explicit external-application schema version `20`. Legacy `crakbit-execution/2` databases without an explicit schema-version marker are treated as the v0.19 baseline.
+
+The migration path is deliberately **offline-copy-first**:
+
+- the source database is not mutated by `migration-copy` or `upgrade-rehearse`,
+- SQLite backup API is used to create the candidate copy,
+- source logical fingerprints are checked before and after the backup,
+- the v19 → v20 migration runs on the copy only,
+- existing application-state tables must keep the same logical fingerprint,
+- rollback is rehearsed on a second disposable copy,
+- rollback must recover the original logical fingerprint.
+
+The v0.20 migration currently adds migration/lifecycle metadata tables and the explicit schema-version marker; it does not rewrite balances, nonces, transactions, consensus block hashes or external commit rows.
+
+A successful rehearsal does **not** mean an online rolling upgrade is safe. Operators still need backups, maintenance windows, version coordination, state-sync recovery and independent testing across the actual deployment topology.
+
+## v0.20 validator lifecycle boundary
+
+v0.20 can build and verify signed `join`, `remove` and `replace` validator lifecycle **drill plans**. These plans model CometBFT public-key/power updates and record the FinalizeBlock emission height and expected effective height.
+
+They deliberately do **not** alter live consensus. The plan records `live_abci_validator_updates_emitted=false` and `consensus_change_applied=false`.
+
+This boundary is important: validator updates must be derived from deterministic replicated application state. Loading an operator-local plan on only one node could cause different ABCI `FinalizeBlock` responses across validators and create a consensus-safety risk. A future phase must define a reviewed replicated authorization/activation mechanism, include lifecycle state in the application hash and prove replay/restart behavior before live validator updates are enabled.
+
+Lifecycle signing keys are evidence/authorization-research keys and must not be reused as CometBFT private-validator keys.
+
+## Compatibility checks
+
+The v0.20 compatibility matrix currently declares:
+
+- package `0.20.0a1`,
+- execution protocol `crakbit-execution/2`,
+- supported external application schemas `19` and `20`,
+- recommended schema `20`,
+- CometBFT candidate `v0.40.0`,
+- live validator updates disabled,
+- production-mainnet readiness false.
+
+Compatibility metadata is a deployment guardrail, not a substitute for multi-node upgrade testing or independent consensus/application review.
 
 ## Browser wallet
 
@@ -67,45 +101,13 @@ The current remote-signer helper only configures CometBFT's signer address. It d
 
 See [`docs/VALIDATOR_REMOTE_SIGNER.md`](docs/VALIDATOR_REMOTE_SIGNER.md).
 
-## v0.19 review-remediation gate
+## Review / reproducible-release controls
 
-`review-findings-build` and `review-findings-check` provide a machine-readable remediation gate. The automated gate remains blocked when a high/critical finding is unresolved or when a remediated high/critical finding has no recorded regression-test reference.
+The v0.19+ review-finding gate blocks unresolved high/critical findings and requires regression-test references for remediated high/critical findings. CI also performs byte-for-byte reproducibility checks for supplied Python/Go artifacts and generates a direct-dependency CycloneDX SBOM.
 
-This is intentionally conservative. An `accepted` high/critical risk still blocks the automated gate. Clearing this matrix does not claim that the original review was independent, complete or sufficient for production.
+These are useful engineering controls, but they are not independent security review, independent reproducible-build evidence or a complete transitive supply-chain audit.
 
-## v0.19 reproducible-build evidence
-
-The CI workflow builds the Python wheel twice under a fixed `SOURCE_DATE_EPOCH` and builds the Go bridge twice with `-trimpath -buildvcs=false`. The resulting artifacts are compared byte-for-byte using SHA-256.
-
-A matching CI result proves only that the supplied outputs were identical in that CI environment. It is **not** independent reproducibility evidence from a second organization/toolchain/environment.
-
-## v0.19 SBOM scope
-
-The CycloneDX 1.5 SBOM records direct Python runtime dependencies, direct Go requirements and hashes of dependency input files. It deliberately marks transitive completeness as false.
-
-A future production release still needs a complete transitive SBOM/dependency-lock/provenance process generated from the exact release environment and independently reviewed.
-
-## Signed release provenance
-
-The v0.19 release-provenance envelope binds:
-
-- exact Git source commit,
-- package version,
-- declared CometBFT version,
-- chain ID/genesis fingerprint and genesis-file SHA-256,
-- selected artifact hashes,
-- optional SBOM and reproducibility-report hashes,
-- dedicated Ed25519 release signer identity.
-
-The signed format keeps `independent_security_review_completed=false`, `production_mainnet_ready=false`, and `production_crkbit_launched=false`. A valid signature authenticates the manifest; it is not an audit certificate.
-
-Release/review signing keys must be separated from validator, TLS, faucet, mining-reward and user-wallet keys.
-
-## Operations-drill evidence
-
-The signed operations-drill format can record upgrade, rollback, incident-response, disaster-recovery and validator-lifecycle exercises. It binds source commit, operator-reported timing/result and supporting artifact hashes.
-
-The format explicitly distinguishes operator-reported success from independent verification. Creating an evidence file does not prove that a live production network, independent operator, remote signer or HSM was involved.
+Signed release, review, migration and operations manifests authenticate the exact metadata/artifact hashes they contain. A signature does not turn operator-reported evidence into independent evidence and does not make the chain production-ready.
 
 ## Faucet and Mining Lab
 
@@ -119,13 +121,13 @@ Production review must cover fsync/durability expectations, disk-full behavior, 
 
 ## Secrets
 
-Never commit or share seed phrases, wallet private keys, CometBFT private-validator keys, signer/HSM credentials, TLS private keys, faucet/mining reward keys, release/review/evidence signing keys, execution-service bearer tokens or API secrets.
+Never commit or share seed phrases, wallet private keys, CometBFT private-validator keys, signer/HSM credentials, TLS private keys, faucet/mining reward keys, release/review/evidence/migration/lifecycle signing keys, execution-service bearer tokens or API secrets.
 
 Do not send these through support chats or issue trackers.
 
 ## Required before production mainnet
 
-Major open gates still include sustained independent-host validator operation, live clean-host state-sync evidence, real fault/partition/load campaigns, production WAF/DDoS/capacity engineering, deployed remote-signer/HSM custody, multi-operator genesis ceremony, complete transitive supply-chain review, independent consensus/application/network/cryptography/browser-wallet reviews, incident-response drills, finalized economics/incentives and applicable legal review.
+Major open gates still include sustained independent-host validator operation, live clean-host state-sync evidence, real fault/partition/load campaigns, production WAF/DDoS/capacity engineering, deployed remote-signer/HSM custody, multi-operator genesis ceremony, complete transitive supply-chain review, deterministic reviewed live validator-set updates, independent consensus/application/network/cryptography/browser-wallet reviews, incident-response drills, finalized economics/incentives and applicable legal review.
 
 The canonical gate list is [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md).
 
