@@ -1,12 +1,23 @@
 from __future__ import annotations
 
-import json
-
 import pytest
 
 from crakbit_chain.crypto import KeyPair
 from crakbit_chain.pow_pool_v31 import PoolLedger
-from crakbit_chain.pow_v31 import COIN, MAX_UINT256, PowChain, PowConfig, PowV31Error, mine_block, transaction_id
+from crakbit_chain.pow_v31 import (
+    COIN,
+    MAX_UINT256,
+    PowChain,
+    PowConfig,
+    PowV31Error,
+    build_coinbase,
+    build_unsigned_transaction,
+    merkle_root,
+    mine_block,
+    sign_transaction,
+    subsidy_for_height,
+    transaction_id,
+)
 
 
 def _config() -> PowConfig:
@@ -56,6 +67,7 @@ def test_v31_real_pow_blocks_utxo_payment_and_fees(tmp_path):
         template = chain.get_block_template(miner.address)
         assert template["fees"] == 1000
         assert template["coinbase_value"] == 10 * COIN + 1000
+        assert template["pow"]["scrypt_n"] == 16
         found, _ = mine_block(template["block"], chain.config, max_hashes=10)
         assert found is not None
         chain.submit_block(found)
@@ -73,8 +85,6 @@ def test_v31_rejects_invalid_pow_and_coinbase_value(tmp_path):
         template = chain.get_block_template(miner.address)
         block = template["block"]
         block["transactions"][0]["outputs"][0]["amount"] += 1
-        # Updating the coinbase changes the merkle root; even if the PoW target is easy,
-        # consensus must reject the altered block.
         with pytest.raises(PowV31Error):
             chain.submit_block(block)
     finally:
@@ -94,6 +104,41 @@ def test_v31_mempool_prevents_double_spend(tmp_path):
         tx2 = chain.create_payment(miner, b.address, 2 * COIN, 100)
         with pytest.raises(PowV31Error):
             chain.submit_transaction(tx2)
+    finally:
+        chain.close()
+
+
+def test_v31_same_block_spend_does_not_leave_phantom_utxo(tmp_path):
+    miner = KeyPair.generate()
+    recipient = KeyPair.generate()
+    chain = PowChain(tmp_path / "pow.sqlite3", _config(), create=True)
+    try:
+        _mine(chain, miner.address)
+        _mine(chain, miner.address)
+
+        tx1 = chain.create_payment(miner, miner.address, 5 * COIN, 100)
+        tx1id = transaction_id(tx1)
+        prevout = {"txid": tx1id, "vout": 0, "address": miner.address, "amount": 5 * COIN}
+        tx2_unsigned = build_unsigned_transaction(
+            [{"txid": tx1id, "vout": 0}],
+            [{"address": recipient.address, "amount": 4 * COIN}],
+        )
+        tx2 = sign_transaction(tx2_unsigned, miner, [prevout])
+
+        fee1, _ = chain.validate_transaction(tx1, spend_height=chain.tip()["height"] + 1)
+        fee2 = 1 * COIN
+        template = chain.get_block_template(miner.address)
+        height = template["height"]
+        coinbase = build_coinbase(height, miner.address, subsidy_for_height(chain.config, height) + fee1 + fee2, "same-block-regression")
+        block = template["block"]
+        block["transactions"] = [coinbase, tx1, tx2]
+        block["header"]["merkle_root"] = merkle_root([transaction_id(tx) for tx in block["transactions"]])
+        found, _ = mine_block(block, chain.config, max_hashes=10)
+        assert found is not None
+        chain.submit_block(found)
+
+        assert chain._lookup_utxo(tx1id, 0) is None
+        assert chain.balance(recipient.address)["confirmed"] == 4 * COIN
     finally:
         chain.close()
 
