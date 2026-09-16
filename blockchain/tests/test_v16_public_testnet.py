@@ -17,8 +17,6 @@ from crakbit_chain.external_state_sync import (
 )
 from crakbit_chain.genesis import Genesis
 from crakbit_chain.models import ATOMIC_UNITS, Transaction
-from crakbit_chain.public_gateway import GatewayConfig
-from crakbit_chain.public_gateway_v16 import create_app as create_gateway_v16
 from crakbit_chain.storage import Ledger
 from crakbit_chain.testnet_health import evaluate_health
 
@@ -77,7 +75,7 @@ def test_durable_fixed_window_survives_reopen(tmp_path):
 
 
 def test_external_checkpoint_restore_and_continue(tmp_path):
-    genesis_path, genesis, _, treasury, recipient = make_env(tmp_path)
+    _, genesis, _, treasury, recipient = make_env(tmp_path)
     source_dir = tmp_path / "source"
     ledger = Ledger(source_dir / "chain.sqlite3", genesis)
     store = ExternalExecutionStoreV16(ledger)
@@ -186,8 +184,16 @@ def test_comet_lab_helpers_build_shared_genesis_and_rewrite_ports():
 
 def test_gateway_v16_adds_same_origin_csp_and_durable_security_status(tmp_path, monkeypatch):
     genesis_path, _, _, _, _ = make_env(tmp_path)
+    monkeypatch.setenv("CRAKBIT_GATEWAY_GENESIS", str(genesis_path))
+    monkeypatch.setenv("CRAKBIT_GATEWAY_MODE", "research")
     monkeypatch.setenv("CRAKBIT_GATEWAY_RATE_LIMIT_DB", str(tmp_path / "gateway-limits.sqlite3"))
     monkeypatch.delenv("CRAKBIT_GATEWAY_ALLOWED_ORIGINS", raising=False)
+
+    # Import after supplying the default module-level configuration. The production
+    # launchers also set these variables before importing the application module.
+    from crakbit_chain.public_gateway import GatewayConfig
+    from crakbit_chain.public_gateway_v16 import create_app as create_gateway_v16
+
     config = GatewayConfig(genesis_path=str(genesis_path), mode="research")
     app = create_gateway_v16(config)
     client = TestClient(app)
