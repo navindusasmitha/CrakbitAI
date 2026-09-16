@@ -1,37 +1,32 @@
-# Crakbit Chain — v0.29 Real Independent-Host Execution Alpha
+# Crakbit Chain — v0.30 Continuous Operations / Evidence Publication Alpha
 
-**Current package:** `0.29.0a1`  
+**Current package:** `0.30.0a1`  
 **Consensus candidate:** CometBFT `v0.40.0`  
 **Execution path:** `crakbit-execution/3`  
-**Status:** real independent-host execution/evidence tooling — **not production mainnet**.
+**Status:** continuous-operations / evidence-publication tooling — **not production mainnet**.
 
 Production CRKBIT has **not** launched. There is no official presale or production token contract. Do not use this software to custody real value.
 
-## v0.29 scope
+## v0.30 scope
 
-v0.29 builds on the v0.28 launch-rehearsal layer and introduces an evidence path designed around **running independent hosts**:
+v0.30 builds on v0.29 real-host evidence and adds long-running operator automation without turning monitoring evidence into an automatic launch mechanism:
 
-- live CometBFT `/status` and `/abci_info` probes,
-- signed per-validator live host observations,
-- exact source/candidate/application-genesis/consensus-genesis binding,
-- explicit private execution/ABCI and protected-signer assertions,
-- RPC URL credential rejection,
-- signed 4+ validator cluster observations,
-- unique validator/operator/evidence-signer checks,
-- provider/region diversity gates,
-- maximum observation-window and block-height-spread checks,
-- same-height application-hash divergence detection,
-- signed operator genesis attestations and a 4+ operator ceremony gate,
-- signed soak evidence from signed cluster samples,
-- minimum configured soak success ratio of 0.99,
-- default mainnet-candidate soak target of 7 days,
-- signed fault/recovery results bound to raw evidence-file SHA-256,
-- required restart/process-kill/partition/latency/packet-loss/load/storage/state-sync/governance/upgrade campaign coverage,
-- exact binding to the supplied v0.28 release freeze and rehearsal gate,
-- signed v0.29 real-evidence freeze after the real-execution gate passes,
-- v0.29 regression tests.
+- signed non-secret monitor inventory for 4+ validators,
+- secret-bearing inventory fields rejected,
+- read-only CometBFT monitoring samples,
+- height-spread and same-height application-hash divergence detection,
+- resumable hash-chained checkpoints,
+- default seven-day target and minimum 0.99 success ratio,
+- continuous collector script with resume behavior,
+- raw evidence archive SHA-256 + retention manifests,
+- active RPC/explorer/gateway HTTP health probes,
+- redundant public-edge gate requiring two healthy endpoints per role by default,
+- protected signer/HSM-equivalent connectivity checks without private-key access,
+- public evidence bundle bound to the exact v0.29 real-evidence freeze,
+- signed operator checklist with explicit manual DNS/treasury/launch controls,
+- v0.30 regression tests.
 
-See [`V0.29.md`](V0.29.md).
+See [`V0.30.md`](V0.30.md).
 
 ## Install / test
 
@@ -50,88 +45,96 @@ go mod download
 go test -mod=mod ./...
 ```
 
-## v0.29 commands
+## v0.30 commands
 
 ```text
-live-host-v29-probe
-live-host-v29-verify
-cluster-v29-build
-cluster-v29-verify
-genesis-attest-v29-build
-genesis-attest-v29-verify
-genesis-gate-v29-build
-genesis-gate-v29-verify
-soak-v29-build
-soak-v29-verify
-fault-result-v29-build
-fault-result-v29-verify
-real-gate-v29-build
-real-freeze-v29-build
-real-freeze-v29-verify
+monitor-inventory-v30-build
+monitor-inventory-v30-verify
+monitor-sample-v30-probe
+monitor-sample-v30-verify
+monitor-checkpoint-v30-build
+monitor-checkpoint-v30-verify
+archive-v30-build
+archive-v30-verify
+edge-v30-probe
+edge-v30-verify
+edge-gate-v30-build
+edge-gate-v30-verify
+signer-v30-probe
+signer-v30-verify
+public-evidence-v30-build
+public-evidence-v30-verify
+operator-checklist-v30-build
+operator-checklist-v30-verify
 ```
 
-All v0.28 and earlier commands remain available through CLI delegation.
+All v0.29 and earlier commands remain available through CLI delegation.
 
-## Live host evidence
+## Monitor inventory
 
-`live-host-v29-probe` actively reads the CometBFT RPC endpoint and records:
+The monitoring inventory is deliberately non-secret. It stores validator/operator/provider/region labels plus public read-only RPC endpoints. Private keys, passwords, seeds, tokens, API keys and provider credentials are rejected.
 
-- chain ID,
-- node ID,
-- latest CometBFT height,
-- ABCI application height,
-- application hash,
-- catching-up status.
+The central monitoring inventory does **not** replace v0.29 multi-operator evidence. It exists to run continuous read-only observation from a dedicated monitoring system.
 
-It rejects endpoints with embedded username/password credentials. The evidence artifact contains no validator private key or provider secret.
+## Continuous collector
 
-## Cluster gate
+Use the dedicated monitor script:
 
-The default cluster gate requires at least four unique validators, four unique operators and four unique evidence signing keys, plus at least two providers and two regions. The observations must describe the same candidate/genesis/chain, remain within a small observation window, have a block-height spread at most 2 by default and show no conflicting application hash for the same ABCI height.
-
-This is stronger than a static inventory but still does not independently prove that the declared providers/operators are genuinely independent.
-
-## Genesis ceremony gate
-
-Each operator independently signs the exact source commit, candidate identity, application genesis, consensus genesis, chain ID and its own validator/node public identity. The ceremony gate requires at least four unique validators/operators/signers and unanimous approval of the exact same genesis artifacts.
-
-Do not centralize validator private keys to create this evidence.
-
-## Soak evidence
-
-The v0.29 soak builder consumes signed cluster samples. It requires at least two samples, rejects configured success thresholds below 0.99 and rejects configured durations below 24 hours. The intended v0.29 candidate campaign uses `604800` seconds (7 days) or longer.
-
-A passing soak requires no same-height application-hash divergence.
-
-## Fault/recovery evidence
-
-A fault result must be authorized and must record a passed result, recovery verification, application-hash reconvergence and no data loss. It also hashes a raw evidence file so reviewers can verify that the result is tied to preserved logs/output.
-
-The aggregate gate requires passing evidence for all ten campaign categories:
-
-```text
-restart
-process-kill
-partition
-latency
-packet-loss
-load
-storage
-state-sync
-governance
-upgrade
+```bash
+python scripts/run_v30_monitor.py \
+  --inventory private/monitor-inventory-v30.json \
+  --key private/monitor-evidence-key.json \
+  --session-id public-testnet-7d-01 \
+  --output-dir runtime/evidence/monitor-7d \
+  --interval-seconds 30 \
+  --target-duration-seconds 604800 \
+  --minimum-success-ratio 0.99
 ```
 
-Fault campaigns must only target infrastructure owned/administered by the operator or explicitly authorized for testing.
+Each successful observation is signed and written as a separate sample. The checkpoint is also signed and contains a hash-chain head covering the sequence of sample-manifest hashes. If the process restarts, the same session can resume from the last checkpoint.
 
-## Real execution gate
+The monitoring evidence key should be dedicated to monitoring. Do not reuse validator consensus keys.
 
-The v0.29 real-execution gate verifies the exact v0.28 release freeze and the exact rehearsal gate it commits to, then requires passing live cluster, multi-operator genesis, long-lived soak and complete fault/recovery evidence for the same source/candidate.
+## Archive / retention
 
-Even when all checks pass, the artifact deliberately records:
+`archive-v30-build` creates a signed inventory of raw evidence files, recording role, file name, size and SHA-256. The default retention recommendation is 90 days and the builder rejects values below 30 days.
+
+The manifest contains hashes, not the raw evidence itself.
+
+## Public-edge monitoring
+
+`edge-v30-probe` supports read-only HTTP checks for:
 
 ```text
-real_execution_gate_satisfied=true
+rpc
+explorer
+gateway
+```
+
+The aggregate edge gate requires at least two passing endpoints for every role by default. This verifies basic reachability/latency redundancy only; it is not a substitute for DDoS, WAF or independent capacity engineering.
+
+## Protected signer monitoring
+
+`signer-v30-probe` opens a TCP connection to an operator-specified protected signer/HSM-equivalent service and creates a signed observation bound to a prior rotation-drill manifest hash.
+
+The tool does not request, read, copy or export the validator private key. Connectivity alone is not proof that the signer/HSM is securely configured.
+
+## Public evidence bundle
+
+`public-evidence-v30-build` requires:
+
+- exact valid v0.29 real-evidence freeze,
+- completed seven-day monitor checkpoint,
+- monitor success ratio >= 0.99,
+- archive retention >= 30 days,
+- passing redundant edge gate,
+- at least one passing protected-signer monitor record.
+
+It can additionally hash SBOM, genesis, review summaries, runbooks or other publication artifacts.
+
+Even if all checks pass:
+
+```text
 manual_launch_decision_required=true
 automatic_launch=false
 production_mainnet_ready=false
@@ -139,11 +142,15 @@ production_mainnet_launched=false
 production_crkbit_launched=false
 ```
 
+## Operator checklist
+
+The final signed checklist requires operators to explicitly confirm validator services, backups, alerts, rollback, incident contacts, manual DNS control, manual treasury movement and manual launch approval.
+
+The checklist is an operational record. It never performs those actions.
+
 ## Production boundary
 
-v0.29 provides live observation and stronger evidence aggregation, but repository code cannot itself provision independent hosts, prove organizational independence, perform a seven-day campaign instantly, verify a physical HSM deployment or replace independent security/economic/legal review.
-
-Those external tasks must actually happen before production-mainnet consideration.
+v0.30 makes evidence collection more durable and reviewable, but software cannot prove provider/operator independence, a physical HSM deployment, reviewer independence or a real seven-day campaign unless those activities actually occur. Real independent-host operation, independent security/economic/legal review and an explicit human launch/no-launch decision remain required before production-mainnet consideration.
 
 See [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md).
 
