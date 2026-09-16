@@ -4,12 +4,12 @@
 
 ## Current Stage
 
-**Early development / Security MVP alpha + Crakbit Chain v0.32 native Proof-of-Work P2P devnet alpha**
+**Early development / Security MVP alpha + Crakbit Chain v0.33 native Proof-of-Work mining-hardening devnet alpha**
 
-Crakbit AI now keeps two clearly separated blockchain research tracks:
+Crakbit AI keeps two clearly separated blockchain research tracks:
 
 1. the earlier CometBFT/BFT validator stack, retained as legacy/research infrastructure and a source of reusable operations/security tooling;
-2. the primary v0.31+ native Proof-of-Work UTXO path, where miners produce blocks and v0.32 nodes exchange competing branches over a signed P2P network.
+2. the primary v0.31+ native Proof-of-Work UTXO path, where miners produce blocks, v0.32 nodes exchange competing branches over a signed P2P network, and v0.33 hardens CPU mining/pool behavior while evaluating RandomX as an optional candidate.
 
 The PoW path is **not production mainnet** and must not be used for real-value custody.
 
@@ -21,84 +21,86 @@ The PoW path is **not production mainnet** and must not be used for real-value c
 | GitHub repository | Active | Security + blockchain research code |
 | Secure Code Scanner | Early alpha | Deterministic static-analysis rules |
 | AI Security Assistant | In development | Security MVP work ongoing |
-| Crakbit Chain package | **v0.32.0a1** | Native PoW P2P devnet alpha |
+| Crakbit Chain package | **v0.33.0a1** | Native PoW mining-hardening devnet alpha |
 | Primary consensus research | **Proof of Work** | Miner-produced blocks |
-| Current PoW | **`crakpow-scrypt-v1`** | CPU-mineable bootstrap; not production-frozen |
+| Active devnet PoW | **`crakpow-scrypt-v1`** | CPU-mineable bootstrap; not production-frozen |
 | Ledger | **UTXO** | Bitcoin-style unspent outputs |
 | PoW rewards/fees | Implemented | Coinbase + fees + maturity |
 | Difficulty / chainwork | Implemented | 256-bit target, retarget, cumulative work |
-| Solo CPU miner | Implemented | Mines real block templates |
-| Mining pool | Implemented alpha | `crakbit-pool/1` + PPLNS test accounting |
-| P2P protocol | **v0.32 implemented** | `crakbit-p2p/1`, signed chain/genesis-bound hello |
-| Peer discovery | **v0.32 implemented alpha** | Static seeds + bounded peer exchange |
-| Block/tx gossip | **v0.32 implemented** | inventory/getblock/gettx propagation |
-| Header sync path | **v0.32 implemented alpha** | locator + headers + block fetch |
-| Side-chain storage | **v0.32 implemented** | Persistent all-branch block graph |
-| Fork choice | **v0.32 implemented** | Highest cumulative valid work |
-| Reorganization | **v0.32 implemented** | Replay-validated canonical state replacement |
-| Orphan handling | **v0.32 implemented** | Bounded orphan queue + parent-triggered processing |
-| Timestamp hardening | **v0.32 implemented alpha** | Median-time-past branch rule |
-| Two-node real TCP sync test | **Implemented** | Regression test mines/syncs a block across nodes |
-| RandomX integration | Not yet implemented | Candidate for v0.33 benchmark/review |
-| Standard Stratum/XMRig | Not yet implemented | Current pool protocol is project-native |
+| P2P protocol | **Implemented alpha** | `crakbit-p2p/1` with signed chain/genesis-bound hello |
+| Fork choice / reorg | **Implemented alpha** | Highest valid work; replay-based state replacement |
+| Multi-thread CPU solo miner | **v0.33 implemented** | RPC miner scans disjoint nonce sequences |
+| Native pool protocol | **`crakbit-pool/2`** | v0.33 vardiff + stale/duplicate protections |
+| Multi-thread pool miner | **v0.33 implemented** | Optional TLS client path |
+| Pool vardiff | **v0.33 implemented alpha** | Per-worker target adaptation |
+| Duplicate/share replay protection | **v0.33 implemented** | Job/extra-nonce/nonce + hash uniqueness |
+| Pool TLS/auth | **v0.33 implemented alpha** | TLS 1.2+ + optional shared token |
+| RandomX native adapter | **v0.33 implemented candidate** | Pinned upstream `v1.1.8`; optional local shared library |
+| RandomX self-test/benchmark | **v0.33 implemented** | Light + fast modes; official API-example vector |
+| RandomX key schedule candidate | **v0.33 implemented** | 2048-block interval / 64-block activation delay |
+| XMRig candidate job verifier | **v0.33 implemented** | `rx/0` job fields/nonce layout + native submitted-hash verification |
+| Stock XMRig live pool compatibility | **Not yet claimed** | Depends on final RandomX consensus/blob/target activation |
+| On-chain pool payout automation | **Not implemented** | PPLNS balances remain test accounting |
 | Production mainnet | **Not launched** | Alpha only |
 | Production CRKBIT | **Not launched** | No official presale/token contract |
 
-## v0.32 Completed Code Work
+## v0.33 Completed Code Work
 
-- package/CLI advanced to `0.32.0a1`,
-- persistent block graph for canonical + side branches,
-- bounded orphan-block storage,
-- complete candidate-branch replay before activation,
-- strict higher-cumulative-work fork selection,
-- canonical block/transaction/UTXO state replacement from fully replayed candidate state,
-- reorg mempool + disconnected transaction reconciliation,
-- median-time-past timestamp rule for v0.32 branch validation,
-- Bitcoin-style exponential block locator,
-- Ed25519 P2P node identity,
-- signed protocol/chain/genesis/tip/chainwork handshake,
-- static seeds + bounded peer discovery,
-- headers/inventory/block/transaction exchange,
-- ping/pong + peer scoring + basic rate/size limits,
-- combined v1-compatible mining RPC and v2 P2P-aware RPC node,
-- peer/graph inspection endpoints,
-- two-node TCP synchronization regression coverage,
-- v0.32 documentation and updated release boundary.
+- package/CLI advanced to `0.33.0a1`,
+- multi-thread CPU RPC miner for the active scrypt network,
+- multi-thread first-party pool miner,
+- hardened `crakbit-pool/2` path,
+- per-worker vardiff,
+- stale-job rejection,
+- duplicate/replayed-share rejection,
+- per-connection message-rate limits,
+- optional TLS 1.2+ pool transport,
+- optional pool authorization token,
+- pool stats,
+- optional ctypes integration with upstream RandomX `v1.1.8`,
+- RandomX light and full-dataset/fast modes,
+- official upstream API-example self-test vector,
+- deterministic RandomX candidate key-height schedule,
+- deterministic candidate hashing blob with XMRig common nonce offset,
+- XMRig `rx/0` candidate job construction,
+- native RandomX recomputation of captured XMRig-style submits,
+- deterministic candidate vector generation,
+- Windows pinned-source RandomX build helper,
+- v0.33 regression tests that stay green even when RandomX is not installed in CI,
+- v0.33 documentation and status updates.
 
-## Important v0.32 Boundary
+## Important v0.33 Boundary
 
-v0.32 is materially closer to a Bitcoin-like architecture than v0.31 because nodes can now disagree temporarily, keep competing branches and converge when one branch gains strictly more valid work.
+The active devnet consensus still uses `crakpow-scrypt-v1`. RandomX is a **real native candidate integration**, but it is deliberately not activated in block validation yet.
 
-It is still a devnet alpha. The implementation needs deeper adversarial review around reorg correctness, eclipse/Sybil resistance, peer persistence, sync efficiency, malformed-message fuzzing, resource-exhaustion behavior, large-chain replay/reorg cost and long-lived multi-host operation.
+That separation prevents a silent consensus split. Before RandomX can become a network rule the project still needs to freeze the candidate blob/target semantics, publish cross-platform vectors, benchmark representative CPUs/GPUs, evaluate validation DoS cost, define an explicit versioned activation rule, run fork/reorg tests on the candidate algorithm and complete independent consensus review.
 
-The current P2P transport is newline-delimited JSON/TCP for research simplicity. Production framing/transport decisions remain open.
-
-## PoW Algorithm Status
-
-`crakpow-scrypt-v1` is a working CPU-verifiable bootstrap algorithm. It is **not frozen for production**.
-
-RandomX remains a candidate for the CPU-first goal, but the project must integrate a real native implementation, publish deterministic test vectors, benchmark validation/mining cost across CPUs/GPUs and complete independent review before selecting it.
+Likewise, v0.33's XMRig adapter proves candidate job/submit formatting and native hash recomputation. It does not yet prove an end-to-end public stock-XMRig pool against active Crakbit consensus.
 
 ## Mining-Pool Status
 
-The first-party pool can issue jobs, validate easier shares, submit full-difficulty blocks and account PPLNS balances. It is still `crakbit-pool/1`, not standard Stratum/XMRig. Automatic on-chain payouts remain disabled.
+The first-party pool now includes vardiff, duplicate/stale/share-replay protection, TLS/auth options and stronger input/rate limits. PPLNS balances are still test accounting. Automatic coinbase-maturity-aware on-chain payouts remain disabled pending wallet/accounting review.
 
-## Previous v0.23–v0.30 Work
+## Previous Work Reused
 
-Consensus-independent work such as monitoring, release signing, evidence retention, incident-response, review/remediation and public-edge hardening remains reusable. CometBFT validator voting power is not mixed into the PoW consensus path.
+- v0.31: actual PoW blocks, UTXO ledger, rewards, fees, difficulty, chainwork and first pool.
+- v0.32: P2P networking, side branches, orphan handling and higher-work reorganization.
+- v0.23–v0.30: consensus-independent monitoring, release signing, evidence retention, incident-response and review/remediation tooling.
 
-## Immediate Blockchain Priorities — v0.33 target
+The old CometBFT validator voting-power path is not mixed into PoW consensus.
 
-1. Integrate a real native RandomX candidate and publish deterministic vectors.
-2. Benchmark scrypt vs RandomX on representative CPUs/GPUs and measure validation DoS cost.
-3. Add optimized multi-core CPU mining.
-4. Add standard Stratum compatibility for the selected algorithm and test XMRig interoperability where technically valid.
-5. Add pool vardiff, duplicate/stale/share-replay protection, TLS/auth and stronger rate limits.
-6. Add hardened on-chain PPLNS payout transaction construction after coinbase maturity.
-7. Persist peer/address reputation and add anti-eclipse controls.
-8. Add adversarial fork/reorg/fuzz/load tests and larger-chain sync benchmarks.
-9. Run a real multi-host public PoW testnet for an extended period.
-10. Complete independent node/network/wallet/pool/economic-security review before mainnet consideration.
+## Immediate Blockchain Priorities — v0.34 target
+
+1. Benchmark the RandomX candidate on representative CPU/GPU systems and publish comparable evidence.
+2. Decide whether RandomX should become the next consensus candidate; do not auto-activate it.
+3. If selected, add explicit versioned RandomX activation + deterministic consensus vectors + multi-node fork/reorg tests.
+4. Run stock XMRig end-to-end against the exact selected job/blob/target semantics before claiming compatibility.
+5. Add mature coinbase-aware PPLNS payout transaction construction and reconciliation.
+6. Separate pool hot wallet, cold funds and operator credentials; add payout caps/holds.
+7. Persist peer/address reputation and add anti-eclipse/diversity controls.
+8. Add deeper malformed-message/fork/reorg/fuzz/load/sync campaigns.
+9. Add PoW explorer hashrate/difficulty/miner/coinbase/reorg views and wallet confirmation/reorg awareness.
+10. Run a long-lived real multi-host PoW public testnet and complete independent node/network/wallet/pool/economic-security review.
 
 ## CRKBIT Status
 
@@ -106,4 +108,4 @@ Production CRKBIT has **not** launched. There is no official presale and no prod
 
 Subsidy/halving/difficulty values remain configurable devnet parameters. The proposed 21,000,000 maximum supply and 8-decimal design remain proposals until intentionally frozen after technical, economic-security and applicable legal/regulatory review.
 
-See `blockchain/V0.32.md`, `blockchain/README.md`, `ROADMAP.md` and GitHub Issue #1.
+See `blockchain/V0.33.md`, `blockchain/README.md`, `ROADMAP.md` and GitHub Issue #1.
