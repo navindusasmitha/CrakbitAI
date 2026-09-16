@@ -9,6 +9,7 @@ import uvicorn
 from .crypto import KeyPair
 from .genesis import Genesis
 from .models import ATOMIC_UNITS, Transaction
+from .snapshots import verify_snapshot
 
 
 def cmd_keygen(args: argparse.Namespace) -> int:
@@ -59,13 +60,34 @@ def cmd_send(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_snapshot_verify(args: argparse.Namespace) -> int:
+    genesis = Genesis.load(args.genesis)
+    with open(args.snapshot, "r", encoding="utf-8") as handle:
+        envelope = json.load(handle)
+    snapshot = verify_snapshot(envelope, genesis)
+    print(
+        json.dumps(
+            {
+                "valid": True,
+                "height": snapshot["height"],
+                "last_hash": snapshot["last_hash"],
+                "accounts_root": snapshot["accounts_root"],
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
 def cmd_node(args: argparse.Namespace) -> int:
     import os
 
     os.environ["CRAKBIT_GENESIS"] = args.genesis
     os.environ["CRAKBIT_VALIDATOR_KEY"] = args.key
     os.environ["CRAKBIT_DATA_DIR"] = args.data
-    from .node import create_app
+    if args.require_peer_tls:
+        os.environ["CRAKBIT_REQUIRE_PEER_TLS"] = "1"
+    from .secure_node import create_app
 
     uvicorn.run(create_app(), host=args.host, port=args.port, reload=False)
     return 0
@@ -98,12 +120,22 @@ def main() -> int:
     send.add_argument("--rpc", default="http://127.0.0.1:9101")
     send.set_defaults(func=cmd_send)
 
+    snapshot = sub.add_parser("snapshot-verify", help="Verify a signed Crakbit state snapshot JSON file")
+    snapshot.add_argument("--snapshot", required=True)
+    snapshot.add_argument("--genesis", required=True)
+    snapshot.set_defaults(func=cmd_snapshot_verify)
+
     node = sub.add_parser("node", help="Run a validator node")
     node.add_argument("--genesis", required=True)
     node.add_argument("--key", required=True)
     node.add_argument("--data", required=True)
     node.add_argument("--host", default="0.0.0.0")
     node.add_argument("--port", type=int, default=9101)
+    node.add_argument(
+        "--require-peer-tls",
+        action="store_true",
+        help="Refuse non-HTTPS validator peer URLs (intended for hardened deployments)",
+    )
     node.set_defaults(func=cmd_node)
 
     args = parser.parse_args()
