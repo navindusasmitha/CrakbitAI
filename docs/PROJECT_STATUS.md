@@ -4,14 +4,14 @@
 
 ## Current Stage
 
-**Early development / Security MVP alpha + Crakbit Chain v0.31 native Proof-of-Work devnet alpha**
+**Early development / Security MVP alpha + Crakbit Chain v0.32 native Proof-of-Work P2P devnet alpha**
 
-Crakbit AI now has two clearly separated blockchain research tracks in the repository:
+Crakbit AI now keeps two clearly separated blockchain research tracks:
 
-1. the earlier CometBFT/BFT validator stack and its extensive operations/review/evidence tooling, retained as legacy/research infrastructure;
-2. a new v0.31 native PoW path intended to evolve toward a Bitcoin-like miner-produced chain.
+1. the earlier CometBFT/BFT validator stack, retained as legacy/research infrastructure and a source of reusable operations/security tooling;
+2. the primary v0.31+ native Proof-of-Work UTXO path, where miners produce blocks and v0.32 nodes exchange competing branches over a signed P2P network.
 
-The new PoW path is now the primary chain research direction. It is **not production mainnet** and must not be used for real-value custody.
+The PoW path is **not production mainnet** and must not be used for real-value custody.
 
 ## Current Snapshot
 
@@ -21,98 +21,89 @@ The new PoW path is now the primary chain research direction. It is **not produc
 | GitHub repository | Active | Security + blockchain research code |
 | Secure Code Scanner | Early alpha | Deterministic static-analysis rules |
 | AI Security Assistant | In development | Security MVP work ongoing |
-| Crakbit Chain package | **v0.31.0a1** | Native PoW devnet alpha |
-| New primary consensus research | **PoW** | Miner-produced blocks |
-| Working v0.31 PoW | **`crakpow-scrypt-v1`** | CPU-mineable memory-hard scrypt bootstrap |
+| Crakbit Chain package | **v0.32.0a1** | Native PoW P2P devnet alpha |
+| Primary consensus research | **Proof of Work** | Miner-produced blocks |
+| Current PoW | **`crakpow-scrypt-v1`** | CPU-mineable bootstrap; not production-frozen |
 | Ledger | **UTXO** | Bitcoin-style unspent outputs |
-| PoW block rewards | Implemented | Coinbase subsidy + fees + maturity |
-| Difficulty | Implemented | 256-bit target + bounded retarget |
-| Chainwork | Implemented | Cumulative work tracked |
-| Solo CPU miner | Implemented | Mines actual block templates |
-| PoW node RPC | Implemented | Template/block/tx/balance/UTXO endpoints |
-| First-party mining pool | Implemented alpha | Native JSON-line pool protocol |
-| Pool share accounting | Implemented alpha | Easier share target + PPLNS test balances |
-| Native pool CPU miner | Implemented | Project-native miner script |
-| Previous CometBFT stack | Retained | Legacy/research; not mixed into PoW consensus |
-| P2P PoW networking | **Not yet implemented** | Required for decentralized multi-node chain |
-| Fork/reorg engine | **Not yet implemented** | v0.31 accepts tip-extending blocks only |
-| RandomX integration | **Not yet implemented** | Candidate for benchmark/review phase |
-| XMRig/standard Stratum compatibility | **Not yet implemented** | Native pool protocol only |
+| PoW rewards/fees | Implemented | Coinbase + fees + maturity |
+| Difficulty / chainwork | Implemented | 256-bit target, retarget, cumulative work |
+| Solo CPU miner | Implemented | Mines real block templates |
+| Mining pool | Implemented alpha | `crakbit-pool/1` + PPLNS test accounting |
+| P2P protocol | **v0.32 implemented** | `crakbit-p2p/1`, signed chain/genesis-bound hello |
+| Peer discovery | **v0.32 implemented alpha** | Static seeds + bounded peer exchange |
+| Block/tx gossip | **v0.32 implemented** | inventory/getblock/gettx propagation |
+| Header sync path | **v0.32 implemented alpha** | locator + headers + block fetch |
+| Side-chain storage | **v0.32 implemented** | Persistent all-branch block graph |
+| Fork choice | **v0.32 implemented** | Highest cumulative valid work |
+| Reorganization | **v0.32 implemented** | Replay-validated canonical state replacement |
+| Orphan handling | **v0.32 implemented** | Bounded orphan queue + parent-triggered processing |
+| Timestamp hardening | **v0.32 implemented alpha** | Median-time-past branch rule |
+| Two-node real TCP sync test | **Implemented** | Regression test mines/syncs a block across nodes |
+| RandomX integration | Not yet implemented | Candidate for v0.33 benchmark/review |
+| Standard Stratum/XMRig | Not yet implemented | Current pool protocol is project-native |
 | Production mainnet | **Not launched** | Alpha only |
 | Production CRKBIT | **Not launched** | No official presale/token contract |
 
-## v0.31 Completed Code Work
+## v0.32 Completed Code Work
 
-- package/CLI advanced to `0.31.0a1`,
-- deterministic PoW genesis,
-- persistent SQLite block/transaction/UTXO/mempool database,
-- UTXO transactions using existing Ed25519 `crk1...` ownership keys,
-- signed inputs and value-conservation checks,
-- transaction fees and mempool double-spend prevention,
-- coinbase rewards and configurable maturity,
-- Merkle roots over transaction IDs,
-- memory-hard scrypt PoW hashing,
-- exact target verification,
-- configurable/bounded difficulty retargeting,
-- cumulative chainwork,
-- actual CPU solo-mining loop,
-- FastAPI PoW node RPC,
-- first-party pool job/share verification,
-- network target vs easier pool share target separation,
-- PPLNS internal test accounting,
-- native pool server and CPU pool miner,
-- v0.31 regression tests and documentation.
+- package/CLI advanced to `0.32.0a1`,
+- persistent block graph for canonical + side branches,
+- bounded orphan-block storage,
+- complete candidate-branch replay before activation,
+- strict higher-cumulative-work fork selection,
+- canonical block/transaction/UTXO state replacement from fully replayed candidate state,
+- reorg mempool + disconnected transaction reconciliation,
+- median-time-past timestamp rule for v0.32 branch validation,
+- Bitcoin-style exponential block locator,
+- Ed25519 P2P node identity,
+- signed protocol/chain/genesis/tip/chainwork handshake,
+- static seeds + bounded peer discovery,
+- headers/inventory/block/transaction exchange,
+- ping/pong + peer scoring + basic rate/size limits,
+- combined v1-compatible mining RPC and v2 P2P-aware RPC node,
+- peer/graph inspection endpoints,
+- two-node TCP synchronization regression coverage,
+- v0.32 documentation and updated release boundary.
 
-## Important v0.31 Boundary
+## Important v0.32 Boundary
 
-v0.31 is the first repository phase where `mine` means a miner actually hashes a block header and the node validates that proof against a network target.
+v0.32 is materially closer to a Bitcoin-like architecture than v0.31 because nodes can now disagree temporarily, keep competing branches and converge when one branch gains strictly more valid work.
 
-However, one local PoW node is not yet a fully decentralized Bitcoin-like network. The following are still missing from the new PoW path:
+It is still a devnet alpha. The implementation needs deeper adversarial review around reorg correctness, eclipse/Sybil resistance, peer persistence, sync efficiency, malformed-message fuzzing, resource-exhaustion behavior, large-chain replay/reorg cost and long-lived multi-host operation.
 
-- peer discovery and persistent P2P connections,
-- block/transaction gossip,
-- header-first synchronization,
-- side-chain/fork storage,
-- highest-cumulative-work fork selection across competing branches,
-- safe UTXO rollback/reorganization data,
-- orphan handling,
-- stronger timestamp rules,
-- production-grade fee/mempool policies,
-- final PoW algorithm selection,
-- interoperable mining protocol,
-- hardened on-chain pool payout workflow,
-- long-lived independent multi-node PoW testnet,
-- independent PoW consensus/security/economic review.
+The current P2P transport is newline-delimited JSON/TCP for research simplicity. Production framing/transport decisions remain open.
 
 ## PoW Algorithm Status
 
-The working alpha algorithm is `crakpow-scrypt-v1`. This is a real CPU-mineable memory-hard PoW path available through Python's standard cryptographic runtime.
+`crakpow-scrypt-v1` is a working CPU-verifiable bootstrap algorithm. It is **not frozen for production**.
 
-RandomX remains a candidate for the production CPU-first design, but it must be integrated through a real native implementation, benchmarked against CPU/GPU behavior and independently reviewed. The project should not claim RandomX/XMRig compatibility until that work exists.
+RandomX remains a candidate for the CPU-first goal, but the project must integrate a real native implementation, publish deterministic test vectors, benchmark validation/mining cost across CPUs/GPUs and complete independent review before selecting it.
+
+## Mining-Pool Status
+
+The first-party pool can issue jobs, validate easier shares, submit full-difficulty blocks and account PPLNS balances. It is still `crakbit-pool/1`, not standard Stratum/XMRig. Automatic on-chain payouts remain disabled.
 
 ## Previous v0.23–v0.30 Work
 
-The older CometBFT stack contains useful wallet, monitoring, release, audit/remediation, incident-response, evidence-retention and public-edge engineering. That work remains in the repository and can be reused where consensus-independent.
+Consensus-independent work such as monitoring, release signing, evidence retention, incident-response, review/remediation and public-edge hardening remains reusable. CometBFT validator voting power is not mixed into the PoW consensus path.
 
-CometBFT validator voting power/governance is not the production-consensus model of the new PoW path unless the project later deliberately changes direction again.
+## Immediate Blockchain Priorities — v0.33 target
 
-## Immediate Blockchain Priorities — PoW v0.32 target
-
-1. Implement a P2P peer protocol and node identity/handshake.
-2. Add block + transaction inventory/gossip.
-3. Add header-first synchronization and peer chainwork comparison.
-4. Store side-chain blocks and implement highest-chainwork reorganization with UTXO undo records.
-5. Add orphan/fork handling and stronger time rules.
-6. Add multi-core/native mining improvements.
-7. Implement/benchmark a real RandomX adapter before deciding the final PoW algorithm.
-8. Add final-algorithm Stratum compatibility and pool vardiff/anti-abuse controls.
-9. Add mature pool payout transaction building after coinbase maturity.
-10. Run a real multi-node public PoW testnet and independent review.
+1. Integrate a real native RandomX candidate and publish deterministic vectors.
+2. Benchmark scrypt vs RandomX on representative CPUs/GPUs and measure validation DoS cost.
+3. Add optimized multi-core CPU mining.
+4. Add standard Stratum compatibility for the selected algorithm and test XMRig interoperability where technically valid.
+5. Add pool vardiff, duplicate/stale/share-replay protection, TLS/auth and stronger rate limits.
+6. Add hardened on-chain PPLNS payout transaction construction after coinbase maturity.
+7. Persist peer/address reputation and add anti-eclipse controls.
+8. Add adversarial fork/reorg/fuzz/load tests and larger-chain sync benchmarks.
+9. Run a real multi-host public PoW testnet for an extended period.
+10. Complete independent node/network/wallet/pool/economic-security review before mainnet consideration.
 
 ## CRKBIT Status
 
 Production CRKBIT has **not** launched. There is no official presale and no production token contract.
 
-v0.31 subsidy/halving/difficulty values are configurable devnet parameters. The proposed 21,000,000 maximum supply and 8-decimal design remain proposals until intentionally frozen after technical, economic-security and applicable legal/regulatory review.
+Subsidy/halving/difficulty values remain configurable devnet parameters. The proposed 21,000,000 maximum supply and 8-decimal design remain proposals until intentionally frozen after technical, economic-security and applicable legal/regulatory review.
 
-See `blockchain/V0.31.md`, `blockchain/README.md`, `ROADMAP.md` and GitHub Issue #1.
+See `blockchain/V0.32.md`, `blockchain/README.md`, `ROADMAP.md` and GitHub Issue #1.
