@@ -79,12 +79,11 @@ def _validate_snapshot_body(snapshot: dict[str, Any], genesis: Genesis) -> list[
         total_supply += balance
         normalized_accounts.append({"address": address, "balance": balance, "nonce": nonce})
 
-    if total_supply != sum(genesis.allocations.values()):
-        raise LedgerError("snapshot total supply does not match genesis issued supply")
-
     expected_accounts_root = sha256_hex(canonical_json(normalized_accounts))
     if snapshot.get("accounts_root") != expected_accounts_root:
         raise LedgerError("snapshot accounts root mismatch")
+    if total_supply != sum(genesis.allocations.values()):
+        raise LedgerError("snapshot total supply does not match genesis issued supply")
     return normalized_accounts
 
 
