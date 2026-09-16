@@ -103,15 +103,30 @@ A runnable research/devnet and external CometBFT application path exist. This do
 
 ### v0.18 — review freeze / reconciliation / sustained evidence tooling
 
-- [x] Bump package/CLI to `0.18.0a1`
-- [x] Add signed review-candidate freeze manifest
-- [x] Bind exact source commit, package version, CometBFT version and genesis identity
-- [x] Hash and verify selected review artifacts
-- [x] Force conservative review claims (`production_mainnet_ready=false`)
-- [x] Add clean explorer rebuild/reconciliation tooling
-- [x] Add deterministic explorer table fingerprints
-- [x] Add sustained health/soak evidence collector
-- [x] Add v0.18 regression tests and documentation
+- [x] Signed review-candidate freeze manifest
+- [x] Exact source/package/CometBFT/genesis identity binding
+- [x] Review artifact hashing and conservative readiness claims
+- [x] Clean explorer rebuild/reconciliation tooling
+- [x] Deterministic explorer table fingerprints
+- [x] Sustained health/soak evidence collector
+- [x] v0.18 regression tests and documentation
+
+### v0.19 — review remediation / reproducible release engineering
+
+- [x] Bump package/CLI to `0.19.0a1`
+- [x] Add machine-readable review-finding remediation matrix
+- [x] Block automated gate on unresolved high/critical findings
+- [x] Require regression-test references for remediated high/critical findings
+- [x] Add reproducible artifact SHA-256 comparison tooling
+- [x] Add CI double-build verification for Python wheel
+- [x] Add CI double-build verification for Go bridge
+- [x] Add direct-dependency CycloneDX 1.5 SBOM generation
+- [x] Add signed release provenance tied to exact source/genesis/artifact hashes
+- [x] Add signed upgrade/rollback/incident/DR/validator-lifecycle drill evidence format
+- [x] Add v0.19 release-engineering tests and documentation
+- [ ] Ingest real independent-review findings when received
+- [ ] Produce a complete transitive release SBOM from the final release environment
+- [ ] Reproduce release artifacts in a genuinely independent build environment
 
 ### External evidence still required
 
@@ -150,17 +165,16 @@ Testnet CRKBIT units represent test units only and should not be represented as 
 - [ ] Applicable legal/regulatory review
 - [ ] Remediate or explicitly accept every high/critical finding
 
-## Phase 9 — v0.19 Remediation / Release Engineering
-**Only after real external evidence/review findings exist**
+## Phase 9 — v0.20 Upgrade Compatibility / Validator Lifecycle
 
-- [ ] Ingest independently reported findings
-- [ ] Fix and regression-test verified findings
-- [ ] Reproducible binary/container builds
-- [ ] SBOM/dependency pinning and release provenance
-- [ ] Upgrade/migration rehearsals
-- [ ] Validator-set lifecycle drills
-- [ ] Disaster-recovery and incident-response rehearsals
-- [ ] Create a new signed review freeze after remediation
+- [ ] Versioned application/database migration framework
+- [ ] Offline migration dry-run and rollback verification
+- [ ] Protocol/application compatibility matrix
+- [ ] Validator-set lifecycle application boundary
+- [ ] Safe join/remove/replace testnet drills
+- [ ] Explorer/history migration verification
+- [ ] Signed migration and rollback evidence
+- [ ] Continue regression fixes for real review findings
 
 ## Phase 10 — Mainnet Consideration
 
