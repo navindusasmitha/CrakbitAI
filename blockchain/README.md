@@ -1,6 +1,6 @@
-# Crakbit Chain — v0.22 Public-Testnet / Review-Candidate Alpha
+# Crakbit Chain — v0.23 Public-Testnet / Review-Candidate Alpha
 
-**Current package:** `0.22.0a1`  
+**Current package:** `0.23.0a1`  
 **Consensus candidate:** CometBFT `v0.40.0`  
 **Execution path:** `crakbit-execution/3`  
 **Status:** research/public-testnet/mainnet-candidate infrastructure — **not production mainnet**.
@@ -11,7 +11,7 @@ Production CRKBIT has **not** launched. There is no official presale or producti
 
 ```text
 Browser wallet / CLI
-        │ signed transaction
+        │ signed transaction / governed validator change
         ▼
 Public gateway / CometBFT RPC
         │
@@ -32,22 +32,29 @@ crakbit-execution/3
         └── governance-aware state sync
 ```
 
-The older Python prevote/precommit implementation remains research-only and is not the intended production BFT path.
+v0.23 adds an operational layer around this path for independent public-testnet operators. The older Python prevote/precommit implementation remains research-only and is not the intended production BFT path.
 
-## What v0.22 adds
+## What v0.23 adds
 
-v0.22 is the **governed multi-node testnet campaign** phase. It adds:
+v0.23 is the **public-testnet deployment / operations** phase. It adds:
 
-- a one-command governed CometBFT lab generator,
-- application-genesis validator identities aligned with the generated disposable CometBFT validators,
-- lab-only governance signing views for local campaigns,
-- cluster reachability/height/app-hash/governance divergence checks,
-- validator-governance history/emission explorer output,
-- explicit `H`, `H+1`, `H+2` campaign plans,
-- signed campaign evidence bound to exact Git commit/genesis/artifact hashes,
-- v0.22 regression tests.
+- public-only validator identity export from each operator's own CometBFT host,
+- explicit secret-field rejection for shared operator metadata,
+- 4+ validator public-testnet inventory generation,
+- operator/provider/region diversity gates,
+- shared application + CometBFT genesis bundles with SHA-256 manifests,
+- per-validator non-secret deployment bundles,
+- systemd templates for execution service, ABCI bridge and CometBFT,
+- persistent-peer configuration artifacts,
+- independent-node `/status` + `/abci_info` monitoring,
+- same-height application-hash divergence detection,
+- long-running JSONL soak collection,
+- 24-hour minimum operational evidence gate,
+- readiness reports that separate public-testnet readiness from production-mainnet readiness,
+- signed operations evidence tied to exact source commit and artifact hashes,
+- v0.23 regression tests.
 
-See [`V0.22.md`](V0.22.md).
+See [`V0.23.md`](V0.23.md).
 
 ## Install / test
 
@@ -66,120 +73,140 @@ go mod download
 go test -mod=mod ./...
 ```
 
-## Create a governed four-node local lab
+## Public-testnet operator workflow
 
-Install the pinned CometBFT candidate binary first, then:
-
-```bash
-crakchain governed-lab-create \
-  --cometbft /path/to/cometbft \
-  --output runtime/governed-v22-lab \
-  --chain-id crakbit-v22-local \
-  --nodes 4
-```
-
-The generator creates disposable local node homes, application genesis, operator inventory and `.secrets` material. **Never reuse the generated validator/treasury/governance keys on a public or production network.**
-
-Use the generated `commands.txt` to start each node's v0.21 execution service, ABCI bridge and CometBFT process.
-
-## Check cluster convergence
+Each operator should initialize and control their own validator key. Export public metadata only:
 
 ```bash
-crakchain cluster-v22-check \
-  --inventory runtime/governed-v22-lab/governed-lab-inventory.json \
-  --max-height-spread 1 \
-  --output runtime/evidence/cluster-check.json
+crakchain validator-identity-v23-export \
+  --home /var/lib/crakbit/cometbft \
+  --cometbft /usr/local/bin/cometbft \
+  --name validator-1 \
+  --operator-id operator-a \
+  --provider provider-a \
+  --region region-a \
+  --p2p-host validator1.example.org \
+  --monitor-rpc-url https://validator1-monitor.example.org \
+  --output validator-1-public.json
 ```
 
-The command checks execution height/application hash, governance state and CometBFT sync status. It rejects same-height app-hash/governance divergence.
+Collect at least four operator identities and build the shared inventory:
 
-## Validator governance
-
-v0.21 commands remain available:
-
-```text
-validator-change-build
-validator-change-sign
-validator-change-verify
-governance-status
-snapshot-v21-export
-snapshot-v21-verify
-snapshot-v21-import
-migration-v21-dry-run
-migration-v21-copy
+```bash
+crakchain public-testnet-inventory-build \
+  --chain-id crakbit-public-testnet-1 \
+  --network-name "Crakbit Public Testnet 1" \
+  --identity validator-1-public.json \
+  --identity validator-2-public.json \
+  --identity validator-3-public.json \
+  --identity validator-4-public.json \
+  --output public-testnet-inventory.json
 ```
 
-Validator change approvals require voting power **strictly greater than two-thirds** of the current application validator set. For four equal-power validators this means 3-of-4 approvals.
+The inventory never needs private validator keys. Do not collect operator private keys on a central machine.
 
-The modeled update lifecycle is:
+## Shared genesis / deployment bundles
+
+Use a reviewed CometBFT genesis template and a **public** treasury address:
+
+```bash
+crakchain public-testnet-genesis-build \
+  --inventory public-testnet-inventory.json \
+  --cometbft-template cometbft-template-genesis.json \
+  --treasury-address crk1PUBLIC_ADDRESS_ONLY \
+  --output runtime/public-testnet/genesis
+```
+
+Build non-secret operator bundles:
+
+```bash
+crakchain public-testnet-bundles-build \
+  --inventory public-testnet-inventory.json \
+  --genesis-bundle runtime/public-testnet/genesis \
+  --output runtime/public-testnet/operators
+```
+
+The generated bundle manifest keeps `deployment_executed=false`; generation does not mean the VPS deployment happened.
+
+## Monitoring and soak evidence
+
+One health observation:
+
+```bash
+crakchain public-testnet-observe \
+  --inventory public-testnet-inventory.json \
+  --output runtime/evidence/observation.json
+```
+
+24-hour collection:
+
+```bash
+crakchain public-testnet-soak \
+  --inventory public-testnet-inventory.json \
+  --output runtime/evidence/soak-24h.jsonl \
+  --duration-seconds 86400 \
+  --interval-seconds 30
+```
+
+Summarize:
+
+```bash
+crakchain public-testnet-soak-summary \
+  --input runtime/evidence/soak-24h.jsonl \
+  --output runtime/evidence/soak-24h-summary.json
+```
+
+The v0.23 minimum soak gate requires actual observed duration of at least 24 hours, zero same-height app-hash divergence, full reachability and at least 99% healthy observations.
+
+## Readiness / signed evidence
+
+```bash
+crakchain public-testnet-readiness \
+  --inventory public-testnet-inventory.json \
+  --genesis-manifest runtime/public-testnet/genesis/genesis-bundle.json \
+  --deployment-manifest runtime/public-testnet/operators/deployment-manifest.json \
+  --soak-summary runtime/evidence/soak-24h-summary.json \
+  --output runtime/evidence/public-testnet-readiness.json
+```
+
+A dedicated evidence signer can bind the exact source commit and artifact hashes:
+
+```bash
+SOURCE_COMMIT=$(git rev-parse HEAD)
+crakchain public-testnet-evidence-build \
+  --key private/public-testnet-evidence-key.json \
+  --source-commit "$SOURCE_COMMIT" \
+  --inventory public-testnet-inventory.json \
+  --readiness runtime/evidence/public-testnet-readiness.json \
+  --artifact runtime/evidence/soak-24h-summary.json \
+  --output runtime/evidence/public-testnet-operations-evidence.json
+```
+
+A signature authenticates operator-produced evidence; it is not an independent audit certificate.
+
+## Validator governance retained
+
+v0.21/v0.22 commands remain available for governed `join` / `remove` / `replace` campaigns. Approvals require voting power **strictly greater than two-thirds** of the current application validator set; for four equal-power validators that means 3-of-4 approvals.
+
+The modeled lifecycle remains:
 
 ```text
-H    governance transaction is finalized and ABCI validator update is emitted
+H    governance transaction finalizes and validator update is emitted
 H+1  application change remains pending
 H+2  target application validator set becomes active
 ```
 
-## Campaign plan / evidence
-
-Build a campaign plan after creating the quorum-approved governance request:
-
-```bash
-crakchain campaign-v22-plan-build \
-  --genesis runtime/governed-v22-lab/application-genesis.json \
-  --kind join \
-  --emit-height 101 \
-  --change-request runtime/governance/join-validator-5-signed.json \
-  --output runtime/evidence/join-plan.json
-```
-
-Capture cluster observations around activation boundaries, then bind them into signed operator evidence:
-
-```bash
-SOURCE_COMMIT=$(git rev-parse HEAD)
-
-crakchain campaign-v22-evidence-build \
-  --genesis runtime/governed-v22-lab/application-genesis.json \
-  --key private/campaign-evidence-key.json \
-  --source-commit "$SOURCE_COMMIT" \
-  --plan runtime/evidence/join-plan.json \
-  --observation runtime/evidence/cluster-before.json \
-  --observation runtime/evidence/cluster-after.json \
-  --executed \
-  --output runtime/evidence/join-evidence.json
-```
-
-A signature authenticates the operator evidence; it is not an independent audit certificate.
-
-## Governance history
-
-```bash
-crakchain governance-history-v22 \
-  --genesis runtime/governed-v22-lab/application-genesis.json \
-  --data runtime/governed-v22-lab/app1 \
-  --output runtime/evidence/governance-history.json
-```
-
-This exports active validators, pending changes, applied history and validator-update emissions for explorer/review use.
+Those semantics still need independent-host campaign evidence and review before production consideration.
 
 ## Existing release/recovery tooling retained
 
-Earlier phases remain available, including:
-
-- native ABCI state sync,
-- external snapshots/checkpoints,
-- explorer indexing/reconciliation,
-- soak/fault tooling,
-- signed release/evidence/review artifacts,
-- reproducible Python/Go build checks,
-- CycloneDX direct-dependency SBOM generation,
-- schema migration/rollback rehearsal,
-- browser wallet/public gateway/faucet/Mining Lab test tooling.
+Earlier phases remain available, including native ABCI state sync, external snapshots/checkpoints, explorer indexing/reconciliation, fault tooling, signed release/evidence/review artifacts, reproducible Python/Go build checks, CycloneDX direct-dependency SBOM generation, schema migration/rollback rehearsal and browser wallet/public gateway/faucet/Mining Lab test tooling.
 
 The Mining Lab remains a **test-only work-reward mechanism**. It is not CometBFT consensus mining, does not mint new CRKBIT supply and must not be represented as guaranteed earnings.
 
 ## What still blocks production mainnet
 
-Code implementation alone is not enough. The project still needs actual long-running independent-host validator operation, real join/remove/replace campaigns, activation-boundary restart/partition/state-sync evidence, protected remote/HSM signing, production RPC/TLS/WAF/DDoS/secret-management controls, independent consensus/application/network/cryptography/browser-wallet review, final validator/CRKBIT economics and applicable legal/regulatory review.
+The repository now has public-testnet deployment/evidence tooling, but production launch still requires **actual** independent-host operation, multi-operator genesis, 24h → 72h → 7-day soak/fault/load/state-sync campaigns, protected remote/HSM signing, production RPC/TLS/WAF/DDoS/secret-management/capacity controls, independent consensus/application/governance/network/cryptography/browser-wallet review, final validator/CRKBIT economics and applicable legal/regulatory review.
 
 The canonical gate list is [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md).
 
