@@ -6,99 +6,80 @@
 
 Crakbit AI is an independent, founder-led technology project building accessible security tooling for developers, security researchers, students and open-source communities.
 
-The project is currently in **early development / Security MVP + blockchain devnet research** stage. Our priority remains useful defensive security technology and careful public testing before any production blockchain or production-value CRKBIT launch.
+The project is currently in **early development / Security MVP + blockchain devnet research** stage. The priority remains useful defensive-security technology and careful public testing before any production blockchain or production-value CRKBIT launch.
 
 ## Mission
 
 Make practical cybersecurity, secure coding and blockchain-security tooling more accessible, understandable and easier to integrate into modern software-development workflows.
 
-We believe AI should not only help developers write code faster — it should also help them understand risk and build safer systems.
-
 ## What We Are Building
 
 ### Crakbit AI Security Assistant
-Security-focused AI guidance for secure coding, vulnerability understanding, remediation and defensive security workflows.
+
+Security-focused AI guidance for secure coding, vulnerability understanding, remediation and defensive-security workflows.
 
 ### Crakbit Scanner — Early Alpha
-A deterministic static-analysis prototype exists in [`scanner/`](scanner/).
 
-Current alpha checks include:
+A deterministic static-analysis prototype exists in [`scanner/`](scanner/). Current alpha checks include hard-coded credential indicators with redaction, Python `subprocess(..., shell=True)`, Python/JavaScript `eval()` and potentially unsafe DOM `innerHTML` assignment.
 
-- Possible hard-coded credentials with evidence redaction
-- Python `subprocess` usage with `shell=True`
-- Python `eval()`
-- JavaScript/TypeScript `eval()`
-- Potentially unsafe `innerHTML` assignment
-
-The scanner performs static checks only and does not execute target code. It is an early architecture proof and **not yet a production-grade security scanner**.
+The scanner performs static checks only and does not execute target code. It is an early architecture prototype, not a production-grade security scanner.
 
 ### Blockchain Security
-Planned security tooling includes:
 
-- Smart-contract analysis
-- Contract-risk assessment
-- Blockchain transaction analysis
-- Security-focused developer guidance
-- Human-readable security reports
+Planned defensive tooling includes smart-contract analysis, contract-risk assessment, public blockchain-data analysis, developer guidance and human-readable security reports.
 
-### Crakbit Chain — Devnet v0.8 Alpha
-A runnable experimental blockchain prototype exists in [`blockchain/`](blockchain/).
+### Crakbit Chain — v0.14 Research / External-BFT Integration Alpha
 
-The current development network includes:
+A runnable experimental blockchain/application-state prototype exists in [`blockchain/`](blockchain/).
 
-- Native test-only `CRKBIT` unit
-- Ed25519 wallets and signed transfers
-- `crk1...` account addresses
-- Nonces, replay protection and transaction fees
-- Signed block proposals
-- Strict greater-than-two-thirds **prevote** quorum
-- Strict greater-than-two-thirds **precommit** quorum
-- Finalization only after both phase certificates validate
-- Round-specific proposer rotation
-- Signed greater-than-two-thirds view-change certificates for non-zero rounds
-- Persistent prevote/precommit anti-double-vote state across restarts
-- Persistent per-height conservative consensus lock
-- Persistent consensus event journal
-- Conflicting signed proposal/equivocation evidence
-- Ed25519-authenticated validator-to-validator internal requests
-- Durable validator request replay-nonce store
-- Signed validator challenge/response identity handshake
-- Optional HTTPS peer-URL enforcement mode
-- Quorum-certified state snapshots
-- Snapshot verification/import bootstrap
-- Chunked snapshot-transfer manifests with per-chunk hashes
-- Resumable verified snapshot chunk cache in the CLI
-- Crash-visible snapshot import journal
-- Snapshot-base-aware history endpoints
-- Prometheus-style development metrics
-- Transaction Merkle roots and deterministic state roots
-- SQLite-backed chain and consensus state
-- Finalized-block broadcast and catch-up synchronization
-- Validator health/height/round telemetry
-- REST/RPC API
-- CLI wallet/transfer/snapshot recovery commands
-- 4-validator Docker Compose devnet with a default 3-of-4 quorum
-- Browser development explorer
-- Automated ledger/consensus/peer-auth/snapshot/recovery tests and CI
+The original Python devnet now includes signed transactions, a research prevote/precommit pipeline, quorum-certified view changes, authenticated validator communication, mTLS/certificate pinning, snapshots, resumable recovery, verified history archives, backups, metrics, fault/soak tooling and bounded RPC/mempool controls.
 
-The proposed devnet parameters use 8 decimals and a 21,000,000 CRKBIT maximum genesis supply. These parameters remain subject to technical, security, economic and legal review before any production network.
+**v0.14 adds a separate external-consensus integration path:**
 
-**Important:** v0.8 is still not a production BFT/mainnet protocol. The current cross-round lock still lacks a mature proof-based unlock rule, validator mTLS/certificate lifecycle is not implemented, snapshot bootstrap does not reconstruct historical blocks before the snapshot base, and the network has not been independently audited.
+```text
+CometBFT v0.40.0
+      │ ABCI socket
+      ▼
+Crakbit Go ABCI bridge
+      │ authenticated loopback HTTP
+      ▼
+crakbit-execution/2
+      │ staged FinalizeBlock → atomic Commit
+      ▼
+Dedicated external application SQLite state
+```
 
-Test CRKBIT units created by this devnet are not a production token, investment product or public presale.
+v0.14 also adds:
 
-See [`blockchain/README.md`](blockchain/README.md), [`blockchain/V0.8.md`](blockchain/V0.8.md), [`blockchain/SPEC.md`](blockchain/SPEC.md) and [`blockchain/SECURITY.md`](blockchain/SECURITY.md).
+- deterministic application hashes for external consensus,
+- persisted non-mutating FinalizeBlock staging,
+- atomic crash-safe Commit semantics,
+- pending-finalize recovery across restart,
+- identical committed FinalizeBlock replay handling,
+- a Go ABCI bridge pinned to CometBFT `v0.40.0`,
+- signed strict >2/3 Crakbit application-genesis ceremony tooling,
+- Python + Go blockchain CI,
+- local integration/operator runbooks.
 
-### Developer Platform
+The proposed devnet parameters use 8 decimals and a 21,000,000 CRKBIT maximum genesis supply. These remain development parameters subject to technical, security, economic and legal review.
+
+**Important:** v0.14 is still a research/testnet integration. It is not a production mainnet, has not completed independent consensus/network/security review, and must not be used to custody real value.
+
+Test CRKBIT units are not a production token, investment product or public presale.
+
+See [`blockchain/README.md`](blockchain/README.md), [`blockchain/V0.14.md`](blockchain/V0.14.md), [`blockchain/docs/EXTERNAL_CONSENSUS_V2.md`](blockchain/docs/EXTERNAL_CONSENSUS_V2.md), [`blockchain/SPEC.md`](blockchain/SPEC.md) and [`blockchain/SECURITY.md`](blockchain/SECURITY.md).
+
+## Developer Platform Direction
+
 Planned developer-facing components include:
 
 - Web application
 - `crak` security CLI
 - Security API / SDK
-- Git integrations
-- CI/CD integrations
+- Git and CI/CD integrations
 - Future IDE integrations
-- Crakbit Chain node/RPC tooling
+- Blockchain security/reporting tools
+- Crakbit Chain node/application tooling
 
 ## Try the Security Scanner Alpha
 
@@ -118,7 +99,7 @@ JSON output:
 crak scan ../your-project --json
 ```
 
-## Run the Crakbit Chain Devnet
+## Run the Research Crakbit Chain Devnet
 
 Requires Python 3.11+ and Docker.
 
@@ -130,52 +111,76 @@ python scripts/bootstrap_devnet.py
 docker compose up --build
 ```
 
-Default local RPC endpoints:
+Default local research RPC endpoints:
 
 - `http://127.0.0.1:9101`
 - `http://127.0.0.1:9102`
 - `http://127.0.0.1:9103`
 - `http://127.0.0.1:9104`
 
-Consensus/validator telemetry:
+The normal `crakchain node` command remains the research Python-consensus path for backwards-compatible local development.
+
+## Try the v0.14 External-Consensus Application Path
+
+Start the dedicated application service with a **fresh data directory**:
 
 ```bash
-curl http://127.0.0.1:9101/status
-curl http://127.0.0.1:9101/peers
-curl http://127.0.0.1:9101/validators
-curl http://127.0.0.1:9101/evidence
-curl http://127.0.0.1:9101/consensus/events
-curl http://127.0.0.1:9101/metrics
-curl http://127.0.0.1:9101/metrics/prometheus
-curl http://127.0.0.1:9101/recovery/status
-curl http://127.0.0.1:9101/history/status
-```
-
-## Snapshot Recovery
-
-Build a quorum certificate with resumable verified chunks:
-
-```bash
-crakchain snapshot-fetch-chunked \
+cd blockchain
+python scripts/run_execution_service_v14.py \
   --genesis runtime/genesis.json \
-  --output runtime/snapshot-cert.json \
-  --cache-dir runtime/snapshot-cache
+  --data runtime/comet-app \
+  --token REPLACE_WITH_LONG_RANDOM_SECRET \
+  --host 127.0.0.1 \
+  --port 26659
 ```
 
-Verify and import into a fresh node database:
+Build/test the Go ABCI bridge:
 
 ```bash
-crakchain snapshot-verify \
-  --snapshot runtime/snapshot-cert.json \
+cd cometbft-app
+go mod download
+go test -mod=mod ./...
+go build -o crakbit-cometbft-bridge .
+```
+
+Run the bridge:
+
+```bash
+export CRAKBIT_EXECUTION_URL=http://127.0.0.1:26659
+export CRAKBIT_EXECUTION_TOKEN=REPLACE_WITH_LONG_RANDOM_SECRET
+export CRAKBIT_ABCI_LISTEN=tcp://127.0.0.1:26658
+./crakbit-cometbft-bridge
+```
+
+The external application DB and ABCI bridge should be loopback/private by default. CometBFT node/validator keys are separate from Crakbit wallet, release, faucet, TLS and research-validator keys.
+
+See [`blockchain/deploy/cometbft-poc/README.md`](blockchain/deploy/cometbft-poc/README.md).
+
+## Signed Application-Genesis Ceremony
+
+```bash
+crakchain ceremony-create \
+  --genesis runtime/genesis.json \
+  --output runtime/genesis-ceremony.json
+```
+
+Each configured validator signs locally:
+
+```bash
+crakchain ceremony-sign \
+  --ceremony runtime/genesis-ceremony.json \
+  --key runtime/node1/validator.json
+```
+
+Verify strict >2/3 validator attestations:
+
+```bash
+crakchain ceremony-verify \
+  --ceremony runtime/genesis-ceremony.json \
   --genesis runtime/genesis.json
-
-crakchain snapshot-import \
-  --snapshot runtime/snapshot-cert.json \
-  --genesis runtime/genesis.json \
-  --data runtime/recovered-node
 ```
 
-Snapshot bootstrap restores certified account state and the finalized base hash. It does **not** recreate historical block bodies before that snapshot base.
+Never share validator private keys to construct a ceremony file. Exchange only the signed public ceremony artifact.
 
 ## Architecture Direction
 
@@ -185,22 +190,15 @@ Developer / Researcher
         v
    Crakbit Web / CLI
         |
-        v
-   Crakbit API Layer
-        |
-        +----------------------+
-        |                      |
-        v                      v
-   Security Engine        Crakbit Chain Devnet
-   |-- Static analysis    |-- Wallet/signatures
-   |-- Secret detection   |-- Transactions/fees
-   |-- Dependency checks  |-- Certified view changes
-   |-- Solidity analysis  |-- Prevote / precommit quorum
-   `-- AI remediation     |-- Durable lock/evidence
-                          |-- Authenticated peer requests
-                          |-- Quorum snapshot recovery
-                          |-- Chunked/resumable transfer
-                          `-- Validator/RPC telemetry
+        +----------------------------+
+        |                            |
+        v                            v
+ Security Engine              Blockchain Research
+ |-- Static analysis          |-- Research Python devnet
+ |-- Secret detection         |-- Snapshot/archive recovery
+ |-- Dependency checks        |-- Validator transport hardening
+ |-- Solidity analysis        |-- CometBFT ABCI bridge PoC
+ `-- AI remediation           `-- crakbit-execution/2 app state
 ```
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the evolving platform design.
@@ -217,54 +215,35 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the evolving platform des
 | Security CLI | Early alpha |
 | Developer API | Planned |
 | Smart Contract Scanner | Planned |
-| Crakbit Chain local devnet | **v0.8 alpha available** |
-| Quorum-certified view changes | **Devnet prototype implemented** |
-| Prevote/precommit finality | **Devnet prototype implemented** |
-| Persistent phase-vote state | **Prototype implemented** |
-| Conservative per-height consensus lock | **Research rule implemented** |
-| Validator request authentication | **Prototype implemented** |
-| Durable peer replay protection | **SQLite-backed prototype implemented** |
-| Validator identity handshake | **Prototype implemented** |
-| Quorum-certified snapshots | **Prototype implemented** |
-| Snapshot import / bootstrap | **Prototype implemented** |
-| Chunked/resumable snapshot transfer | **v0.8 prototype implemented** |
-| Snapshot import journal | **v0.8 prototype implemented** |
-| Snapshot-aware history status | **v0.8 prototype implemented** |
-| Prometheus-style metrics | **Prototype implemented** |
-| Public blockchain testnet | Not launched |
+| Crakbit Chain research devnet | **v0.14 alpha code available** |
+| CometBFT ABCI bridge | **v0.14 integration PoC implemented** |
+| Crash-safe external execution commit | **v0.14 prototype implemented** |
+| Signed application-genesis ceremony | **v0.14 prototype implemented** |
+| Multi-host public external-BFT testnet | Not launched |
+| Independent consensus/security audit | Not completed |
 | Production CRKBIT | **Not launched** |
 
-The status of planned features is intentionally shown clearly. We do not present roadmap items as completed production systems.
+The status of planned features is intentionally shown clearly. Roadmap work is not presented as completed production infrastructure.
 
 ## Roadmap
 
-Our development sequence includes:
+The high-level sequence is:
 
 1. Foundation and public project infrastructure
 2. Security MVP
-3. Security CLI and API alpha
+3. Security CLI/API and developer integrations
 4. Blockchain-security tooling
-5. Developer integrations
-6. Crakbit Chain local devnet
-7. Signed quorum finality
-8. Proposer failover and persistent consensus state
-9. Quorum-certified view changes and equivocation evidence
-10. Multi-phase prevote/precommit finality + durable lock
-11. Authenticated validator requests + signed snapshot foundation
-12. Quorum snapshot recovery + durable replay protection
-13. Chunked/resumable state transfer + recovery hardening
-14. Mature BFT/network transport hardening
-15. Public testnet preparation
-16. Long-lived public testnet and independent security review
-17. Mainnet consideration only after technical, economic and legal validation
+5. Crakbit Chain research/devnet and recovery/security hardening
+6. External reviewed-BFT integration PoC
+7. Repeatable multi-process/multi-host external-BFT test network
+8. Long-running public testnet, fault testing and independent review
+9. Mainnet consideration only after technical, economic, operational and legal validation
 
-See [`ROADMAP.md`](ROADMAP.md) for milestones and target phases.
+See [`ROADMAP.md`](ROADMAP.md).
 
 ## Open Source
 
 Crakbit AI intends to release useful developer-security and blockchain research components openly where practical, including selected scanners, rules, SDKs, documentation and testnet tooling.
-
-Our goal is to make security knowledge and practical tooling useful to developers, students and researchers regardless of company size or budget.
 
 ## Public-Benefit Funding
 
@@ -280,15 +259,15 @@ See [`docs/FUNDING.md`](docs/FUNDING.md) for the proposed allocation and transpa
 
 **Production CRKBIT has not been launched. There is currently no official CRKBIT presale or production token contract.**
 
-The repository contains test-only CRKBIT units used inside the local Crakbit Chain development network. They have no represented production value and should not be marketed or sold as mainnet CRKBIT.
+The repository contains test-only CRKBIT accounting used in development/research networks. These units have no represented production value and should not be marketed or sold as mainnet CRKBIT.
 
-Any future production utility asset is subject to public testing, security review, economic design and applicable legal/regulatory consideration.
+Any future production utility asset remains subject to public testing, security review, economic design and applicable legal/regulatory consideration.
 
 ## Security and Responsible Use
 
 Crakbit AI is being developed primarily for defensive security, secure software development, code review, research and educational use.
 
-Please read [`SECURITY.md`](SECURITY.md) before reporting a vulnerability in this repository or project infrastructure. The blockchain devnet has additional limitations documented in [`blockchain/SECURITY.md`](blockchain/SECURITY.md).
+Please read [`SECURITY.md`](SECURITY.md) before reporting a vulnerability in this repository or project infrastructure. Blockchain-specific limitations are documented in [`blockchain/SECURITY.md`](blockchain/SECURITY.md).
 
 ## Contributing
 
@@ -302,11 +281,11 @@ Read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](CODE_OF_CON
 - Repository: https://github.com/navindusasmitha/CrakbitAI
 - Funding / Giveth: Crakbit AI is publicly listed on Giveth
 
-Additional official community links will be added here as they are launched.
+Additional official community links will be added as they are launched.
 
 ## Transparency
 
-We intend to publish development milestones, major architecture decisions, releases, funding-allocation updates where practical, open-source components, security/testing progress and devnet/testnet limitations.
+We intend to publish development milestones, architecture decisions, releases, funding-allocation updates where practical, open-source components, security/testing progress and devnet/testnet limitations.
 
 See [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) for the current development snapshot.
 
