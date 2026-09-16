@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crakbit-chain"
-version = "0.14.0a1"
-description = "Crakbit Chain external-BFT bridge, crash-safe commit protocol and signed-genesis ceremony development-network prototype"
+version = "0.15.0a1"
+description = "Crakbit Chain public wallet gateway, browser wallet UI and testnet proof-of-work reward development-network prototype"
 requires-python = ">=3.11"
 dependencies = [
   "cryptography>=42.0.0",
@@ -18,8 +18,11 @@ dependencies = [
 dev = ["pytest>=8.0.0"]
 
 [project.scripts]
-crakchain = "crakbit_chain.cli_v14:main"
+crakchain = "crakbit_chain.cli_v15:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["crakbit_chain*"]
+
+[tool.setuptools.package-data]
+crakbit_chain = ["webui/*.html", "webui/*.css", "webui/*.js"]
