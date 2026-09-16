@@ -10,53 +10,22 @@
 <body>
   <div class="shell">
     <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">C</div>
-        <div><strong>Crakbit Chain</strong><span>Testnet Console</span></div>
-      </div>
-      <nav>
-        <button class="nav-item active" data-page="overview"><span>◈</span> Overview</button>
-        <button class="nav-item" data-page="wallet"><span>◫</span> Wallet</button>
-        <button class="nav-item" data-page="explorer"><span>⌁</span> Explorer</button>
-        <button class="nav-item" data-page="mining"><span>⚙</span> Mining Lab</button>
-        <button class="nav-item" data-page="validators"><span>◇</span> Validators</button>
-        <button class="nav-item" data-page="settings"><span>⚡</span> Settings</button>
-      </nav>
+      <div class="brand"><div class="brand-mark">C</div><div><strong>Crakbit Chain</strong><span>Testnet Console</span></div></div>
+      <nav><button class="nav-item active" data-page="overview"><span>◈</span> Overview</button><button class="nav-item" data-page="wallet"><span>◫</span> Wallet</button><button class="nav-item" data-page="explorer"><span>⌁</span> Explorer</button><button class="nav-item" data-page="mining"><span>⚙</span> Mining Lab</button><button class="nav-item" data-page="validators"><span>◇</span> Validators</button><button class="nav-item" data-page="settings"><span>⚡</span> Settings</button></nav>
       <div class="sidebar-note"><span class="status-dot"></span><div><strong id="sideNetwork">Connecting</strong><small id="sideMode">gateway</small></div></div>
     </aside>
-
     <main class="content">
-      <header class="topbar">
-        <div><h1 id="pageTitle">Overview</h1><p id="pageSubtitle">Network, wallet and service status</p></div>
-        <div class="top-actions"><div class="pill"><span class="status-dot"></span><span id="networkBadge">Connecting…</span></div><button class="ghost" id="refreshAll">Refresh</button></div>
-      </header>
+      <header class="topbar"><div><h1 id="pageTitle">Overview</h1><p id="pageSubtitle">Network, wallet and service status</p></div><div class="top-actions"><div class="pill"><span class="status-dot"></span><span id="networkBadge">Connecting…</span></div><button class="ghost" id="refreshAll">Refresh</button></div></header>
       <div id="toast" class="toast" aria-live="polite"></div>
 
       <section class="page active" id="page-overview">
         <div class="notice warning"><strong>Research / public-testnet software.</strong> Production CRKBIT is not launched. This interface must not be treated as audited mainnet custody software.</div>
-        <div class="grid metrics">
-          <article class="metric"><span>Network</span><strong id="metricNetwork">—</strong><small id="metricChain">—</small></article>
-          <article class="metric"><span>Height</span><strong id="metricHeight">—</strong><small id="metricHash">—</small></article>
-          <article class="metric"><span>Consensus</span><strong id="metricConsensus">—</strong><small id="metricMode">—</small></article>
-          <article class="metric"><span>Wallet</span><strong id="metricBalance">Locked</strong><small id="metricAddress">No local wallet</small></article>
-        </div>
-        <div class="grid two">
-          <article class="panel"><div class="panel-head"><div><h2>Recent blocks / commits</h2><p>Latest finalized application history visible to the gateway.</p></div><button class="ghost small" id="overviewBlocksRefresh">Refresh</button></div><div class="table-wrap"><table><thead><tr><th>Height</th><th>Hash</th><th>Txs</th></tr></thead><tbody id="overviewBlocks"></tbody></table></div></article>
-          <article class="panel"><div class="panel-head"><div><h2>Services</h2><p>User-facing components connected to this gateway.</p></div></div><div class="service-list"><div><span>Wallet gateway</span><strong class="ok">Client-side keys</strong></div><div><span>Faucet</span><strong id="serviceFaucet">—</strong></div><div><span>Mining lab</span><strong id="serviceMining">—</strong></div><div><span>Block production</span><strong id="serviceConsensus">—</strong></div></div></article>
-        </div>
+        <div class="grid metrics"><article class="metric"><span>Network</span><strong id="metricNetwork">—</strong><small id="metricChain">—</small></article><article class="metric"><span>Height</span><strong id="metricHeight">—</strong><small id="metricHash">—</small></article><article class="metric"><span>Consensus</span><strong id="metricConsensus">—</strong><small id="metricMode">—</small></article><article class="metric"><span>Wallet</span><strong id="metricBalance">Locked</strong><small id="metricAddress">No local wallet</small></article></div>
+        <div class="grid two"><article class="panel"><div class="panel-head"><div><h2>Recent blocks / commits</h2><p>Latest finalized application history visible to the gateway.</p></div><button class="ghost small" id="overviewBlocksRefresh">Refresh</button></div><div class="table-wrap"><table><thead><tr><th>Height</th><th>Hash</th><th>Txs</th></tr></thead><tbody id="overviewBlocks"></tbody></table></div></article><article class="panel"><div class="panel-head"><div><h2>Services</h2><p>User-facing components connected to this gateway.</p></div></div><div class="service-list"><div><span>Wallet gateway</span><strong class="ok">Client-side keys</strong></div><div><span>Faucet</span><strong id="serviceFaucet">—</strong></div><div><span>Mining lab</span><strong id="serviceMining">—</strong></div><div><span>Block production</span><strong id="serviceConsensus">—</strong></div></div></article></div>
       </section>
 
       <section class="page" id="page-wallet">
-        <div class="grid two wallet-grid">
-          <article class="panel">
-            <div class="panel-head"><div><h2>Local wallet vault</h2><p>Keys are generated and encrypted in this browser. The gateway never receives your private key.</p></div></div>
-            <label>Password for local vault<input id="walletPassword" type="password" autocomplete="current-password" placeholder="At least 10 characters" /></label>
-            <div class="button-row"><button class="primary" id="createWallet">Create wallet</button><button class="secondary" id="unlockWallet">Unlock</button><button class="secondary" id="lockWallet">Lock</button></div>
-            <div class="button-row"><label class="file-button">Import key / vault<input id="importWallet" type="file" accept="application/json,.json" /></label><button class="ghost" id="exportVault">Export encrypted backup</button><button class="ghost" id="requestFaucet">Get test coins</button></div>
-            <div class="wallet-card"><span>Address</span><code id="walletAddress">No wallet unlocked</code><div class="balance-line"><strong id="walletBalance">—</strong><span id="walletSymbol">CRKBIT</span></div><small id="walletNonce">Nonce —</small></div>
-          </article>
-          <article class="panel"><div class="panel-head"><div><h2>Send transaction</h2><p>Transactions are signed locally with Ed25519 before broadcast.</p></div></div><label>Recipient<input id="sendRecipient" placeholder="crk1…" /></label><label>Amount<input id="sendAmount" inputmode="decimal" placeholder="1.0" /></label><label>Memo<input id="sendMemo" maxlength="160" placeholder="Optional memo" /></label><div class="fee-row"><span>Network fee</span><strong id="sendFee">—</strong></div><button class="primary wide" id="sendTransaction">Sign & Send</button><pre class="result" id="sendResult">Unlock a wallet to send.</pre></article>
-        </div>
+        <div class="grid two wallet-grid"><article class="panel"><div class="panel-head"><div><h2>Local wallet vault</h2><p>Keys are generated and encrypted in this browser. The gateway never receives your private key.</p></div></div><label>Password for local vault<input id="walletPassword" type="password" autocomplete="current-password" placeholder="At least 10 characters" /></label><div class="button-row"><button class="primary" id="createWallet">Create wallet</button><button class="secondary" id="unlockWallet">Unlock</button><button class="secondary" id="lockWallet">Lock</button></div><div class="button-row"><label class="file-button">Import key / vault<input id="importWallet" type="file" accept="application/json,.json" /></label><button class="ghost" id="exportVault">Export encrypted backup</button><button class="ghost" id="requestFaucet">Get test coins</button></div><div class="wallet-card"><span>Address</span><code id="walletAddress">No wallet unlocked</code><div class="balance-line"><strong id="walletBalance">—</strong><span id="walletSymbol">CRKBIT</span></div><small id="walletNonce">Nonce —</small></div></article><article class="panel"><div class="panel-head"><div><h2>Send transaction</h2><p>Transactions are signed locally with Ed25519 before broadcast.</p></div></div><label>Recipient<input id="sendRecipient" placeholder="crk1…" /></label><label>Amount<input id="sendAmount" inputmode="decimal" placeholder="1.0" /></label><label>Memo<input id="sendMemo" maxlength="160" placeholder="Optional memo" /></label><div class="fee-row"><span>Network fee</span><strong id="sendFee">—</strong></div><button class="primary wide" id="sendTransaction">Sign & Send</button><pre class="result" id="sendResult">Unlock a wallet to send.</pre></article></div>
         <article class="panel"><div class="panel-head"><div><h2>Wallet activity</h2><p>Recent incoming and outgoing transactions returned by the active backend.</p></div><button class="ghost small" id="walletRefresh">Refresh</button></div><div class="table-wrap"><table><thead><tr><th>Height</th><th>Direction</th><th>Amount</th><th>Counterparty</th><th>Tx</th></tr></thead><tbody id="walletActivity"></tbody></table></div></article>
       </section>
 
@@ -72,10 +41,10 @@
       </section>
 
       <section class="page" id="page-validators"><article class="panel"><div class="panel-head"><div><h2>Validator set</h2><p>Configured validator identities and active consensus information.</p></div><button class="ghost small" id="validatorsRefresh">Refresh</button></div><div id="validatorsView" class="validator-grid"></div></article></section>
-
       <section class="page" id="page-settings"><div class="grid two"><article class="panel"><h2>Gateway</h2><p class="muted">This UI uses same-origin gateway APIs. Private wallet keys stay in browser memory/encrypted local storage.</p><pre class="result" id="gatewayInfo">—</pre></article><article class="panel"><h2>Security rules</h2><p class="muted">Use dedicated validator, faucet, mining-reward, release-signing and wallet keys. Never reuse validator consensus keys in a browser wallet or reward service.</p><button class="danger" id="forgetWallet">Forget local encrypted vault</button></article></div></section>
     </main>
   </div>
   <script src="./app.js"></script>
+  <script src="./extras.js"></script>
 </body>
 </html>
