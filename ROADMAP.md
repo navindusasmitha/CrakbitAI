@@ -153,26 +153,51 @@ A runnable research/devnet exists. It does **not** mean a production blockchain 
 - [x] Publish explicit production mainnet release gates
 - [x] Add automated v0.15 wallet/mining/read-API tests
 
-### v0.16 — next major phase: real multi-host public testnet evidence
+### v0.16 — public-testnet evidence, checkpoint recovery and web hardening
 
-- [ ] One-command 4-node local CometBFT lab generation
-- [ ] Generate/verify CometBFT consensus genesis and peer inventory separately from Crakbit application genesis
-- [ ] Complete external-consensus snapshot/state-sync adapter
-- [ ] Add dedicated indexed explorer database for the external-consensus path
-- [ ] Add crash-point replay matrix around FinalizeBlock/Commit/restart
-- [ ] Add persistent distributed/upstream faucet/mining abuse controls
-- [ ] Add multi-host inventory, deployment and health automation
-- [ ] Run automated partition, latency, packet-loss, restart and sustained-load campaigns
-- [ ] Add browser-wallet threat-model/security fixtures and production CSP profile
-- [ ] Publish signed testnet release + genesis ceremony + fault/soak evidence bundle
-- [ ] Add remote-signer/HSM-equivalent validator key guidance
-- [ ] Prepare first independent consensus/application/network/wallet review candidate
+- [x] Bump package/CLI to `0.16.0a1`
+- [x] Add one-command local multi-node CometBFT lab generation
+- [x] Generate shared CometBFT consensus genesis + persistent-peer inventory from independent validator homes
+- [x] Generate separate per-node external application state locations and execution-service tokens
+- [x] Add deterministic external-application checkpoint export/verification/import
+- [x] Bind checkpoint to chain ID, genesis fingerprint, state root, fixed supply and deterministic application hash
+- [x] Support trusted expected consensus height/application hash checks before restore
+- [x] Track checkpoint base explicitly and continue committing after restore
+- [x] Add dedicated indexed explorer database/service for external-consensus state
+- [x] Add restart-persistent SQLite write-rate limiting for public gateway paths
+- [x] Add durable faucet and Mining Lab request limiting
+- [x] Replace wildcard CORS default with same-origin + explicit allow-list
+- [x] Add production-style CSP and browser security headers
+- [x] Add browser-wallet threat model
+- [x] Add validator remote-signer/HSM-equivalent custody guidance
+- [x] Add multi-host health/divergence inventory checker
+- [x] Add isolated FinalizeBlock/Commit restart/replay/checkpoint matrix
+- [x] Add v0.16 automated tests and keep Python + Go bridge CI green
+- [ ] Complete native CometBFT state-sync protocol wiring for the application checkpoint format
+- [ ] Operate validators continuously across independently managed hosts/providers
+- [ ] Execute and publish real partition/latency/packet-loss/restart/load campaign results
+- [ ] Deploy shared/horizontally consistent upstream abuse controls
+- [ ] Deploy/test protected remote-signer or HSM-equivalent validator custody
+- [ ] Complete independent browser-wallet/consensus/application/network review
+
+### v0.17 — next major phase: independent-host public-testnet evidence
+
+- [ ] Integrate application checkpoints into reviewed CometBFT snapshot/state-sync lifecycle
+- [ ] Run generated 4-validator topology across independent VPS/providers for an extended period
+- [ ] Automate and execute packet-loss, partition, latency, process-kill and sustained-load campaigns
+- [ ] Publish raw fault/soak/recovery evidence tied to exact source commit and CometBFT version
+- [ ] Add explorer reconciliation and clean-host rebuild drills
+- [ ] Deploy shared upstream rate limiting, reverse-proxy/load-balancer and TLS profiles
+- [ ] Integrate a remote-signer/HSM-compatible validator path and run recovery/double-sign drills
+- [ ] Produce a reproducible signed public-testnet release bundle
+- [ ] Run documented multi-operator genesis ceremony with independently held keys
+- [ ] Freeze and hand off an independent consensus/application/network/wallet review candidate
 
 ### Current warning
 
-v0.15 provides a much more complete **public-testnet user experience**, but it is still not production mainnet software. A Web UI, wallet and proof-of-work reward lab do not replace external consensus validation, long-lived multi-host testing, production key custody, DDoS/security architecture or independent review.
+v0.16 materially improves repeatability, recovery, indexing and browser/public-service hardening, but it is still not production mainnet software. Source-code features are not substitutes for sustained independent-host operation, published fault evidence, protected production key custody, DDoS architecture or independent review.
 
-The Mining Lab is a test-reward service only; the external consensus integration remains CometBFT-based.
+The Mining Lab remains a test-reward service only; external block consensus remains CometBFT-based and no new CRKBIT supply is minted by the Mining Lab.
 
 ## Phase 7 — Public Testnet
 **Only after Phase 6 technical gates are met**
@@ -182,10 +207,11 @@ The Mining Lab is a test-reward service only; the external consensus integration
 - [x] Browser wallet/explorer UI foundation
 - [x] Test-faucet implementation foundation
 - [x] Public gateway foundation
-- [x] Network monitoring/soak tooling foundation
-- [ ] Independent multi-host deployment
-- [ ] External-consensus state sync
-- [ ] Dedicated indexed public explorer
+- [x] Network monitoring/health tooling foundation
+- [x] Dedicated external explorer index prototype
+- [x] Application checkpoint export/restore prototype
+- [ ] Independent multi-host sustained deployment
+- [ ] Native external-consensus state sync
 - [ ] Stress/partition testing with published evidence
 - [ ] Community test program
 
@@ -218,7 +244,7 @@ Potential production items include:
 - production genesis ceremony,
 - hardened wallet ecosystem,
 - production explorer/indexer,
-- validator onboarding and remote signer strategy,
+- validator onboarding and protected signer strategy,
 - CRKBIT production utility/economics,
 - upgrade/governance process,
 - incident-response operations.
