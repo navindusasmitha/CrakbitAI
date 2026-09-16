@@ -4,9 +4,9 @@
 
 ## Current Stage
 
-**Early development / Security MVP alpha + Crakbit Chain v0.28 launch-rehearsal / independently-corroborated-evidence tooling alpha**
+**Early development / Security MVP alpha + Crakbit Chain v0.29 real independent-host execution/evidence alpha**
 
-Crakbit AI has a public website, a Giveth-listed fundraising project, an open GitHub repository, technical documentation, a deterministic security-scanner alpha and an experimental blockchain/application stack with browser wallet, public gateway, CometBFT integration, native ABCI state sync, validator governance, public-testnet deployment/monitoring, operational fault/recovery tooling, independent-review remediation controls, final-candidate policy and v0.28 launch-rehearsal evidence tooling.
+Crakbit AI has a public website, a Giveth-listed fundraising project, an open GitHub repository, technical documentation, a deterministic security-scanner alpha and an experimental blockchain/application stack with browser wallet, public gateway, CometBFT integration, native ABCI state sync, validator governance, review/remediation controls, launch-rehearsal policy and a v0.29 live-host evidence path.
 
 None of these alpha components should be described as a production mainnet or as safe for custody of real value.
 
@@ -19,85 +19,76 @@ None of these alpha components should be described as a production mainnet or as
 | Fundraising | Publicly listed on Giveth | Campaign is not a CRKBIT token sale |
 | AI Security Assistant | In development | Security MVP work remains active |
 | Secure Code Scanner | Early alpha | Deterministic static-analysis rules implemented |
-| Crakbit Chain package | **v0.28.0a1** | Launch-rehearsal / corroborated-evidence tooling alpha |
+| Crakbit Chain package | **v0.29.0a1** | Real independent-host execution/evidence alpha |
 | CometBFT candidate | **v0.40.0** | External BFT candidate used by the ABCI bridge |
 | Governed execution | **`crakbit-execution/3`** | Crash-safe staged FinalizeBlock → atomic Commit |
 | Validator governance | Implemented for testnet research | Strict `>2/3` current voting-power join/remove/replace approvals |
-| Native ABCI state sync | Governance-aware | Real independent-host recovery evidence still required |
-| Public-testnet deployment layer | v0.23 implemented | 4+ validator inventory, genesis/deployment bundles, monitoring |
-| Operational hardening | v0.24 implemented | Preflight, fault/recovery, redundancy, signer evidence, 24h/72h/7d gates |
-| Initial independent-review freeze | v0.25 implemented | Signed host evidence, incident records and exact candidate freeze |
-| Review remediation/retest | v0.26 implemented | Stable findings + exact-candidate high/critical retest gate |
-| Final candidate policy | v0.27 implemented | Upgrade/governance/economics/review/multi-party release gate |
-| Launch rehearsal runbook | **v0.28 implemented** | Genesis/start order/rollback; dry-run only |
-| DNS/RPC/explorer cutover rehearsal | **v0.28 implemented** | Redundant failover + rollback; no automatic production DNS change |
-| Edge SLO/capacity evidence | **v0.28 implemented** | Explicit thresholds + measured availability/latency/error/capacity/failover |
-| Protected signer recovery drill | **v0.28 implemented** | Rotation/revocation/recovery/catastrophic drill evidence; no key export |
-| Upgrade/rollback rehearsal | **v0.28 implemented** | Bound to signed v0.27 upgrade plan |
-| Final risk register | **v0.28 implemented** | Unmitigated high/critical risk blocks modeled release gate |
-| Technical reviewer sign-offs | **v0.28 implemented** | Exact v0.27 final-report binding + required technical scopes |
-| External reproducible-build attestation | **v0.28 implemented** | Source/package/lock/SBOM/wheel/Go hashes + transitive review assertions |
-| Launch-rehearsal aggregate gate | **v0.28 implemented** | Manual launch decision remains required |
-| Independent-host public testnet | **Not yet evidenced** | Tooling exists; real sustained external operation still required |
+| Native ABCI state sync | Governance-aware | Real external recovery campaign still required |
+| Final-candidate policy | v0.27 implemented | Upgrade/governance/economics/review/multi-party release gate |
+| Launch rehearsal | v0.28 implemented | Runbook/cutover/SLO/signer/upgrade/risk/review/repro evidence |
+| Live validator probing | **v0.29 implemented** | Reads CometBFT `/status` + `/abci_info` and signs observations |
+| Live cluster gate | **v0.29 implemented** | 4+ validators/operators/signers + provider/region diversity + divergence detection |
+| Genesis ceremony gate | **v0.29 implemented** | 4+ independently signed operator attestations for exact genesis |
+| Long-lived soak gate | **v0.29 implemented** | Signed cluster samples; default seven-day target and >=0.99 success ratio |
+| Fault/recovery gate | **v0.29 implemented** | Ten required campaign categories tied to raw evidence hashes |
+| Real execution aggregate gate | **v0.29 implemented** | Exact v0.28 freeze/rehearsal binding + live/genesis/soak/fault evidence |
+| Independent-host public testnet | **Not yet actually run here** | Tooling exists; real VPS operation/evidence still external |
 | Independent security audit | **Not completed** | Review tooling does not equal completed independent review |
 | Production mainnet | **Not launched** | No software gate automatically launches production |
 | Production CRKBIT | **Not launched** | No official presale or production token contract |
 
-## v0.28 Completed Code Work
+## v0.29 Completed Code Work
 
-- package/CLI advanced to `0.28.0a1`,
-- signed launch runbook with at least four validators, genesis steps, explicit start order and rollback,
-- hard-coded dry-run / no automatic DNS/network/fund mutation boundary,
-- signed cutover rehearsal for DNS/RPC/explorer failover and rollback,
-- configurable public-edge SLO/capacity/failover evidence,
-- protected signer/HSM-equivalent rotation + catastrophic recovery drill evidence,
-- signed coordinated upgrade/rollback rehearsal tied to the v0.27 upgrade plan,
-- signed final unresolved-risk register with high/critical launch blockers,
-- signed independent technical reviewer sign-offs bound to the exact v0.27 final report,
-- required technical review scopes for consensus/application, network/RPC, cryptography/key-management and browser wallet,
-- external reproducible-build/transitive-dependency attestation,
-- aggregate v0.28 rehearsal gate,
-- signed final release-candidate freeze for manual launch review only,
-- signed human `hold` / `approve-launch-window` record with no automatic execution,
-- v0.28 regression tests and documentation.
+- package/CLI advanced to `0.29.0a1`,
+- live CometBFT RPC probe with credential-bearing endpoint rejection,
+- signed host observations bound to source/candidate/genesis identity,
+- cluster checks for unique validator/operator/evidence signers, provider/region diversity, height spread and same-height app-hash divergence,
+- signed multi-operator genesis attestations + aggregate ceremony gate,
+- signed soak evidence with default seven-day target and minimum 0.99 success threshold,
+- signed fault/recovery evidence bound to raw evidence-file SHA-256,
+- required restart/process-kill/partition/latency/packet-loss/load/storage/state-sync/governance/upgrade coverage,
+- aggregate v0.29 real-execution gate bound to the exact v0.28 release freeze + rehearsal gate,
+- signed v0.29 real-evidence freeze,
+- v0.29 regression tests and documentation.
 
-## Important v0.28 Boundary
+## Important v0.29 Boundary
 
-A cryptographic signature proves which evidence key signed a statement and detects later tampering. It does not independently prove that a claimed VPS, provider control, HSM, outage test, capacity measurement or reviewer independence exists in the real world.
+v0.29 can perform real read-only RPC observations and verify signed evidence consistency, but repository code cannot independently prove organizational independence, provider ownership, physical HSM deployment, reviewer independence or that a seven-day campaign actually occurred unless those activities are genuinely performed and externally corroborated.
 
-A passing `launch_rehearsal_gate_satisfied=true` therefore remains an evidence-model result, not a production launch. Every v0.28 final artifact deliberately keeps production readiness and launch claims false.
+A passing `real_execution_gate_satisfied=true` still records:
+
+```text
+production_mainnet_ready=false
+production_mainnet_launched=false
+production_crkbit_launched=false
+```
 
 ## External Gates Still Open
 
-The following remain open until actually performed and independently corroborated:
-
-- operate four or more independently managed validators across suitable operators/providers/regions,
-- perform a genuine multi-operator genesis ceremony with separately held keys,
-- complete genuine continuous 24h → 72h → 7-day or longer soak windows,
-- execute real validator-governance, restart/process-kill/partition/latency/packet-loss/load/storage campaigns,
-- complete real clean-host state-sync and backup/restore disaster-recovery drills,
-- deploy and drill protected remote-signer/HSM-equivalent validator/governance custody,
-- deploy production-style redundant RPC/explorer/gateway edges and measure real SLO/capacity/failover behavior,
-- execute a real coordinated upgrade + rollback rehearsal on independent hosts,
+- provision and operate four or more independently managed validators on real hosts,
+- perform the real multi-operator genesis ceremony with separately held keys,
+- collect genuine continuous 24h → 72h → 7-day or longer observations,
+- execute authorized real fault/load/storage/state-sync/governance/upgrade campaigns,
+- deploy and independently inspect protected remote-signer/HSM-equivalent custody,
+- deploy redundant production-style RPC/explorer/gateway edges and measure real capacity/failover,
 - complete independent consensus/application/governance/network/cryptography/browser-wallet review,
-- independently retest all high/critical fixes against the exact final candidate,
-- complete independent reproducible-build/transitive supply-chain review,
+- independently retest every high/critical fix against the exact final candidate,
+- complete external reproducible-build/transitive dependency review,
 - finalize and independently review production economics/validator incentives,
 - complete applicable legal/regulatory review,
-- make and execute a deliberate human launch/no-launch decision only after reviewing the real evidence.
+- make an explicit human launch/no-launch decision after reviewing the real evidence.
 
-## Immediate Blockchain Priorities — Real v0.29 Work
+## Immediate Blockchain Priorities — v0.30
 
-The next meaningful phase is **real infrastructure execution**, not another self-attestation-only layer:
+The next phase should focus on **operator deployment automation and evidence collection**, not declaring mainnet ready:
 
-1. Provision 4+ independent VPS validators and keep execution/ABCI/signer surfaces private.
-2. Run the real multi-operator genesis ceremony and preserve signed public evidence.
-3. Start 24h, then 72h, then 7-day monitoring/soak evidence.
-4. Run authorized fault/state-sync/governance/upgrade/rollback campaigns on those hosts.
-5. Deploy protected signer/HSM-equivalent custody and exercise rotation/recovery.
-6. Deploy redundant public RPC/explorer/gateway edges and collect real v0.28 SLO/cutover evidence.
-7. Commission independent technical review and import the real sign-offs/findings/retests.
-8. Only then freeze the final release candidate and make a human launch/no-launch decision.
+1. Add non-secret Ansible/systemd inventory generation for real validator hosts.
+2. Add continuous signed cluster-observation collector/rotation with resumable seven-day evidence.
+3. Add archive/log bundle hashing and evidence-retention policy.
+4. Add public RPC/explorer active health + failover collector.
+5. Add validator remote-signer connectivity/rotation checks without reading private keys.
+6. Add release-candidate publication bundle with hashes, SBOM, genesis, review summaries and operator runbooks.
+7. Continue to keep production launch as a separate human decision.
 
 ## CRKBIT Status
 
@@ -105,4 +96,4 @@ Production CRKBIT has **not** launched. There is no official presale and no prod
 
 The repository contains test-only CRKBIT accounting for research/public-testnet work. The 21,000,000 maximum-supply and 8-decimal values remain development proposals unless intentionally frozen and independently reviewed through the v0.27 economics process.
 
-See `blockchain/V0.28.md`, `blockchain/docs/MAINNET_GATES.md`, `ROADMAP.md` and GitHub Issue #1.
+See `blockchain/V0.29.md`, `blockchain/docs/MAINNET_GATES.md`, `ROADMAP.md` and GitHub Issue #1.
