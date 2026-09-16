@@ -1,4 +1,4 @@
-# Crakbit Chain Security Notes — v0.16 Alpha
+# Crakbit Chain Security Notes — v0.17 Alpha
 
 Crakbit Chain is currently **research/public-testnet/mainnet-candidate infrastructure**, not an audited production mainnet. It must not be used to custody real value.
 
@@ -12,10 +12,10 @@ The repository deliberately separates security roles:
 browser wallet
     │ signed transaction only
     ▼
-public gateway
+public gateway / controlled edge
     ├→ research RPC, or
     ├→ CometBFT JSON-RPC
-    └→ private authenticated execution/index services
+    └→ private authenticated index/application services
 
 CometBFT
     │ ABCI
@@ -26,11 +26,11 @@ Go application bridge
 crakbit-execution/2
     │
     ├→ external application DB
-    ├→ deterministic checkpoint adapter
+    ├→ ABCI snapshot state-sync lifecycle
     └→ read-only explorer index source
 ```
 
-Keys for CometBFT consensus, P2P identity, Crakbit wallets, research validators, TLS, release signing, faucet and Mining Lab rewards must not be reused across roles.
+Keys for CometBFT consensus, P2P identity, Crakbit wallets, research validators, TLS, release/evidence signing, faucet and Mining Lab rewards must not be reused across roles.
 
 ## Consensus
 
@@ -38,33 +38,43 @@ The old Python prevote/precommit implementation remains research-only. It is not
 
 The external consensus integration candidate is CometBFT `v0.40.0`. The repository contains a Go ABCI bridge and a crash-safe `crakbit-execution/2` application boundary.
 
-`FinalizeBlock`-style state is staged first and committed account/state changes are applied atomically in SQLite. Pending finalization survives an application restart. Identical finalized-height replay can be handled idempotently while conflicting replay is rejected.
+Finalized application state is staged first and committed account/state changes are applied atomically in SQLite. Pending finalization survives an application restart. Identical finalized-height replay can be handled idempotently while conflicting replay is rejected.
 
 This integration is still an alpha. Sustained multi-host external-consensus testing and independent review remain required.
 
-## External application checkpoints
+## CometBFT state sync
 
-v0.16 adds deterministic checkpoint export/verify/import for the external application state.
+v0.17 wires the external application checkpoint format into the CometBFT ABCI snapshot lifecycle:
 
-A checkpoint commits to:
+```text
+ListSnapshots
+OfferSnapshot
+LoadSnapshotChunk
+ApplySnapshotChunk
+```
 
-- chain ID,
-- genesis fingerprint,
-- consensus height,
+A materialized state-sync snapshot commits to:
+
+- exact chain ID and genesis fingerprint,
+- committed external-consensus height,
 - last consensus block hash,
 - deterministic application hash,
 - sorted account balances/nonces,
-- account-state root,
-- fixed issued-supply total,
-- complete artifact hash.
+- fixed issued-supply invariant,
+- full transport SHA-256,
+- per-chunk SHA-256 hashes.
 
-Restore can require a separately trusted expected consensus height/application hash. Import is restricted to a pristine external application database.
+Snapshot bytes are deterministic for the same committed state and chosen chunk size. Non-deterministic export timestamps are excluded from the ABCI transport artifact.
 
-A restored application records an explicit snapshot base and does **not** invent historical commits before that base.
+### Trust model
 
-### State-sync limitation
+Snapshot metadata received from peers is **not trusted by itself**. `OfferSnapshot` accepts a snapshot only when the application hash declared in the snapshot metadata exactly matches the application hash supplied by CometBFT for the trusted height. After all chunks arrive, the complete artifact, each chunk, chain/genesis identity, fixed supply and deterministic application hash are verified again before import.
 
-This checkpoint mechanism is not yet fully wired to CometBFT's native snapshot/state-sync lifecycle. It should be treated as application recovery infrastructure until multi-node offer/apply/recovery behavior is implemented and reviewed.
+Restore is restricted to pristine external application state. Pre-checkpoint external commit rows are not fabricated.
+
+### Remaining state-sync risk
+
+The code-level ABCI lifecycle now exists, but this does not prove production recovery. Required evidence still includes live multi-validator state-sync from clean hosts, malicious/bad peer behavior, interrupted transfer/retry, storage faults, large snapshots and independent review of the exact CometBFT/application integration.
 
 ## Browser wallet
 
@@ -72,99 +82,65 @@ The browser wallet performs key generation/signing locally and encrypts its loca
 
 The public gateway is not intended to receive private wallet keys.
 
-v0.16 adds a restrictive gateway CSP/security-header profile and changes the default from wildcard CORS to same-origin access. These controls reduce some web attack surface but do not make the wallet an audited custody product.
+The hardened gateway uses restrictive CSP/security headers and same-origin access by default. These controls reduce some web attack surface but do not make the wallet an audited custody product.
 
-Critical remaining threats include:
-
-- compromised same-origin JavaScript,
-- malicious extensions,
-- compromised endpoint/browser,
-- vault password guessing after encrypted-storage theft,
-- phishing/fake origins,
-- clipboard/address substitution,
-- compromised gateway read data.
+Critical remaining threats include compromised same-origin JavaScript, malicious extensions, compromised endpoint/browser, vault password guessing after encrypted-storage theft, phishing/fake origins, clipboard/address substitution and compromised gateway read data.
 
 See [`docs/WALLET_THREAT_MODEL.md`](docs/WALLET_THREAT_MODEL.md).
 
-## Public gateway / RPC
+## Public gateway / edge
 
-v0.16 defaults include:
+Gateway controls include same-origin browser access unless explicitly allow-listed, Content-Security-Policy, frame denial, `nosniff`, no-referrer policy, restrictive permissions policy, same-origin opener/resource policy, durable SQLite write-path rate limiting and no automatic trust of arbitrary client forwarding headers.
 
-- same-origin browser access unless origins are explicitly allow-listed,
-- Content-Security-Policy,
-- frame denial,
-- `nosniff`,
-- no-referrer policy,
-- restrictive permissions policy,
-- same-origin opener/resource policy,
-- durable SQLite write-path rate limiting,
-- no automatic trust of client-controlled forwarding headers.
+v0.17 also provides [`deploy/public-testnet-edge/`](deploy/public-testnet-edge/) as a **single-edge testnet scaffold** with TLS termination, request/connection limits and separate transaction/faucet/Mining-Lab rate-limit zones.
 
-SQLite rate-limit state survives process restart but is not a distributed rate-limit database. Multiple public gateway instances still require a shared upstream API gateway/load balancer/rate-limit layer and an explicit trusted-proxy design.
+That NGINX profile is not a complete WAF/DDoS design. Its shared-memory limits coordinate one edge host, not multiple geographically distributed edge hosts. A production deployment still needs a reviewed trusted-proxy model, certificate automation, capacity tests, redundancy and shared upstream controls.
 
-Execution service and ABCI sockets should remain loopback/private. Do not expose the execution-service bearer token to the browser.
+Execution service, ABCI socket, remote signer and validator operator surfaces should remain private/authorized. Do not expose the execution-service bearer token to the browser.
 
 ## Faucet and Mining Lab
 
-Faucet distribution history/cooldowns and Mining Lab challenges/claims are persistent. v0.16 also persists request-rate state.
+Faucet distribution history/cooldowns and Mining Lab challenges/claims are persistent, including durable request-rate state.
 
 Both services require dedicated non-validator keys.
 
-The Mining Lab is **not consensus mining**. It verifies a test browser proof-of-work challenge and pays from an already funded reward wallet via an ordinary signed transaction. It must not:
-
-- mint supply,
-- select validators,
-- alter CometBFT voting power,
-- claim to mine consensus blocks,
-- be marketed as guaranteed earnings.
+The Mining Lab is **not consensus mining**. It verifies a test browser proof-of-work challenge and pays from an already funded reward wallet via an ordinary signed transaction. It must not mint supply, select validators, alter CometBFT voting power, claim to mine consensus blocks or be marketed as guaranteed earnings.
 
 ## Dedicated explorer index
 
-v0.16 adds a read-optimized explorer database separate from the external execution database. The index verifies source genesis identity and execution ownership before copying commits, transactions and account state.
+The read-optimized explorer database remains separate from the external execution database. The index verifies source genesis identity and execution ownership before copying commits, transactions and account state.
 
-It improves read isolation but is still an alpha index. Production use requires reconciliation/rebuild procedures, archive-retention decisions, clean-host rebuild tests and monitoring for index lag/divergence.
-
-## Durable state and SQLite
-
-SQLite is currently used for research/application/index/service state. Existing protections include WAL mode and explicit transactions for critical state transitions.
-
-Production review must still cover:
-
-- storage durability/fsync expectations,
-- disk-full behavior,
-- database corruption,
-- backup consistency,
-- abrupt power loss,
-- filesystem semantics on actual deployment hosts,
-- growth/retention limits,
-- migration/versioning.
+Production use still requires reconciliation/rebuild procedures, archive-retention decisions, clean-host rebuild tests and monitoring for index lag/divergence.
 
 ## Validator key security
 
 The generated local CometBFT lab stores disposable private-validator keys in local runtime directories. Those keys are not suitable for reuse.
 
-A production candidate should use a remote signer, HSM or equivalent protected signing design and tested anti-double-sign/recovery procedures. Documentation alone does not satisfy this gate.
+A production candidate should use a remote signer, HSM or equivalent protected signing design and tested anti-double-sign/recovery procedures.
+
+v0.17 includes `scripts/configure_comet_remote_signer.py`, which only changes the CometBFT `priv_validator_laddr` configuration. It does **not** read, copy, migrate or protect the validator key and does not implement an HSM. Loopback signer endpoints are allowed by default; non-loopback use requires explicit override and still needs separately authenticated/encrypted private transport.
 
 See [`docs/VALIDATOR_REMOTE_SIGNER.md`](docs/VALIDATOR_REMOTE_SIGNER.md).
 
-## Replay / crash testing
+## Fault/soak evidence
 
-v0.16 contains an isolated application crash/replay matrix covering:
+v0.17 adds a controlled fault-campaign runner. It is dry-run by default and only executes operator-supplied commands with explicit `--execute`. Every step must contain a recovery command, and recovery is attempted even if the fault command fails.
 
-- persisted FinalizeBlock staging,
-- restart before Commit,
-- Commit after restart,
-- restart after Commit,
-- identical replay,
-- conflicting replay,
-- checkpoint restore,
-- next-height commit after restore.
+The runner can record network health before/during/after operator-defined process restart, impairment or load scenarios. Merely adding the runner does not prove those scenarios have been executed on independent infrastructure.
 
-This is useful deterministic application evidence but is not equivalent to real process kills, filesystem faults and CometBFT/network failures on independent hosts.
+## Signed evidence bundles
 
-## Multi-host monitoring
+Signed public-testnet evidence bundles bind an exact source commit, declared CometBFT version, genesis identity and supplied evidence-file hashes to a dedicated Ed25519 signer.
 
-The testnet inventory checker can detect RPC reachability, catch-up state and validator-height divergence. Operator-only endpoints should stay private/authorized; do not expose sensitive interfaces merely to make monitoring easier.
+The bundle format explicitly records that independent-host operation, independent review and production-mainnet readiness are **false unless separately established**. A signature authenticates the evidence manifest; it does not convert unperformed tests into evidence.
+
+The evidence/release signing key must be protected separately from validator and wallet keys.
+
+## Durable state and SQLite
+
+SQLite is currently used for research/application/index/service state. Existing protections include WAL mode and explicit transactions for critical state transitions.
+
+Production review must still cover storage durability/fsync expectations, disk-full behavior, database corruption, backup consistency, abrupt power loss, filesystem semantics on actual deployment hosts, growth/retention limits and migration/versioning.
 
 ## Secrets
 
@@ -176,7 +152,7 @@ Never commit or share:
 - signer/HSM credentials,
 - TLS private keys,
 - faucet/mining reward keys,
-- release-signing private keys,
+- release/evidence-signing private keys,
 - execution-service bearer tokens,
 - API secrets.
 
@@ -186,14 +162,14 @@ Do not send any of these through support chats or issue trackers.
 
 Major open gates include:
 
-- complete reviewed CometBFT state-sync integration,
 - sustained independent-host testnet operation,
+- successful live state-sync/recovery evidence from clean hosts,
 - reproducible partition/latency/packet-loss/restart/load evidence,
-- production reverse-proxy/WAF/DDoS architecture,
+- production reverse-proxy/WAF/DDoS architecture and capacity testing,
 - horizontally shared abuse controls,
-- remote-signer/HSM-equivalent validator custody,
+- deployed and tested remote-signer/HSM-equivalent validator custody,
 - explorer reconciliation/archive procedures,
-- reproducible signed releases and final genesis ceremony,
+- reproducible signed releases and final multi-operator genesis ceremony,
 - independent consensus/application/network/cryptography/wallet reviews,
 - incident-response drills,
 - finalized economics/incentives and applicable legal review.
