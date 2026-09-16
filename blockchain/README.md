@@ -1,32 +1,40 @@
-# Crakbit Chain — v0.30 Continuous Operations / Evidence Publication Alpha
+# Crakbit Chain — v0.31 Native Proof-of-Work Alpha
 
-**Current package:** `0.30.0a1`  
-**Consensus candidate:** CometBFT `v0.40.0`  
-**Execution path:** `crakbit-execution/3`  
-**Status:** continuous-operations / evidence-publication tooling — **not production mainnet**.
+**Current package:** `0.31.0a1`  
+**Primary research consensus path:** native Proof of Work  
+**Working v0.31 algorithm:** `crakpow-scrypt-v1`  
+**Ledger:** UTXO  
+**Status:** CPU-mineable devnet alpha — **not production mainnet**.
 
 Production CRKBIT has **not** launched. There is no official presale or production token contract. Do not use this software to custody real value.
 
-## v0.30 scope
+## v0.31 scope
 
-v0.30 builds on v0.29 real-host evidence and adds long-running operator automation without turning monitoring evidence into an automatic launch mechanism:
+v0.31 is a major consensus pivot. Instead of treating CometBFT validator consensus as mining, the repository now contains a separate native PoW path in which miners build and solve block templates.
 
-- signed non-secret monitor inventory for 4+ validators,
-- secret-bearing inventory fields rejected,
-- read-only CometBFT monitoring samples,
-- height-spread and same-height application-hash divergence detection,
-- resumable hash-chained checkpoints,
-- default seven-day target and minimum 0.99 success ratio,
-- continuous collector script with resume behavior,
-- raw evidence archive SHA-256 + retention manifests,
-- active RPC/explorer/gateway HTTP health probes,
-- redundant public-edge gate requiring two healthy endpoints per role by default,
-- protected signer/HSM-equivalent connectivity checks without private-key access,
-- public evidence bundle bound to the exact v0.29 real-evidence freeze,
-- signed operator checklist with explicit manual DNS/treasury/launch controls,
-- v0.30 regression tests.
+Implemented:
 
-See [`V0.30.md`](V0.30.md).
+- deterministic PoW genesis,
+- Bitcoin-style UTXO state,
+- Ed25519 `crk1...` transaction ownership,
+- signed transfers + fees,
+- mempool double-spend protection,
+- coinbase subsidy + maturity,
+- Merkle roots,
+- memory-hard scrypt PoW,
+- explicit 256-bit network targets,
+- bounded automatic difficulty retargeting,
+- cumulative work tracking,
+- persistent SQLite chain/UTXO/mempool state,
+- CPU solo mining,
+- FastAPI node RPC,
+- first-party mining-pool protocol,
+- pool share difficulty separated from network difficulty,
+- PPLNS test accounting,
+- native CPU pool-miner script,
+- v0.31 regression tests.
+
+See [`V0.31.md`](V0.31.md).
 
 ## Install / test
 
@@ -37,123 +45,105 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-Go bridge tests:
+## v0.31 PoW commands
+
+```text
+pow-wallet-v31-new
+pow-chain-v31-init
+pow-chain-v31-info
+pow-balance-v31
+pow-template-v31
+pow-mine-v31
+pow-send-v31
+pow-submit-tx-v31
+pow-node-v31-run
+pow-pool-v31-run
+pow-pool-v31-balances
+```
+
+All v0.30 and earlier tooling remains available through CLI delegation.
+
+## Basic solo-mining flow
 
 ```bash
-cd cometbft-app
-go mod download
-go test -mod=mod ./...
+crakchain pow-wallet-v31-new --output private/miner.json
+crakchain pow-chain-v31-init --db runtime/pow-v31/chain.sqlite3
+crakchain pow-mine-v31 --db runtime/pow-v31/chain.sqlite3 --miner-address crk1YOUR_ADDRESS --blocks 1
+crakchain pow-chain-v31-info --db runtime/pow-v31/chain.sqlite3
 ```
 
-## v0.30 commands
+The miner iterates the block nonce and the node independently verifies the target before accepting the block.
 
-```text
-monitor-inventory-v30-build
-monitor-inventory-v30-verify
-monitor-sample-v30-probe
-monitor-sample-v30-verify
-monitor-checkpoint-v30-build
-monitor-checkpoint-v30-verify
-archive-v30-build
-archive-v30-verify
-edge-v30-probe
-edge-v30-verify
-edge-gate-v30-build
-edge-gate-v30-verify
-signer-v30-probe
-signer-v30-verify
-public-evidence-v30-build
-public-evidence-v30-verify
-operator-checklist-v30-build
-operator-checklist-v30-verify
-```
-
-All v0.29 and earlier commands remain available through CLI delegation.
-
-## Monitor inventory
-
-The monitoring inventory is deliberately non-secret. It stores validator/operator/provider/region labels plus public read-only RPC endpoints. Private keys, passwords, seeds, tokens, API keys and provider credentials are rejected.
-
-The central monitoring inventory does **not** replace v0.29 multi-operator evidence. It exists to run continuous read-only observation from a dedicated monitoring system.
-
-## Continuous collector
-
-Use the dedicated monitor script:
+## Node RPC
 
 ```bash
-python scripts/run_v30_monitor.py \
-  --inventory private/monitor-inventory-v30.json \
-  --key private/monitor-evidence-key.json \
-  --session-id public-testnet-7d-01 \
-  --output-dir runtime/evidence/monitor-7d \
-  --interval-seconds 30 \
-  --target-duration-seconds 604800 \
-  --minimum-success-ratio 0.99
+crakchain pow-node-v31-run --db runtime/pow-v31/chain.sqlite3 --host 127.0.0.1 --port 28443
 ```
 
-Each successful observation is signed and written as a separate sample. The checkpoint is also signed and contains a hash-chain head covering the sequence of sample-manifest hashes. If the process restarts, the same session can resume from the last checkpoint.
-
-The monitoring evidence key should be dedicated to monitoring. Do not reuse validator consensus keys.
-
-## Archive / retention
-
-`archive-v30-build` creates a signed inventory of raw evidence files, recording role, file name, size and SHA-256. The default retention recommendation is 90 days and the builder rejects values below 30 days.
-
-The manifest contains hashes, not the raw evidence itself.
-
-## Public-edge monitoring
-
-`edge-v30-probe` supports read-only HTTP checks for:
+Endpoints:
 
 ```text
-rpc
-explorer
-gateway
+GET  /pow/v1/health
+GET  /pow/v1/info
+GET  /pow/v1/block/{height}
+GET  /pow/v1/balance/{address}
+GET  /pow/v1/utxos/{address}
+GET  /pow/v1/mempool
+POST /pow/v1/getblocktemplate
+POST /pow/v1/submitblock
+POST /pow/v1/submittransaction
 ```
 
-The aggregate edge gate requires at least two passing endpoints for every role by default. This verifies basic reachability/latency redundancy only; it is not a substitute for DDoS, WAF or independent capacity engineering.
+## First-party pool
 
-## Protected signer monitoring
-
-`signer-v30-probe` opens a TCP connection to an operator-specified protected signer/HSM-equivalent service and creates a signed observation bound to a prior rotation-drill manifest hash.
-
-The tool does not request, read, copy or export the validator private key. Connectivity alone is not proof that the signer/HSM is securely configured.
-
-## Public evidence bundle
-
-`public-evidence-v30-build` requires:
-
-- exact valid v0.29 real-evidence freeze,
-- completed seven-day monitor checkpoint,
-- monitor success ratio >= 0.99,
-- archive retention >= 30 days,
-- passing redundant edge gate,
-- at least one passing protected-signer monitor record.
-
-It can additionally hash SBOM, genesis, review summaries, runbooks or other publication artifacts.
-
-Even if all checks pass:
-
-```text
-manual_launch_decision_required=true
-automatic_launch=false
-production_mainnet_ready=false
-production_mainnet_launched=false
-production_crkbit_launched=false
+```bash
+crakchain pow-pool-v31-run \
+  --db runtime/pow-v31/pool.sqlite3 \
+  --node-url http://127.0.0.1:28443 \
+  --pool-address crk1POOL_ADDRESS \
+  --host 127.0.0.1 \
+  --port 3333
 ```
 
-## Operator checklist
+Native CPU miner:
 
-The final signed checklist requires operators to explicitly confirm validator services, backups, alerts, rollback, incident contacts, manual DNS control, manual treasury movement and manual launch approval.
+```bash
+python scripts/run_pow_pool_miner_v31.py \
+  --host 127.0.0.1 \
+  --port 3333 \
+  --address crk1MINER_ADDRESS \
+  --worker cpu-01
+```
 
-The checklist is an operational record. It never performs those actions.
+The pool uses `crakbit-pool/1`, a JSON-line protocol for subscribe/authorize/job/share submission. It is not yet XMRig/RandomX Stratum compatible. PPLNS balances are test accounting only and automatic on-chain payout is disabled.
 
-## Production boundary
+## PoW algorithm boundary
 
-v0.30 makes evidence collection more durable and reviewable, but software cannot prove provider/operator independence, a physical HSM deployment, reviewer independence or a real seven-day campaign unless those activities actually occur. Real independent-host operation, independent security/economic/legal review and an explicit human launch/no-launch decision remain required before production-mainnet consideration.
+v0.31 uses Python's built-in memory-hard scrypt primitive so the project has a real, testable CPU mining path now. The final production algorithm is not frozen. RandomX remains a candidate for a later native integration/benchmark/review phase.
 
-See [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md).
+## Current decentralization boundary
 
-## Mining note
+The v0.31 SQLite node tracks cumulative work but currently accepts only blocks that extend its current tip. Full P2P discovery/gossip, side chains, competing-fork storage and highest-cumulative-work reorganization are still required before this can be called a decentralized Bitcoin-like production network.
 
-The Mining Lab remains a **test-only work-reward service**, not consensus mining. It does not mint new supply and does not create CometBFT blocks.
+The previous CometBFT/BFT code is retained as legacy/research infrastructure and is not combined with PoW consensus.
+
+## Next PoW priorities
+
+- P2P node protocol + peer discovery,
+- header-first sync,
+- block/transaction gossip,
+- side-chain storage + UTXO undo data,
+- highest-chainwork reorgs,
+- orphan/fork handling,
+- stronger time/mempool/fee rules,
+- native optimized multi-core miner,
+- RandomX adapter and performance/security comparison,
+- final Stratum/XMRig compatibility,
+- vardiff + anti-abuse pool hardening,
+- on-chain PPLNS payout construction,
+- PoW explorer/hashrate/difficulty views,
+- long-running multi-node public PoW testnet.
+
+## Monetary-policy boundary
+
+Subsidy, halving and difficulty values are configurable devnet parameters. The proposed `21,000,000 CRKBIT` and 8-decimal design are not final production economics until deliberately frozen and independently reviewed.
