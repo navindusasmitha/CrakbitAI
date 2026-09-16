@@ -4,9 +4,9 @@
 
 > Secure Code. Secure Chains. Build the Future.
 
-Crakbit AI is an independent, founder-led technology project building accessible defensive-security tooling for developers, security researchers, students and open-source communities.
+Crakbit AI is an independent, founder-led technology project building accessible security tooling for developers, security researchers, students and open-source communities.
 
-The project is currently in **early development / Security MVP alpha + blockchain public-testnet review-candidate research**. Useful security technology, reproducible testing and independent review come before any production blockchain or production-value CRKBIT launch.
+The project is currently in **early development / Security MVP alpha + blockchain public-testnet review-candidate research**. The priority remains useful defensive-security technology and careful public testing before any production blockchain or production-value CRKBIT launch.
 
 ## Mission
 
@@ -26,63 +26,38 @@ A deterministic static-analysis prototype exists in [`scanner/`](scanner/). Curr
 
 Planned defensive tooling includes smart-contract analysis, contract-risk assessment, public blockchain-data analysis, developer guidance and human-readable security reports.
 
-### Crakbit Chain — v0.20 Public-Testnet / Review-Candidate Alpha
+### Crakbit Chain — v0.21 Public-Testnet / Review-Candidate Alpha
 
 A runnable experimental blockchain/application stack exists in [`blockchain/`](blockchain/).
 
 ```text
-Browser wallet / CLI
-        │ signed transaction
+Browser wallet / CLI / governance tx
+        │ signed input
         ▼
-Public gateway / controlled edge
-        │ CometBFT JSON-RPC
+Public gateway / CometBFT RPC
         ▼
 CometBFT v0.40.0
         │ ABCI
         ▼
-Crakbit Go bridge
+Crakbit Go bridge 0.21
         │ authenticated private HTTP
         ▼
-crakbit-execution/2
+crakbit-execution/3
         │
         ├── crash-safe FinalizeBlock → Commit
-        ├── native ABCI snapshot state sync
-        └── deterministic application state
-                │
-                ├── explorer index / reconciliation
-                ├── review + release provenance
-                ├── v0.20 schema migration rehearsal
-                └── signed validator lifecycle drill plans
+        ├── replicated validator-governance state
+        ├── deterministic ABCI validator updates
+        ├── governance-aware app hash
+        └── native governance-aware state sync
 ```
 
-Implemented research/public-testnet components include:
+Implemented research/public-testnet components include Ed25519 wallets and `crk1...` addresses, signed CRKBIT test transactions, browser wallet/public gateway, CometBFT ABCI integration, native state sync, indexed explorer tooling, signed review/release evidence, schema migration/rollback rehearsal and v0.21 deterministic validator-governance research.
 
-- Ed25519 wallets and `crk1...` addresses,
-- signed CRKBIT test transactions,
-- browser wallet with encrypted local vault and client-side signing,
-- public wallet/explorer gateway,
-- CometBFT `v0.40.0` ABCI bridge,
-- crash-safe staged FinalizeBlock → atomic Commit application flow,
-- native ABCI `ListSnapshots`, `OfferSnapshot`, `LoadSnapshotChunk`, `ApplySnapshotChunk` state sync,
-- deterministic application checkpoints and explorer reconciliation,
-- multi-validator lab generation and health/soak/fault tooling,
-- signed public-testnet evidence and review-freeze artifacts,
-- review finding/remediation matrix with high/critical release gating,
-- reproducible Python wheel and Go bridge checks in CI,
-- direct-dependency CycloneDX SBOM generation,
-- signed release provenance and operations-drill evidence,
-- explicit v0.20 external-application schema versioning,
-- offline v19 → v20 migration/rollback rehearsal,
-- signed migration evidence,
-- signed validator join/remove/replace **drill plans**,
-- browser wallet security headers/threat model,
-- test faucet and optional browser SHA-256 Mining Lab reward system.
+v0.21 can validate quorum-approved `join`, `remove` and `replace` validator-change transactions. Approval power must be strictly greater than two-thirds of the committed current validator power; the default four-validator/equal-power lab therefore requires 3 of 4 approvals. Governance state is included in the deterministic application hash, and the Go bridge can return the validated update through `ResponseFinalizeBlock.ValidatorUpdates`.
 
-The older Python prevote/precommit chain remains for research/backwards-compatible local experiments. It is not the intended production BFT path.
+**Important:** v0.21 is not a production mainnet. Independent multi-host validator-change campaigns, activation-boundary fault/recovery tests, protected governance/validator signing, sustained public-testnet operation and independent security review remain required. It must not be used to custody real value.
 
-**Important:** v0.20 is not a production mainnet. Live validator-set changes are not enabled, sustained independent-host operation and live recovery/fault evidence remain required, and independent consensus/application/network/wallet security review has not been completed. It must not be used to custody real value.
-
-See [`blockchain/V0.20.md`](blockchain/V0.20.md), [`blockchain/README.md`](blockchain/README.md), [`blockchain/SECURITY.md`](blockchain/SECURITY.md) and [`blockchain/docs/MAINNET_GATES.md`](blockchain/docs/MAINNET_GATES.md).
+See [`blockchain/V0.21.md`](blockchain/V0.21.md), [`blockchain/README.md`](blockchain/README.md) and [`blockchain/docs/MAINNET_GATES.md`](blockchain/docs/MAINNET_GATES.md).
 
 ## Browser Wallet / Web UI
 
@@ -92,19 +67,7 @@ The gateway is not intended to receive the wallet private key. The wallet is not
 
 ## Mining Lab
 
-The Mining Lab is a **test-only work reward**, not blockchain consensus mining.
-
-```text
-browser solves SHA-256 challenge
-        ↓
-server verifies work
-        ↓
-dedicated funded reward wallet
-        ↓
-ordinary signed test CRKBIT transaction
-```
-
-It does not mint new supply, create CometBFT blocks, select validators or change voting power.
+The Mining Lab is a **test-only work reward, not blockchain consensus mining**. It does not mint new supply, create CometBFT blocks, select validators or change voting power.
 
 ## Quick Start — Security Scanner
 
@@ -129,34 +92,21 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-The normal `crakchain node` path still targets the older research node. The external-consensus candidate uses the CometBFT bridge and external execution service documented in [`blockchain/README.md`](blockchain/README.md).
-
-## v0.20 Upgrade Compatibility
-
-Check the current external-application schema:
+Go bridge:
 
 ```bash
-crakchain schema-status --data runtime/comet-app
+cd cometbft-app
+go mod download
+go test -mod=mod ./...
 ```
 
-Dry-run migration/rollback without modifying the source DB:
+The external-consensus candidate uses the CometBFT bridge and v0.21 governed execution service documented in [`blockchain/README.md`](blockchain/README.md).
 
-```bash
-crakchain migration-dry-run --source runtime/comet-app
-```
+## v0.21 Validator Governance
 
-Run a full offline upgrade rehearsal:
+Existing application state should be migrated using the offline-copy v0.21 migration before enabling governance on a non-pristine node. Multi-operator validator-change requests can then be built, signed independently by current validator operators and verified for strict `>2/3` quorum before controlled testnet broadcast.
 
-```bash
-crakchain upgrade-rehearse \
-  --genesis runtime/genesis.json \
-  --source-data runtime/comet-app \
-  --output-data runtime/upgrade-rehearsal-v20 \
-  --cometbft-version v0.40.0 \
-  --report runtime/evidence/upgrade-v20.json
-```
-
-v0.20 validator lifecycle plans are signed review/drill artifacts only. They do **not** emit live CometBFT validator updates. A live update path must first be implemented as deterministic replicated application state and independently reviewed.
+Never collect validator private keys onto one machine simply to assemble approvals. Keep validator, governance/release/evidence, wallet, TLS, faucet/mining and service credentials separated.
 
 ## Current Project Status
 
@@ -167,34 +117,21 @@ v0.20 validator lifecycle plans are signed review/drill artifacts only. They do 
 | AI Security Assistant | In development |
 | Secure Code Scanner | Early alpha available |
 | Security CLI | Early alpha |
-| Developer API | Planned |
-| Smart-contract scanner | Planned |
-| Crakbit Chain package | **v0.20.0a1 alpha** |
-| Browser wallet/public gateway | **Alpha implemented** |
-| CometBFT ABCI bridge | **Integration implemented** |
-| Native ABCI application state sync | **Code implemented; live independent-host evidence pending** |
-| Explorer reconciliation | **Implemented** |
-| Review / release provenance | **Implemented** |
-| v0.20 schema migration/rollback rehearsal | **Implemented** |
-| v0.20 validator lifecycle drill plans | **Implemented; live updates disabled** |
+| Crakbit Chain package | **v0.21.0a1 alpha** |
+| Browser wallet/public gateway | Alpha implemented |
+| CometBFT ABCI bridge | **v0.21 governed integration implemented** |
+| External execution | **`crakbit-execution/3` implemented** |
+| Validator governance | **Deterministic testnet path implemented; real multi-host campaigns pending** |
+| Native ABCI application state sync | **Governance-aware code implemented; live independent-host evidence pending** |
+| Upgrade migration/rollback | **Offline-copy rehearsal implemented** |
+| Review/release evidence | Implemented |
 | Independent-host public testnet evidence | Not completed |
 | Independent consensus/security audit | Not completed |
 | Production CRKBIT | **Not launched** |
 
 ## Roadmap
 
-The high-level path is:
-
-1. Security MVP and developer tooling
-2. Blockchain-security tooling
-3. Research chain and recovery/security experiments
-4. External reviewed-BFT integration
-5. Browser wallet/public-testnet tooling
-6. Native state sync and operational evidence
-7. Review freeze, reproducible release engineering and remediation
-8. Upgrade compatibility and deterministic validator-governance research
-9. Sustained independent-host public testnet and independent security review
-10. Mainnet consideration only after technical, operational, economic and legal gates are satisfied
+The high-level path is security MVP → developer tooling → blockchain-security tooling → public-testnet research → governed multi-node campaigns → long-lived independent-host testnet → independent review → operations/economic/legal readiness → mainnet consideration.
 
 See [`ROADMAP.md`](ROADMAP.md).
 
