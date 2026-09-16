@@ -48,19 +48,9 @@ The older Python research consensus remains only for backwards-compatible experi
 
 ## v0.21 additions
 
-v0.21 moves validator changes from v0.20 operator-only rehearsal artifacts into deterministic replicated **testnet application state**. It adds:
+v0.21 moves validator changes from v0.20 operator-only rehearsal artifacts into deterministic replicated **testnet application state**. It adds canonical validator `join`, `remove`, and `replace` governance transactions; validator approvals with strict `>2/3` current voting-power quorum; replicated active/pending validator state; governance state committed into the application hash; CometBFT ABCI validator updates returned only from validated replicated input; modeled update emission at height `H` and effective validator-set change at `H+2`; crash/replay-safe update records; schema `21` with offline v20 → v21 migration and rollback rehearsal; governance-aware native ABCI state-sync snapshots; and multi-operator request build/sign/verify CLI tooling.
 
-- canonical validator `join`, `remove`, and `replace` governance transactions,
-- validator approvals with strict `>2/3` current voting-power quorum,
-- replicated active/pending validator state,
-- governance state committed into the application hash,
-- CometBFT ABCI validator updates returned only from validated replicated input,
-- modeled update emission at height `H` and effective validator-set change at `H+2`,
-- crash/replay-safe validator update emission,
-- schema `21` with offline v20 → v21 migration and rollback rehearsal,
-- governance-aware native ABCI state-sync snapshots,
-- multi-operator request build/sign/verify CLI tooling,
-- Python governance/migration/state-sync tests and Go bridge validator-update tests.
+The `H → H+2` behavior is a **modeled testnet activation rule that still requires multi-host CometBFT campaign evidence and independent review**. Code implementation is not proof of production-safe validator governance.
 
 See [`V0.21.md`](V0.21.md).
 
@@ -79,17 +69,11 @@ go test -mod=mod ./...
 
 ## Upgrade an existing v0.20 application copy
 
-Do a dry run first:
-
 ```bash
 crakchain migration-v21-dry-run \
   --genesis runtime/genesis.json \
   --source runtime/comet-app
-```
 
-Create a v0.21 copy:
-
-```bash
 crakchain migration-v21-copy \
   --genesis runtime/genesis.json \
   --source runtime/comet-app \
@@ -109,18 +93,7 @@ python scripts/run_execution_service_v21.py \
   --port 26659
 ```
 
-Keep the execution token private and keep this service off the public Internet.
-
-The v0.21 bridge uses:
-
-```text
-GET  /v4/info
-POST /v4/check-tx
-POST /v4/finalize
-POST /v4/commit
-```
-
-The existing `/v3/state-sync/*` routes use the governance-aware state-sync manager under the v0.21 service.
+Keep the execution token private and keep this service off the public Internet. The v0.21 bridge uses `/v4/info`, `/v4/check-tx`, `/v4/finalize`, and `/v4/commit`; the existing `/v3/state-sync/*` routes use the governance-aware manager under the v0.21 service.
 
 ## Validator-governance flow
 
@@ -186,21 +159,15 @@ crakchain snapshot-v21-verify \
 
 v0.21 snapshots include account state plus the active/pending validator governance state. Native CometBFT state sync remains bound to the light-client-trusted application hash and requires pristine restore state.
 
-## Retained release/security tooling
+## Retained tooling
 
 v0.19/v0.20 tools remain available for review findings, reproducible builds, SBOM, signed release provenance, operations evidence, schema compatibility, migration rehearsal and signed lifecycle-plan review.
 
-The browser wallet, explorer, public gateway, faucet and optional Mining Lab also remain alpha/test-only components. The Mining Lab is **not consensus mining**: it does not mint supply, create CometBFT blocks, select validators or change voting power.
+The browser wallet, explorer, public gateway, faucet and optional Mining Lab remain alpha/test-only components. The Mining Lab is **not consensus mining**: it does not mint supply, create CometBFT blocks, select validators or change voting power.
 
 ## Security / release gates
 
-Read:
-
-- [`SECURITY.md`](SECURITY.md)
-- [`V0.21.md`](V0.21.md)
-- [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md)
-- [`docs/WALLET_THREAT_MODEL.md`](docs/WALLET_THREAT_MODEL.md)
-- [`docs/VALIDATOR_REMOTE_SIGNER.md`](docs/VALIDATOR_REMOTE_SIGNER.md)
+Read [`SECURITY.md`](SECURITY.md), [`V0.21.md`](V0.21.md), [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md), [`docs/WALLET_THREAT_MODEL.md`](docs/WALLET_THREAT_MODEL.md) and [`docs/VALIDATOR_REMOTE_SIGNER.md`](docs/VALIDATOR_REMOTE_SIGNER.md).
 
 v0.21 implements a testnet validator-governance path, but it has **not** completed independent multi-host join/remove/replace campaigns, activation-boundary fault tests, protected remote/HSM governance signing, independent consensus/application/network/wallet review, long-duration public-testnet evidence, complete supply-chain review, production DDoS/capacity engineering, final validator economics or applicable legal review.
 
