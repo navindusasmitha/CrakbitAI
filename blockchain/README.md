@@ -1,8 +1,8 @@
 # Crakbit Chain — Development Network Prototype
 
-**Status: research/devnet alpha (`0.12.0-alpha`)**
+**Status: research/devnet alpha (`0.13.0-alpha`)**
 
-Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosystem. The current development network includes native test-only `CRKBIT` accounting, Ed25519-signed transactions, certified view changes, prevote/precommit finality, authenticated validator requests, durable replay protection, quorum-certified snapshots, resumable recovery, integrity checks, verified backups, bounded RPC/mempool behavior, mTLS/pinning support, verified history archives and public-testnet operations tooling.
+Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosystem. The development network includes native test-only `CRKBIT` accounting, Ed25519-signed transactions, research prevote/precommit consensus, authenticated validator requests, quorum-certified snapshots, resumable recovery, verified history archives, mTLS/certificate pinning, bounded RPC behavior, signed release tooling, a deterministic external-consensus execution PoC, testnet provisioning scaffolds, a bounded test faucet and read-only explorer APIs.
 
 > This is **not a production mainnet**, has not completed independent consensus/network review, and must not be used to custody real value.
 
@@ -22,7 +22,7 @@ The 21M value is a development-network configuration parameter, not a promise of
 
 ## Consensus direction
 
-The current Python consensus remains a research implementation. `docs/ADR-0001-consensus-direction.md` records the decision that Crakbit will not keep extending this prototype as if it were production BFT. Before public-value mainnet planning, the project will evaluate migration of the execution/state layer to an established independently reviewed BFT core, with a Tendermint/CometBFT-style protocol as the primary architectural reference.
+The current Python consensus remains a **research implementation**. Crakbit will not keep extending it as if it were production BFT. Before public-value mainnet planning, the execution/state layer must be integrated with an established independently reviewed BFT core, or the complete consensus protocol must receive equivalent independent review.
 
 Current research flow:
 
@@ -36,25 +36,27 @@ proposal
 finalized block
 ```
 
-## v0.12 large update
+See `docs/ADR-0001-consensus-direction.md`.
 
-v0.12 adds:
+## v0.13 large phase
 
-- fully verified genesis-anchored history archive export,
-- archive replay verification of signatures, certificates, balances, nonces, state roots and hash continuity,
-- verified pre-snapshot history backfill for snapshot-bootstrapped nodes without changing current state,
-- `archive-export`, `archive-verify` and `archive-import` CLI commands,
-- explicit consensus/execution boundary groundwork for future reviewed-BFT integration,
-- optional bearer authentication for operator/monitoring endpoints,
-- dual TLS certificate-pin overlap for safer certificate rotation,
-- explicit duplicate/conflicting/forged validator-vote rejection fixtures,
-- multi-node soak/divergence monitoring script,
-- deny-by-default nftables public-testnet example,
-- `/archive/status`, `/execution/status` and `/operator/security-status`.
+v0.13 adds:
 
-See [`V0.12.md`](V0.12.md) for the full phase notes and limitations.
+- deterministic `crakbit-execution/1` application protocol boundary,
+- deterministic application-state hash independent from consensus-local state,
+- non-mutating transaction and ordered-batch execution previews,
+- authenticated loopback execution-service process PoC,
+- signed genesis/release manifests with Ed25519 signatures and artifact SHA-256 hashes,
+- independent-host validator provisioning scaffold generator,
+- strictly test-only faucet with per-address cooldown and global request limits,
+- bounded read-only explorer summary/block/address APIs,
+- reproducible soak-test summary generation,
+- external consensus/network review package checklist,
+- all v0.12 archive/recovery, v0.11 transport and v0.10 resource-hardening features.
 
-## Quick start
+See [`V0.13.md`](V0.13.md) for the full phase notes and limitations.
+
+## Quick start — local devnet
 
 Requirements: Python 3.11+ and Docker Desktop / Docker Engine.
 
@@ -80,9 +82,7 @@ Local RPC endpoints:
 crakchain keygen --output runtime/alice.json
 crakchain address --key runtime/alice.json
 crakchain balance YOUR_ADDRESS --rpc http://127.0.0.1:9101
-```
 
-```bash
 crakchain send \
   --key runtime/treasury.json \
   --genesis runtime/genesis.json \
@@ -93,7 +93,63 @@ crakchain send \
 
 Never commit or share validator/private wallet key files.
 
-## Snapshot recovery
+## Deterministic execution protocol PoC
+
+Read local application protocol state:
+
+```bash
+crakchain protocol-status \
+  --genesis runtime/genesis.json \
+  --data runtime/node1-data
+```
+
+Preview an ordered transaction batch without changing state:
+
+```bash
+crakchain protocol-preview \
+  --genesis runtime/genesis.json \
+  --data runtime/node1-data \
+  --transactions runtime/transactions.json \
+  --fee-recipient crk1VALIDATOR
+```
+
+Run the isolated process-boundary PoC on loopback:
+
+```bash
+python scripts/run_execution_service.py \
+  --genesis runtime/genesis.json \
+  --data runtime/node1-data \
+  --token REPLACE_WITH_LONG_RANDOM_SECRET
+```
+
+The v0.13 execution service has **no external finalize/commit endpoint**. This is deliberate until a reviewed BFT integration and replay/crash contract are in place.
+
+## Signed release / genesis manifest
+
+Use a **dedicated release signing key**, not a validator key:
+
+```bash
+crakchain keygen --output runtime/release-signing-key.json
+
+crakchain release-build \
+  --genesis runtime/genesis.json \
+  --key runtime/release-signing-key.json \
+  --version 0.13.0a1 \
+  --artifact dist/crakbit-chain.whl \
+  --output runtime/release-0.13.json
+```
+
+Verify:
+
+```bash
+crakchain release-verify \
+  --manifest runtime/release-0.13.json \
+  --genesis runtime/genesis.json \
+  --expected-signer crk1EXPECTED_RELEASE_SIGNER \
+  --artifact-dir dist
+```
+
+## Snapshot and archive recovery
 
 ```bash
 crakchain snapshot-fetch-chunked \
@@ -111,47 +167,68 @@ crakchain snapshot-import \
   --data runtime/recovered-node
 ```
 
-Snapshot bootstrap restores certified state but does not itself reconstruct older block bodies.
-
-## v0.12 history archive / sync
-
-Export a full genesis-anchored archive from a full-history node:
+Export/verify/backfill full genesis-anchored history:
 
 ```bash
 crakchain archive-export \
   --genesis runtime/genesis.json \
   --data runtime/node1-data \
   --output runtime/history.json
-```
 
-Verify it independently by replaying from genesis:
-
-```bash
 crakchain archive-verify \
   --genesis runtime/genesis.json \
   --archive runtime/history.json
-```
 
-Backfill verified history into a snapshot-bootstrapped node without changing balances/nonces/current state:
-
-```bash
 crakchain archive-import \
   --genesis runtime/genesis.json \
   --data runtime/recovered-node \
   --archive runtime/history.json
 ```
 
-Useful status endpoints:
+## Independent-host operator scaffolds
+
+Generate non-secret per-validator deployment bundles:
+
+```bash
+python scripts/provision_testnet.py \
+  --genesis runtime/genesis.json \
+  --output runtime/operator-bundles
+```
+
+The generated folders contain public metadata and configuration templates only. They intentionally contain no private validator keys, TLS private keys or monitoring secrets.
+
+## Strictly test-only faucet
+
+Create/fund a **dedicated non-validator faucet key** and run:
+
+```bash
+python scripts/run_faucet.py \
+  --genesis runtime/genesis.json \
+  --key runtime/faucet.json \
+  --rpc http://127.0.0.1:9101 \
+  --amount 10 \
+  --cooldown-seconds 3600 \
+  --global-rpm 10
+```
+
+Default listener: `127.0.0.1:9400`. Put any public testnet faucet behind a hardened reverse proxy and upstream abuse controls. Faucet units are test-only and represent no production value.
+
+## Explorer/read APIs
+
+v0.13 adds:
 
 ```text
-GET /history/status
-GET /archive/status
-GET /history/block/{height}
+GET /protocol/status
+GET /explorer/summary
+GET /explorer/blocks?limit=20
+GET /explorer/address/{address}?limit=50
 ```
+
+Existing recovery/history/operator APIs remain available. Address activity is bounded and is not yet a dedicated indexed explorer backend.
 
 ## Validator transport security
 
-v0.11+ supports operator-managed mTLS, CA/hostname verification and optional certificate SHA-256 pinning. v0.12 extends pin files to allow a bounded two-pin overlap during certificate rotation.
+v0.11+ supports operator-managed mTLS, CA/hostname verification and optional certificate SHA-256 pinning. v0.12+ supports a bounded two-pin overlap during certificate rotation.
 
 ```json
 {
@@ -162,17 +239,13 @@ v0.11+ supports operator-managed mTLS, CA/hostname verification and optional cer
 }
 ```
 
-Remove the old fingerprint after all peers have confirmed the new certificate.
-
-## Operator monitoring authentication
-
-Optionally set a long random bearer token:
+Operator monitoring can additionally require:
 
 ```text
 CRAKBIT_MONITORING_BEARER_TOKEN=<secret-at-least-24-characters>
 ```
 
-When enabled, monitoring/operations endpoints require an `Authorization: Bearer ...` header. This does not replace private networking, firewall policy or reverse-proxy access controls.
+This does not replace private networking, firewall policy or reverse-proxy access controls.
 
 ## Integrity & backups
 
@@ -191,7 +264,7 @@ crakchain backup-verify \
   --full
 ```
 
-## Multi-node soak monitoring
+## Soak evidence
 
 ```bash
 python scripts/soak_test.py \
@@ -203,27 +276,13 @@ python scripts/soak_test.py \
   --interval-seconds 5 \
   --output runtime/soak-results.jsonl \
   --fail-on-divergence
+
+python scripts/soak_summary.py \
+  --input runtime/soak-results.jsonl \
+  --output runtime/soak-summary.json
 ```
 
-The script records availability, latency, height spread and same-height hash divergence. It is evidence-gathering tooling, not a proof of consensus safety.
-
-## Monitoring stack
-
-```bash
-cd ops
-docker compose -f docker-compose.observability.yml up -d
-```
-
-- Prometheus: `http://127.0.0.1:9090`
-- Grafana: `http://127.0.0.1:3000`
-
-Development credentials/configuration must not be exposed unchanged to the Internet.
-
-## Public-testnet deployment examples
-
-See [`deploy/testnet/`](deploy/testnet/), including one-validator-per-host compose, mTLS environment configuration, reverse-proxy hardening and a deny-by-default nftables example.
-
-These are reviewable starting points, not production deployment guarantees.
+These outputs are operational evidence, not a formal consensus-safety proof.
 
 ## Tests
 
@@ -233,17 +292,17 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-GitHub Actions runs the blockchain test suite on blockchain changes.
+GitHub Actions runs the blockchain suite on blockchain changes.
 
 ## Main remaining blockers
 
 - actual integration with an established independently reviewed BFT core,
-- protocol-level consensus/execution integration and formal safety/liveness review,
-- sustained independent-host partition/latency/Byzantine/load/soak testing,
-- production validator key custody/HSM-equivalent strategy,
+- reviewed mutating finalize/commit protocol and crash/replay semantics,
+- sustained independent-host partition/latency/Byzantine/load/soak campaigns,
+- production validator/release-key custody or HSM-equivalent strategy,
 - production monitoring/alert routing and secret management,
-- production firewall/reverse-proxy/DDoS architecture review,
-- independent consensus/network/security audit,
+- production reverse-proxy/firewall/DDoS architecture review,
+- independent consensus/network/security review,
 - meaningful public-testnet operation before any mainnet planning.
 
-See [`V0.12.md`](V0.12.md), [`V0.11.md`](V0.11.md), [`SPEC.md`](SPEC.md), [`SECURITY.md`](SECURITY.md) and [`docs/ADR-0001-consensus-direction.md`](docs/ADR-0001-consensus-direction.md).
+See [`V0.13.md`](V0.13.md), [`V0.12.md`](V0.12.md), [`docs/EXECUTION_PROTOCOL_V1.md`](docs/EXECUTION_PROTOCOL_V1.md), [`docs/EXTERNAL_REVIEW_PACKAGE.md`](docs/EXTERNAL_REVIEW_PACKAGE.md), [`SPEC.md`](SPEC.md) and [`SECURITY.md`](SECURITY.md).
