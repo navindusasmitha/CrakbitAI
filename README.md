@@ -10,9 +10,12 @@ Crakbit AI is an independent technology project building defensive-security tool
 
 - Security scanner / CLI: early alpha
 - AI Security Assistant: in development
-- Crakbit Chain package: **v0.31.0a1**
-- New primary chain research direction: **native Proof of Work + UTXO**
-- Working v0.31 PoW: **`crakpow-scrypt-v1` CPU-mineable devnet**
+- Crakbit Chain package: **v0.32.0a1**
+- Primary chain research direction: **native Proof of Work + UTXO**
+- Current PoW: **`crakpow-scrypt-v1` CPU-mineable devnet**
+- P2P protocol: **`crakbit-p2p/1`**
+- Fork choice: **highest cumulative valid work**
+- Side chains / orphan handling / automatic higher-work reorg: implemented in v0.32
 - First-party solo miner + mining-pool prototype: implemented
 - Previous CometBFT/BFT path: retained as legacy/research infrastructure
 - Production mainnet: **not launched**
@@ -21,33 +24,35 @@ Crakbit AI is an independent technology project building defensive-security tool
 
 Do not use the current alpha to custody real value.
 
-## Crakbit Chain v0.31 — PoW pivot
+## Crakbit Chain v0.32 — decentralized PoW network layer
 
-v0.31 introduces an actual proof-of-work block-production path instead of pretending the previous validator-based CometBFT path is Bitcoin-like mining.
+v0.31 introduced actual CPU-mined blocks and a UTXO ledger. v0.32 adds a separate signed peer-to-peer layer and changes the node from a tip-only prototype into a block-graph node capable of retaining competing branches and selecting a higher-work canonical chain.
 
 Implemented now:
 
-- deterministic PoW genesis,
-- Bitcoin-style UTXO accounting,
+- native PoW genesis + UTXO accounting,
 - Ed25519 `crk1...` ownership/signatures,
-- signed transfers + transaction fees,
-- mempool double-spend policy,
-- coinbase block rewards + maturity,
-- Merkle roots,
-- memory-hard scrypt PoW,
-- 256-bit targets + bounded difficulty retargeting,
-- cumulative chain-work accounting,
-- CPU solo mining,
-- SQLite persistent chain/UTXO/mempool state,
-- FastAPI node RPC (`getblocktemplate`, `submitblock`, transaction/balance/block endpoints),
-- first-party `crakbit-pool/1` mining-pool protocol,
-- pool share difficulty separated from network target,
-- test PPLNS accounting,
-- native CPU pool-miner script.
+- coinbase rewards, fees and maturity,
+- CPU scrypt mining + difficulty/chainwork,
+- persistent all-branches block graph,
+- side-chain retention,
+- bounded orphan queue,
+- full candidate-branch replay before activation,
+- highest-cumulative-work fork choice,
+- canonical reorganization,
+- reorg mempool/disconnected-transaction reconciliation,
+- median-time-past branch timestamp rule,
+- exponential block locators,
+- signed chain/genesis-bound P2P handshakes,
+- static seed peers + bounded peer discovery,
+- header announcements + block fetch,
+- block/transaction inventory gossip,
+- peer scoring/rate/size limits,
+- v1 mining RPC compatibility plus v2 P2P-aware node RPC,
+- live peer/branch inspection,
+- a regression test that synchronizes a mined block between two real TCP nodes.
 
-The production PoW algorithm is **not frozen**. A real RandomX adapter/benchmark remains a future evaluation item; v0.31 uses Python's real scrypt primitive so CPU-mined blocks are working/testable now without claiming unimplemented RandomX support.
-
-See [`blockchain/V0.31.md`](blockchain/V0.31.md).
+See [`blockchain/V0.32.md`](blockchain/V0.32.md).
 
 ## Quick test
 
@@ -59,38 +64,49 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-## Quick PoW devnet
+## Quick PoW P2P devnet
+
+Create a dedicated P2P identity and chain database:
 
 ```bash
-crakchain pow-wallet-v31-new --output private/miner.json
-crakchain pow-chain-v31-init --db runtime/pow-v31/chain.sqlite3
-crakchain pow-mine-v31 --db runtime/pow-v31/chain.sqlite3 --miner-address crk1YOUR_ADDRESS --blocks 1
-crakchain pow-chain-v31-info --db runtime/pow-v31/chain.sqlite3
+crakchain pow-p2p-key-v32-new --output private/node1-p2p.json
+crakchain pow-network-v32-init --db runtime/node1/chain.sqlite3
 ```
 
-Run the node RPC:
+Run node 1:
 
 ```bash
-crakchain pow-node-v31-run --db runtime/pow-v31/chain.sqlite3 --host 127.0.0.1 --port 28443
+crakchain pow-node-v32-run \
+  --db runtime/node1/chain.sqlite3 \
+  --network-key private/node1-p2p.json \
+  --rpc-port 28443 \
+  --p2p-port 28444
 ```
 
-Run the first-party pool:
+A second node initialized with the exact same chain config/genesis can connect with:
 
 ```bash
-crakchain pow-pool-v31-run --db runtime/pow-v31/pool.sqlite3 --node-url http://127.0.0.1:28443 --pool-address crk1POOL_ADDRESS --host 127.0.0.1 --port 3333
+crakchain pow-node-v32-run \
+  --db runtime/node2/chain.sqlite3 \
+  --network-key private/node2-p2p.json \
+  --rpc-port 29443 \
+  --p2p-port 29444 \
+  --peer 127.0.0.1:28444
 ```
 
-Then a native CPU pool miner can connect with:
+The v0.31 solo miner and pool remain usable against the v0.32 node's `/pow/v1` compatibility RPC.
 
-```bash
-python scripts/run_pow_pool_miner_v31.py --host 127.0.0.1 --port 3333 --address crk1MINER_ADDRESS --worker cpu-01
-```
+## Mining / algorithm boundary
 
-## Important v0.31 boundary
+The current bootstrap algorithm is `crakpow-scrypt-v1`. It is real CPU-verifiable PoW, but the **production PoW algorithm is not frozen**. RandomX/native optimized mining and standard Stratum/XMRig interoperability remain separate future work.
 
-This is a CPU-mineable PoW **devnet prototype**, not yet a decentralized Bitcoin-like production network. v0.31 currently accepts blocks extending the local canonical tip only. P2P peer discovery/gossip, competing forks, highest-cumulative-work reorganization/undo data, RandomX interoperability, mature Stratum/XMRig compatibility, hardened pool payouts and long-lived multi-node PoW testing still need to be completed.
+The first-party `crakbit-pool/1` pool is not yet standard Stratum and its PPLNS balances remain test accounting only.
 
-The previous v0.23–v0.30 operations/review/evidence tooling remains useful and is retained, but CometBFT validator consensus is not silently mixed into the new PoW consensus path.
+## Important v0.32 boundary
+
+v0.32 is now a genuine multi-node PoW devnet architecture with competing-branch storage and higher-work reorganization, but it is still not a production Bitcoin-equivalent network. Remaining work includes deeper adversarial reorg/network testing, stronger peer/address persistence and DoS hardening, optimized sync, final PoW selection, mature Stratum/XMRig support, hardened pool payout construction, long-running independent public testnet operation and independent node/wallet/pool security review.
+
+The previous CometBFT/BFT code is retained as legacy/research infrastructure and is not silently mixed with PoW consensus.
 
 ## Funding
 
