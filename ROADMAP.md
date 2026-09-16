@@ -81,31 +81,53 @@ The earlier chain path used CometBFT/BFT validator consensus. It produced useful
 - [ ] Extensive malformed-message/fuzz/resource-exhaustion campaigns
 - [ ] Production transport/privacy/NAT policy
 
-### v0.33 target — CPU mining algorithm / interoperability hardening
+### v0.33 — CPU mining algorithm / interoperability hardening
 
-- [ ] Integrate a real RandomX native implementation as a candidate
-- [ ] Publish deterministic RandomX test vectors
+- [x] Package/CLI `0.33.0a1`
+- [x] Optional native RandomX `v1.1.8` adapter candidate
+- [x] Upstream official RandomX API-example self-test vector
+- [x] RandomX light + full-dataset/fast modes
+- [x] Deterministic RandomX candidate key schedule
+- [x] Deterministic candidate blob with XMRig common RandomX nonce offset
+- [x] Candidate XMRig `rx/0` job builder
+- [x] Candidate XMRig native submitted-hash verifier
+- [x] Deterministic v0.33 candidate vector output
+- [x] Multi-thread CPU solo miner for active scrypt consensus
+- [x] Multi-thread native pool miner
+- [x] `crakbit-pool/2` variable difficulty (vardiff)
+- [x] Stale/duplicate/share-replay defenses
+- [x] Pool message-rate limits
+- [x] Optional pool TLS 1.2+ transport
+- [x] Optional pool authorization token
+- [x] Pool stats
+- [x] Windows pinned-source RandomX build helper
+- [x] v0.33 regression coverage without requiring RandomX in CI
+
+### v0.33 boundaries still open
+
 - [ ] Benchmark scrypt vs RandomX on representative CPUs/GPUs
-- [ ] Review validation CPU/memory DoS exposure
-- [ ] Define deterministic RandomX seed/key schedule if selected
-- [ ] Multi-core optimized native miner
-- [ ] Standard Stratum compatibility for the selected algorithm
-- [ ] XMRig interoperability if technically compatible
-- [ ] Pool variable difficulty (vardiff)
-- [ ] Stale/duplicate/share-replay defenses
-- [ ] Pool TLS/auth/rate limits
+- [ ] Review RandomX validation CPU/memory DoS exposure
+- [ ] Independently validate candidate vectors across Windows/Linux machines
+- [ ] Decide whether RandomX is the production PoW candidate
+- [ ] Define versioned network activation rules if RandomX is selected
+- [ ] Run candidate-algorithm multi-node fork/reorg tests
+- [ ] Prove end-to-end stock XMRig interoperability before advertising it
+- [ ] Independently review the selected final PoW rules
 
 ### v0.34 target — wallet/pool/explorer + P2P hardening
 
+- [ ] If RandomX is selected, add explicit versioned consensus activation and fork/reorg regression vectors
+- [ ] Stock XMRig end-to-end compatibility for the exact selected algorithm/job semantics
 - [ ] Mature coinbase-aware pool payout transaction builder
-- [ ] PPLNS payout batching / fee policy
-- [ ] Pool hot/cold key separation
-- [ ] PoW explorer difficulty/hashrate/coinbase/miner views
+- [ ] PPLNS payout batching / fee policy / reconciliation
+- [ ] Pool hot/cold key separation + payout caps/holds
+- [ ] PoW explorer difficulty/hashrate/coinbase/miner/reorg views
 - [ ] Wallet confirmations / fee estimation / reorg awareness
 - [ ] Watch-only addresses and safe backup/recovery flows
-- [ ] Persistent peer database + anti-eclipse controls
+- [ ] Persistent peer database + reputation / anti-eclipse diversity controls
 - [ ] Efficient UTXO undo/reorg journal
 - [ ] Public node/RPC rate limiting and reverse-proxy guidance
+- [ ] Larger malformed-message/fuzz/resource-exhaustion campaigns
 
 ### v0.35 target — real multi-node PoW public testnet
 
