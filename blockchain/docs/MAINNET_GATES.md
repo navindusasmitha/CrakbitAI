@@ -1,108 +1,166 @@
 # Crakbit Chain — Production Mainnet Release Gates
 
-This document defines conditions that must be satisfied before the project can responsibly describe a Crakbit Chain release as a production mainnet candidate or production mainnet.
+This document defines conditions that must be satisfied before Crakbit Chain can responsibly be described as a production mainnet.
 
-**Current status: gates are not satisfied.** The repository contains research/devnet and public-testnet-candidate infrastructure only. Production CRKBIT has not launched.
+**Current status: gates are not satisfied.** The active research direction is the native PoW path introduced in v0.31. Production CRKBIT has not launched.
 
-## Consensus and deterministic execution
+The earlier CometBFT/BFT validator stack remains in the repository as legacy/research infrastructure; its historical evidence/tooling can be reused where consensus-independent, but it does not satisfy PoW-specific launch gates by itself.
 
-- [ ] Operate the selected external BFT implementation across multiple independent hosts for an extended test period.
-- [ ] Complete and review the full consensus/application interface, including FinalizeBlock, Commit, replay and crash recovery.
-- [ ] Verify deterministic application hashes across independent nodes under sustained workloads.
-- [ ] Complete external-consensus snapshot/state-sync integration and recovery testing.
-- [ ] Define validator-set lifecycle, onboarding, removal, rotation and emergency procedures.
-- [ ] Define protocol upgrade and chain-halt/restart procedures.
-- [ ] Publish reproducible partition, latency, packet-loss, restart and sustained-load evidence.
-- [ ] Test Byzantine/malformed input behavior at consensus and application boundaries.
+## 1. Native PoW consensus and chain selection
 
-## Validator and key security
+- [ ] Freeze the production PoW algorithm after benchmarking and independent review.
+- [ ] Define deterministic PoW seed/key scheduling for the final algorithm.
+- [ ] Validate proof-of-work target rules against independent implementations/test vectors.
+- [ ] Implement P2P block/header/transaction propagation.
+- [ ] Implement competing-fork storage and highest-cumulative-work fork choice.
+- [ ] Implement safe canonical reorganization with UTXO undo/rollback records.
+- [ ] Reconcile mempool state correctly across reorganizations.
+- [ ] Implement orphan handling and peer synchronization.
+- [ ] Add strong timestamp rules such as median-time-past or a reviewed alternative.
+- [ ] Verify difficulty retarget behavior under fast/slow timestamp and hash-rate changes.
+- [ ] Test long/deep reorg boundaries and malicious fork inputs.
+- [ ] Publish deterministic consensus test vectors.
 
-- [ ] Keep CometBFT node/validator keys separate from Crakbit wallet, research-validator, TLS, release, faucet and mining-reward keys.
-- [ ] Adopt remote-signer, HSM or equivalent protected validator-key custody for production operators.
-- [ ] Define validator backup, rotation, compromise and revocation procedures.
-- [ ] Use authenticated/encrypted private validator networking where appropriate.
-- [ ] Complete certificate lifecycle, pinning/rotation and secret-management design.
-- [ ] Run validator disaster-recovery drills without copying private keys into unsafe locations.
+## 2. UTXO / transaction / monetary correctness
 
-## Wallet security
+- [ ] Independently review transaction signing and ownership validation.
+- [ ] Independently review UTXO conservation and integer-overflow boundaries.
+- [ ] Review coinbase creation, maturity and fee accounting.
+- [ ] Review subsidy/halving/issuance arithmetic over the complete intended schedule.
+- [ ] Define dust/minimum-output policy.
+- [ ] Define transaction size/weight limits.
+- [ ] Define fee and mempool eviction policy.
+- [ ] Add transaction malleability/replay/network-domain protections as needed.
+- [ ] Test reorg effects on confirmed/unconfirmed wallet balances.
+- [ ] Publish supply/issuance verification tooling.
 
-- [ ] Complete an independent review of the browser wallet's key generation, canonical signing, encryption and backup formats.
-- [ ] Publish a wallet threat model covering XSS, malicious extensions, compromised origins, local-storage theft and phishing.
-- [ ] Enforce strict production CSP, dependency integrity, secure headers and origin isolation.
-- [ ] Add hardware-wallet / external-signer support or document a reviewed alternative for high-value use.
-- [ ] Test import/export compatibility and recovery across supported clients.
-- [ ] Complete transaction confirmation UX review so users can clearly verify recipient, amount, fee and network.
+## 3. Mining algorithm and miner interoperability
 
-## Public RPC and Web infrastructure
+- [ ] Benchmark the final algorithm across representative CPUs and GPUs.
+- [ ] Evaluate ASIC/FPGA risk and state the intended hardware-neutrality goals accurately.
+- [ ] Review PoW validation cost for CPU/memory denial-of-service exposure.
+- [ ] Build/verify a native optimized reference miner.
+- [ ] Implement standard mining interoperability for the final algorithm (e.g. Stratum where appropriate).
+- [ ] Verify third-party miner interoperability if supported.
+- [ ] Publish block-header/job-format test vectors.
+- [ ] Test stale work, duplicate shares and malformed mining submissions.
+- [ ] Ensure pool/miner protocol never exposes wallet/private keys.
 
-- [ ] Put public RPC/gateway services behind production reverse-proxy/load-balancer controls.
-- [ ] Add upstream connection, request, transaction and abuse limits that survive process restarts and scale horizontally.
-- [ ] Complete WAF/DDoS architecture and capacity testing.
-- [ ] Restrict execution service, ABCI sockets, validator services and operator endpoints to private/authorized networks.
-- [ ] Adopt production TLS configuration and automated certificate rotation.
-- [ ] Add centralized secret management; do not deploy secrets in source-controlled `.env` files.
+## 4. P2P network security
+
+- [ ] Version and document the P2P wire protocol.
+- [ ] Enforce chain/network ID during handshake.
+- [ ] Add peer message-size, timeout and rate limits.
+- [ ] Add peer scoring/ban policy for malformed or abusive behavior.
+- [ ] Test eclipse/Sybil/peer-churn behavior.
+- [ ] Test partition/reconnect and divergent-tip recovery.
+- [ ] Test invalid-header/block/transaction flooding.
+- [ ] Define seed-node/bootstrap discovery strategy without centralizing consensus.
+- [ ] Review privacy implications of peer and transaction propagation.
+
+## 5. Mining-pool security and accounting
+
+- [ ] Freeze and document the production pool protocol.
+- [ ] Add TLS/authentication/rate limits where exposed publicly.
+- [ ] Implement variable difficulty or a reviewed share-difficulty design.
+- [ ] Prevent duplicate/replayed/stale-share credit.
+- [ ] Independently review PPLNS/PPS accounting if offered.
+- [ ] Implement coinbase-maturity-aware payout construction.
+- [ ] Separate pool hot wallet, cold funds and operator/admin keys.
+- [ ] Add withdrawal/payout limits and reconciliation.
+- [ ] Test pool outage without affecting chain consensus.
+- [ ] Confirm miners can solo mine or use third-party pools; no official-pool dependency.
+
+## 6. Wallet security
+
+- [ ] Independent review of Ed25519 key generation/signing/address derivation.
+- [ ] Review encrypted wallet backup/import/export flows.
+- [ ] Add watch-only and confirmation/reorg-aware balance UX.
+- [ ] Enforce production CSP, dependency integrity, secure headers and origin isolation for browser wallet components.
+- [ ] Add hardware-wallet/external-signer support or document a reviewed alternative for high-value use.
+- [ ] Test recovery across supported clients.
+- [ ] Review transaction confirmation UX so users can verify recipient, amount, fee and network.
+
+## 7. Node / RPC / explorer infrastructure
+
+- [ ] Harden mutation RPC behind authentication/private networking.
+- [ ] Put public read-only RPC behind production reverse proxy/load balancing.
+- [ ] Add horizontally scalable abuse/rate limits.
+- [ ] Add WAF/DDoS architecture and capacity testing.
+- [ ] Adopt production TLS and certificate rotation.
+- [ ] Use centralized secret management; no production secrets in source-controlled `.env` files.
+- [ ] Deploy PoW-aware explorer/index storage.
+- [ ] Reconcile explorer state against canonical chain after reorganizations.
+- [ ] Define archive/pruning/history retention.
+- [ ] Verify clean reindex/recovery/bootstrap paths.
 - [ ] Run third-party web/API penetration testing.
 
-## Explorer, indexing and data availability
-
-- [ ] Deploy a dedicated indexed explorer database for external-consensus history.
-- [ ] Reconcile explorer indexes against consensus/application state and publish recovery procedures.
-- [ ] Define archive-node and history-retention requirements.
-- [ ] Verify snapshot/archive/replay paths from clean hosts.
-- [ ] Provide independently verifiable block, transaction and application-state commitments.
-
-## Faucet and mining-lab separation
-
-- [ ] Keep faucet and proof-of-work reward services explicitly testnet-only unless a separately reviewed production design is approved.
-- [ ] Keep faucet/mining reward keys separate from validator and release keys.
-- [ ] Apply persistent distribution limits and upstream abuse controls.
-- [ ] Do not represent Mining Lab work as consensus block mining. The current external consensus path is BFT/CometBFT-based.
-
-## Release and genesis integrity
+## 8. Release and genesis integrity
 
 - [ ] Build releases reproducibly from tagged source.
 - [ ] Publish cryptographic hashes and dedicated release-signing signatures.
-- [ ] Run a documented genesis ceremony with independently held validator keys.
-- [ ] Verify the final genesis artifact, validator set and release artifacts before launch.
-- [ ] Maintain rollback, emergency patch and compromised-release procedures.
+- [ ] Freeze final chain ID/genesis/PoW/economic parameters.
+- [ ] Independently verify final genesis artifact.
+- [ ] Maintain rollback/emergency patch/compromised-release procedures.
+- [ ] Publish SBOM and dependency review.
 
-## Observability and incident response
+## 9. Observability and incident response
 
-- [ ] Run production metrics, logs and alerts without leaking secrets or sensitive request data.
-- [ ] Monitor validator availability, consensus progress, app hashes, peer connectivity, RPC health and storage integrity.
+- [ ] Monitor block production, tip height, cumulative work and difficulty.
+- [ ] Monitor peer counts/connectivity and fork/reorg events.
+- [ ] Monitor mempool, RPC health, storage and index integrity.
+- [ ] Monitor pool share/block/payout health without exposing miner secrets.
 - [ ] Define alert routing, escalation and on-call ownership.
-- [ ] Conduct chain-halt, validator-loss, key-compromise, corrupted-database and network-partition incident drills.
-- [ ] Publish a responsible disclosure process for chain/wallet/network vulnerabilities.
+- [ ] Conduct chain-stall, deep-reorg, corrupted-database, key-compromise, pool-outage and network-partition drills.
+- [ ] Publish a responsible-disclosure process.
 
-## Independent review
+## 10. Independent review
 
-- [ ] Independent consensus review.
-- [ ] Independent application/state-transition review.
+- [ ] Independent PoW consensus/fork-choice review.
+- [ ] Independent UTXO/state-transition review.
 - [ ] Independent cryptography/key-management review.
-- [ ] Independent network/RPC/validator security review.
-- [ ] Independent browser-wallet review.
-- [ ] Remediate or explicitly accept every high/critical finding before launch.
+- [ ] Independent P2P/network/RPC review.
+- [ ] Independent wallet review.
+- [ ] Independent mining-pool/accounting review.
+- [ ] Fuzzing/property-based testing at block/transaction/network boundaries.
+- [ ] Remediate and independently retest all high/critical findings before launch.
 
-## Economics, policy and legal review
+## 11. Economics, incentives and legal review
 
-- [ ] Finalize production supply, issuance/reward/fee and validator-incentive rules separately from devnet assumptions.
-- [ ] Evaluate economic attacks and validator incentives.
-- [ ] Review any production CRKBIT utility and distribution plan for applicable legal/regulatory requirements.
-- [ ] Publish clear user-facing terms and risk disclosures appropriate to the final deployment.
+- [ ] Finalize production supply/issuance schedule.
+- [ ] Finalize block subsidy/halving or alternative reward schedule.
+- [ ] Finalize fee policy.
+- [ ] Analyze miner/pool centralization incentives.
+- [ ] Analyze selfish-mining, fee-sniping and chain-reorg economics.
+- [ ] Analyze realistic hash-rate attack cost and confirmation policy.
+- [ ] Review production CRKBIT utility/distribution for applicable legal/regulatory requirements.
+- [ ] Publish clear user-facing terms and risk disclosures.
 
-## Minimum launch evidence package
+## 12. Real multi-node public testnet
 
-Before a production mainnet claim, publish at minimum:
+- [ ] Operate 4+ independently managed full nodes.
+- [ ] Operate multiple independent miners and preferably multiple pools/solo miners.
+- [ ] Run 24h → 72h → 7-day+ sustained testnet campaigns.
+- [ ] Produce real competing forks and verify highest-chainwork convergence.
+- [ ] Run partition/reconnect/reorg campaigns.
+- [ ] Run invalid block/transaction/P2P fuzz and load campaigns.
+- [ ] Verify full clean-node bootstrap/reindex/recovery.
+- [ ] Verify wallet balances and explorer indexes after reorgs.
+- [ ] Publish representative evidence without secrets.
 
-1. exact source commit/tag and reproducible release hashes,
-2. final genesis artifact and ceremony attestations,
-3. external-consensus version and configuration,
-4. independent-host soak/partition/restart/load results,
-5. state-sync and disaster-recovery evidence,
-6. independent security-review reports or public summaries,
-7. validator/key operational runbook,
-8. incident-response plan,
-9. wallet security/recovery documentation,
+## Minimum production launch evidence package
+
+Before a production-mainnet claim, publish at minimum:
+
+1. exact source tag and reproducible release hashes,
+2. final genesis + chain/PoW/economic parameters,
+3. final PoW algorithm specification and test vectors,
+4. P2P/fork-choice/reorg test evidence,
+5. independent multi-node soak/partition/reorg/load evidence,
+6. wallet/node/pool security-review reports or public summaries,
+7. high/critical remediation + retest evidence,
+8. incident-response / disaster-recovery runbooks,
+9. final mining/pool interoperability documentation,
 10. final production economics and legal/compliance position.
 
-Until these gates are satisfied, project documentation should use terms such as **research devnet**, **public testnet**, or **mainnet-candidate infrastructure**, not production mainnet.
+Until these gates are satisfied, project documentation should use terms such as **PoW devnet**, **public PoW testnet**, or **mainnet-candidate infrastructure**, not production mainnet.
