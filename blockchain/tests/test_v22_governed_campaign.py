@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from crakbit_chain.cluster_monitor_v22 import evaluate_observations
+from crakbit_chain.comet_broadcast_v22 import build_broadcast_payload
 from crakbit_chain.crypto import KeyPair
 from crakbit_chain.genesis import Genesis
 from crakbit_chain.governance_campaign_v22 import (
@@ -210,3 +211,19 @@ def test_v22_campaign_plan_and_signed_evidence(tmp_path: Path):
     tampered["manifest"]["effective_height"] = 999
     with pytest.raises(Exception):
         verify_campaign_evidence(tampered, genesis_path=genesis_path)
+
+
+def test_v22_governance_broadcast_payload_uses_base64_json_bytes():
+    envelope = {
+        "type": "validator_governance",
+        "format": "crakbit-validator-governance-tx/1",
+        "change_id": "e" * 64,
+        "request": {"emit_height": 12},
+        "approvals": [],
+    }
+    payload = build_broadcast_payload(envelope)
+    assert payload["method"] == "broadcast_tx_sync"
+    decoded = base64.b64decode(payload["params"]["tx"])
+    body = json.loads(decoded.decode("utf-8"))
+    assert body["type"] == "validator_governance"
+    assert body["request"]["emit_height"] == 12
