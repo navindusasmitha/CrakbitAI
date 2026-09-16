@@ -4,7 +4,7 @@
 
 ## Current Stage
 
-**Early development / Security MVP alpha + Crakbit Chain v0.5 local devnet alpha**
+**Early development / Security MVP alpha + Crakbit Chain v0.6 local devnet alpha**
 
 Crakbit AI currently has a public website, a Giveth-listed fundraising project, an open GitHub repository, technical documentation, a deterministic security-scanner alpha and a runnable experimental blockchain development network. None of these alpha components should be described as production-ready.
 
@@ -20,42 +20,48 @@ Crakbit AI currently has a public website, a Giveth-listed fundraising project, 
 | Security CLI | Early alpha | `crak` command included with scanner package |
 | Security API | Planned | To follow scanner core |
 | Smart Contract Scanner | Planned | Blockchain-security phase |
-| Crakbit Chain local devnet | **v0.5 alpha** | Runnable 4-validator research network under `blockchain/` |
-| Certified view changes | **Implemented for devnet** | Non-zero rounds require >2/3 signed view-change certificate |
+| Crakbit Chain local devnet | **v0.6 alpha** | Runnable 4-validator research network under `blockchain/` |
+| Certified view changes | **Implemented for devnet** | Later rounds require >2/3 signed view-change certificate |
 | Prevote quorum | **Implemented for devnet** | >2/3 signed prevote certificate required before precommit |
 | Precommit quorum | **Implemented for devnet** | >2/3 signed precommit certificate required before finalization |
-| Persistent phase votes | **Implemented** | Local prevote/precommit choice survives restart |
-| Persistent consensus lock | **Implemented as research safety rule** | Precommit creates per-height local lock |
-| Consensus event journal | **Prototype implemented** | Round/vote/lock/finality events stored in SQLite |
+| Persistent consensus lock | **Implemented as research rule** | Precommit creates a per-height local lock |
+| Validator request authentication | **v0.6 prototype implemented** | Ed25519 signatures bind method/path/body hash/timestamp/nonce |
+| Validator identity handshake | **v0.6 prototype implemented** | Signed challenge/response identity verification |
+| HTTPS enforcement mode | **Optional** | Rejects non-HTTPS peer URLs when explicitly enabled; does not provision TLS |
+| Signed state snapshots | **Export + verification implemented** | Fast-sync import is not implemented yet |
+| Prometheus-style metrics | **Prototype implemented** | `/metrics/prometheus` available |
 | Equivocation evidence | **Prototype implemented** | Conflicting valid signed proposals exposed through `/evidence` |
-| Validator telemetry | **Prototype implemented** | Health/status/peer/metrics/event endpoints available |
 | CRKBIT devnet unit | Test-only | Native unit inside the local devnet; no represented production value |
-| Crakbit Chain public testnet | Not launched | Lock/unlock, authenticated networking, recovery and external review still required |
+| Crakbit Chain public testnet | Not launched | Stronger BFT unlock/network recovery/testnet infrastructure still required |
 | Production CRKBIT | Not launched | No presale or official production token contract |
 
-## Completed Blockchain Work Through v0.5
+## Completed Blockchain Work Through v0.6
 
 - Ed25519 wallet/key generation and `crk1...` addresses
 - Signed CRKBIT devnet transfers, nonces, replay protection and fees
 - Signed block proposals, Merkle transaction roots and deterministic state roots
-- SQLite blockchain/account persistence
+- SQLite blockchain/account/consensus persistence
 - Round-specific proposer selection
 - >2/3 signed certified view changes for later rounds
-- Signed prevote phase
-- Signed precommit phase
-- >2/3 prevote certificate validation before precommit
-- >2/3 precommit certificate validation before finalization
+- Signed prevote and precommit phases
+- >2/3 prevote certificate before precommit
+- >2/3 precommit certificate before finalization
 - Persistent same-phase anti-double-vote state
-- Persistent per-height consensus lock
+- Persistent per-height conservative consensus lock
 - Persistent consensus event history
 - Conflicting signed-proposal/equivocation evidence
+- Ed25519-authenticated internal validator requests
+- Timestamp-window and nonce replay checks for peer requests
+- Signed validator challenge/response handshake
+- Optional HTTPS peer-URL enforcement mode
+- Signed state snapshot export and local verification
+- `crakchain snapshot-verify`
+- `/snapshot/latest`
+- JSON and Prometheus-style metrics endpoints
 - Finalized-block broadcast and catch-up sync
 - Validator health/height/round telemetry
-- `/consensus/events` and `/metrics` development endpoints
 - 4-validator Docker Compose topology with default 3-of-4 quorum
-- CLI tooling and development explorer
-- Automated multiphase consensus and persistence tests in CI
-- v0.5 protocol specification and security notes
+- Automated consensus, peer-authentication and snapshot tests in CI
 
 ## Immediate Security-Platform Priorities
 
@@ -67,23 +73,22 @@ Crakbit AI currently has a public website, a Giveth-listed fundraising project, 
 6. Publish a simple public Security MVP interface/demo.
 7. Begin security API work after scanner core becomes more stable.
 
-## Immediate Blockchain Priorities — v0.6
+## Immediate Blockchain Priorities — v0.7
 
-1. Define and review a safe cross-round proof-based unlock rule, or migrate consensus to a mature BFT core.
-2. Add authenticated validator identity handshakes.
-3. Add encrypted validator transport / deployment TLS requirements.
-4. Add validator key/certificate rotation design.
-5. Add signed state snapshots and verified fast state sync.
-6. Add restart/recovery/database-corruption tests.
-7. Add long-running multi-node partition/fault/load tests.
-8. Add Prometheus-style metrics, dashboarding and alerts.
-9. Add public-testnet deployment configuration and operator runbooks.
-10. Add faucet abuse controls and improve wallet/explorer testnet UX.
-11. Commission independent consensus/network review before public-value use.
+1. Review/replace the conservative cross-round lock with a mature proof-based unlock/BFT design.
+2. Add mutually authenticated encrypted validator transport with certificate/key rotation.
+3. Harden peer replay/session handling across restarts.
+4. Add snapshot quorum certification and verified snapshot import / fast state sync.
+5. Add restart/recovery/database-corruption testing.
+6. Add long-running network partition, latency, Byzantine-behavior and load tests.
+7. Add Grafana dashboards and alert rules.
+8. Add public-testnet deployment configuration and operator runbooks.
+9. Add faucet abuse controls and improve wallet/explorer testnet UX.
+10. Commission independent consensus/network review before public-value use.
 
-## Important v0.5 Limitation
+## Important v0.6 Limitations
 
-v0.5 now has a real two-phase prevote/precommit research pipeline, but its per-height lock is deliberately conservative and does not yet have a mature proof-based unlock rule. Certain failures can therefore halt liveness rather than unlock. Validator transport is also still unauthenticated HTTP. The network remains a research devnet and is not suitable for real-value custody or mainnet claims.
+v0.6 improves validator request authentication and adds signed snapshot verification, but it is still not a production BFT/mainnet implementation. The consensus lock lacks a mature proof-based unlock rule, replay-nonce memory is process-local, local Docker traffic is not encrypted by default, HTTPS enforcement does not configure certificates/mTLS, and signed snapshots cannot yet be imported for fast state sync.
 
 ## What Is Not Yet Production-Ready
 
