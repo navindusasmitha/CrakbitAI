@@ -1,0 +1,22 @@
+{
+  "name": "Crakbit v0.16 public-testnet candidate",
+  "validators": [
+    {
+      "name": "validator-1",
+      "comet_rpc": "https://validator-1.example.invalid/rpc",
+      "gateway": "https://wallet.example.invalid"
+    },
+    {
+      "name": "validator-2",
+      "comet_rpc": "https://validator-2.example.invalid/rpc"
+    },
+    {
+      "name": "validator-3",
+      "comet_rpc": "https://validator-3.example.invalid/rpc"
+    },
+    {
+      "name": "validator-4",
+      "comet_rpc": "https://validator-4.example.invalid/rpc"
+    }
+  ]
+}
