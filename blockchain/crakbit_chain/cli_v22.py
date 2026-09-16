@@ -7,6 +7,7 @@ from pathlib import Path
 
 from . import cli_v21
 from .cluster_monitor_v22 import collect_and_evaluate
+from .comet_broadcast_v22 import guarded_broadcast_governance
 from .governance_campaign_v22 import (
     build_campaign_evidence,
     build_campaign_plan,
@@ -17,6 +18,7 @@ from .governance_campaign_v22 import (
 )
 from .governance_history_v22 import governance_history_from_paths
 from .governed_lab_v22 import generate_governed_lab
+from .validator_governance_v21 import load_governance_request
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -45,6 +47,14 @@ def _parser() -> argparse.ArgumentParser:
     history.add_argument("--data", required=True)
     history.add_argument("--limit", type=int, default=100)
     history.add_argument("--output", default=None)
+
+    broadcast = sub.add_parser("governance-v22-broadcast")
+    broadcast.add_argument("--request", required=True)
+    broadcast.add_argument("--rpc", required=True)
+    broadcast.add_argument("--wait-for-preheight", action="store_true")
+    broadcast.add_argument("--wait-timeout-seconds", type=float, default=60.0)
+    broadcast.add_argument("--poll-seconds", type=float, default=0.5)
+    broadcast.add_argument("--output", default=None)
 
     plan = sub.add_parser("campaign-v22-plan-build")
     plan.add_argument("--genesis", required=True)
@@ -118,6 +128,19 @@ def _run(argv: list[str]) -> int:
         print(json.dumps(result, indent=2))
         return 0
 
+    if args.command == "governance-v22-broadcast":
+        result = guarded_broadcast_governance(
+            load_governance_request(args.request),
+            rpc_url=args.rpc,
+            wait_for_preheight=bool(args.wait_for_preheight),
+            wait_timeout_seconds=args.wait_timeout_seconds,
+            poll_seconds=args.poll_seconds,
+        )
+        if args.output:
+            _write_json(result, args.output)
+        print(json.dumps(result, indent=2))
+        return 0
+
     if args.command == "campaign-v22-plan-build":
         plan = build_campaign_plan(
             genesis_path=args.genesis,
@@ -184,6 +207,7 @@ def main() -> int:
         "governed-lab-create",
         "cluster-v22-check",
         "governance-history-v22",
+        "governance-v22-broadcast",
         "campaign-v22-plan-build",
         "campaign-v22-evidence-build",
         "campaign-v22-evidence-verify",
