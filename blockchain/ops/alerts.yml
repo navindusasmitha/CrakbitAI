@@ -1,0 +1,55 @@
+groups:
+  - name: crakbit-devnet
+    rules:
+      - alert: CrakbitValidatorScrapeDown
+        expr: up{job="crakbit-validators"} == 0
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Crakbit validator metrics target is down"
+          description: "Prometheus has been unable to scrape {{ $labels.instance }} for 30 seconds."
+
+      - alert: CrakbitValidatorViewLoss
+        expr: crakbit_healthy_validator_views < 3
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Validator healthy-view count below local quorum"
+          description: "{{ $labels.instance }} currently sees fewer than 3 healthy validator views."
+
+      - alert: CrakbitValidatorAuthenticationLoss
+        expr: crakbit_authenticated_validator_views < 3
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Authenticated validator-view count below local quorum"
+          description: "{{ $labels.instance }} currently has fewer than 3 authenticated validator views."
+
+      - alert: CrakbitConsensusRoundHigh
+        expr: crakbit_consensus_round >= 3
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Crakbit consensus is repeatedly changing rounds"
+          description: "{{ $labels.instance }} has remained at consensus round 3 or higher for one minute."
+
+      - alert: CrakbitMempoolPressure
+        expr: crakbit_mempool_transactions >= 4000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Crakbit development mempool is under sustained pressure"
+          description: "{{ $labels.instance }} has at least 4000 pending transactions for two minutes."
+
+      - alert: CrakbitEquivocationEvidenceObserved
+        expr: increase(crakbit_equivocation_evidence_total[5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "New Crakbit equivocation evidence observed"
+          description: "{{ $labels.instance }} recorded new conflicting-proposal evidence in the last five minutes."
