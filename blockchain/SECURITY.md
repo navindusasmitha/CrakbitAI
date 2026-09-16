@@ -1,4 +1,4 @@
-# Crakbit Chain Security Notes — v0.20 Alpha
+# Crakbit Chain Security Notes — v0.21 Alpha
 
 Crakbit Chain is currently **research/public-testnet/review-candidate infrastructure**, not an audited production mainnet. It must not be used to custody real value.
 
@@ -6,128 +6,104 @@ Production CRKBIT has not launched. There is no official presale or production t
 
 ## Trust-domain separation
 
-The repository separates browser-wallet, public-gateway, CometBFT consensus, ABCI bridge, external execution, explorer, release/review/migration signing, faucet and Mining Lab roles. Keys must not be reused across these roles.
+The repository separates browser-wallet, public-gateway, CometBFT consensus, ABCI bridge, external execution, validator-governance state, explorer, release/review signing, faucet and Mining Lab roles. Keys must not be casually reused across these roles.
 
 ```text
-browser wallet
-    │ signed transaction only
-    ▼
-public gateway / controlled edge
-    │
-    ▼
+browser wallet / governance tx
+        │ signed input
+        ▼
+public gateway / controlled RPC
+        │
+        ▼
 CometBFT v0.40.0
-    │ ABCI
-    ▼
-Go bridge
-    │ authenticated private HTTP
-    ▼
-crakbit-execution/2
-    │
-    ├→ application DB
-    ├→ native ABCI state sync
-    ├→ explorer/review/release evidence
-    └→ offline schema/lifecycle rehearsal tooling
+        │ ABCI
+        ▼
+Go bridge 0.21
+        │ authenticated private HTTP
+        ▼
+crakbit-execution/3
+        │
+        ├→ account state
+        ├→ active/pending validator-governance state
+        ├→ governance-aware native ABCI state sync
+        └→ explorer/review/release evidence tooling
 ```
 
 The older Python prevote/precommit chain remains research-only and is not the intended production BFT path.
 
-## CometBFT state sync
+## Validator governance — v0.21
 
-The external application supports `ListSnapshots`, `OfferSnapshot`, `LoadSnapshotChunk` and `ApplySnapshotChunk`. Snapshot acceptance is bound to the application hash supplied through the CometBFT state-sync trust path. Chunk hashes, full artifact hash, chain/genesis identity, fixed supply and deterministic application hash are rechecked before restore. Restore remains restricted to pristine application state.
+v0.21 introduces a replicated testnet validator-governance transaction for `join`, `remove` and `replace` operations. A request commits to chain/genesis identity, source and target validator-set hashes, update contents, ABCI emission height and modeled effective height.
 
-Code-level lifecycle support does not prove production recovery. Clean-host independent-validator recovery, malicious-peer behavior, interrupted transfer, storage faults and large-snapshot behavior still require operational evidence and review.
+Approvals are verified against the **currently committed source validator set** and require voting power strictly greater than two-thirds. Duplicate approvals, unknown validators, public-key/address mismatches, stale source-set hashes and invalid signatures are rejected.
 
-## v0.20 schema migration safety
+For the default four-validator equal-power lab, quorum is 3 of 4 validators.
 
-v0.20 introduces explicit external-application schema version `20`. Legacy `crakbit-execution/2` databases without an explicit schema-version marker are treated as the v0.19 baseline.
+### Key handling
 
-The migration path is deliberately **offline-copy-first**:
+Each validator operator should inspect the same public governance request and sign it locally. Do not centralize validator private keys merely to reach quorum. A future production candidate requires stronger separation between consensus signing, governance authorization, operator access and recovery authority, preferably using reviewed remote-signer/HSM-equivalent controls.
 
-- the source database is not mutated by `migration-copy` or `upgrade-rehearse`,
-- SQLite backup API is used to create the candidate copy,
-- source logical fingerprints are checked before and after the backup,
-- the v19 → v20 migration runs on the copy only,
-- existing application-state tables must keep the same logical fingerprint,
-- rollback is rehearsed on a second disposable copy,
-- rollback must recover the original logical fingerprint.
+## Application-hash binding
 
-The v0.20 migration currently adds migration/lifecycle metadata tables and the explicit schema-version marker; it does not rewrite balances, nonces, transactions, consensus block hashes or external commit rows.
+`crakbit-execution/3` includes active and pending validator governance state in the deterministic application hash. This is required so validators cannot honestly report an identical application hash while disagreeing about the validator-set transition state.
 
-A successful rehearsal does **not** mean an online rolling upgrade is safe. Operators still need backups, maintenance windows, version coordination, state-sync recovery and independent testing across the actual deployment topology.
+ABCI validator updates are returned from `FinalizeBlock` only after the governance transaction has been validated against replicated committed state. v0.21 models an update returned at height `H` becoming effective at `H+2` and separately activates the application-side validator state at that modeled effective height.
 
-## v0.20 validator lifecycle boundary
+This height behavior and cross-node convergence still require independent multi-host testing and review before production use.
 
-v0.20 can build and verify signed `join`, `remove` and `replace` validator lifecycle **drill plans**. These plans model CometBFT public-key/power updates and record the FinalizeBlock emission height and expected effective height.
+## Crash/replay behavior
 
-They deliberately do **not** alter live consensus. The plan records `live_abci_validator_updates_emitted=false` and `consensus_change_applied=false`.
+The governed execution path preserves the staged FinalizeBlock → atomic Commit boundary. Governance state, transfers, transaction records and application metadata are committed in one SQLite transaction.
 
-This boundary is important: validator updates must be derived from deterministic replicated application state. Loading an operator-local plan on only one node could cause different ABCI `FinalizeBlock` responses across validators and create a consensus-safety risk. A future phase must define a reviewed replicated authorization/activation mechanism, include lifecycle state in the application hash and prove replay/restart behavior before live validator updates are enabled.
+An identical FinalizeBlock replay at an already committed height can return the recorded validator update. A conflicting replay is rejected. Restart/fault behavior at `H`, `H+1` and `H+2` activation boundaries still needs multi-node campaign evidence.
 
-Lifecycle signing keys are evidence/authorization-research keys and must not be reused as CometBFT private-validator keys.
+## Schema migration
 
-## Compatibility checks
+Schema `21` adds validator-governance tables. Existing non-pristine schema-19/20 external-application databases are not silently upgraded by the v0.21 service. Use the offline-copy migration and verify rollback before considering an operator-controlled testnet upgrade.
 
-The v0.20 compatibility matrix currently declares:
+Migration success does not prove that a rolling multi-node upgrade is safe.
 
-- package `0.20.0a1`,
-- execution protocol `crakbit-execution/2`,
-- supported external application schemas `19` and `20`,
-- recommended schema `20`,
-- CometBFT candidate `v0.40.0`,
-- live validator updates disabled,
-- production-mainnet readiness false.
+## Governance-aware CometBFT state sync
 
-Compatibility metadata is a deployment guardrail, not a substitute for multi-node upgrade testing or independent consensus/application review.
+v0.21 state-sync snapshots include account state, active validator set, pending validator change, governance hash and the combined application hash. Snapshot acceptance remains bound to the application hash supplied by the CometBFT trust path, with chunk and full-artifact verification and pristine-state restore requirements.
+
+State sync restores the deterministic current governance state needed for future execution; it does not fabricate historical governance events. Live independent-host recovery with a pending validator change remains an external test requirement.
 
 ## Browser wallet
 
 Wallet key generation/signing is local to the browser and the local vault uses PBKDF2-SHA256-derived key material with AES-GCM. The gateway should receive signed transactions, not private keys.
 
-The wallet remains an alpha web wallet, not an audited hardware-wallet replacement. Important risks still include compromised same-origin JavaScript, malicious browser extensions, compromised endpoints, phishing/fake origins, vault-password guessing, clipboard substitution and compromised read data.
+The wallet remains an alpha web wallet, not an audited hardware-wallet replacement. Important risks include compromised same-origin JavaScript, malicious browser extensions, compromised endpoints, phishing/fake origins, vault-password guessing and clipboard substitution.
 
 See [`docs/WALLET_THREAT_MODEL.md`](docs/WALLET_THREAT_MODEL.md).
 
 ## Public gateway / edge
 
-The hardened gateway uses same-origin defaults, restrictive CSP/security headers and restart-persistent local rate limits. The public-testnet NGINX profile provides a single-edge TLS/rate-limit scaffold.
-
-These controls are not a complete distributed WAF/DDoS system. Production design still requires reviewed proxy trust, certificate automation, redundant edges, shared abuse controls and capacity testing. Execution-service, ABCI, remote-signer and validator-operator surfaces should remain private/authorized.
+The hardened gateway uses same-origin defaults, restrictive CSP/security headers and restart-persistent local rate limits. These controls are not a complete distributed WAF/DDoS system. Execution-service, ABCI, signer and validator-operator surfaces should remain private/authorized.
 
 ## Validator key security
 
-Disposable lab validator keys must never be promoted to a production network. A production candidate requires a remote signer, HSM or equivalent protected signing design with anti-double-sign protection, backup/recovery procedures and tested operator drills.
-
-The current remote-signer helper only configures CometBFT's signer address. It does not implement or audit an HSM.
+Disposable lab validator keys must never be promoted to a production network. A production candidate requires protected signing, anti-double-sign controls, backup/recovery procedures, operator separation and tested incident drills.
 
 See [`docs/VALIDATOR_REMOTE_SIGNER.md`](docs/VALIDATOR_REMOTE_SIGNER.md).
 
-## Review / reproducible-release controls
+## Release/review evidence
 
-The v0.19+ review-finding gate blocks unresolved high/critical findings and requires regression-test references for remediated high/critical findings. CI also performs byte-for-byte reproducibility checks for supplied Python/Go artifacts and generates a direct-dependency CycloneDX SBOM.
-
-These are useful engineering controls, but they are not independent security review, independent reproducible-build evidence or a complete transitive supply-chain audit.
-
-Signed release, review, migration and operations manifests authenticate the exact metadata/artifact hashes they contain. A signature does not turn operator-reported evidence into independent evidence and does not make the chain production-ready.
+v0.19+ remediation matrices, reproducible-build comparisons, direct-dependency SBOMs, signed release provenance and operations evidence remain useful review artifacts. They do not replace independent security review or complete transitive supply-chain verification.
 
 ## Faucet and Mining Lab
 
 Faucet and Mining Lab services require dedicated non-validator keys. The Mining Lab is **not consensus mining**: it verifies a test browser work challenge and pays from an already funded reward wallet. It must not mint new supply, produce CometBFT blocks, alter voting power or be marketed as guaranteed earnings.
 
-## Explorer and SQLite state
-
-The explorer remains separate from execution state and v0.18+ reconciliation can compare a deployed index with a clean rebuild. SQLite is still used across research/application/index/service state.
-
-Production review must cover fsync/durability expectations, disk-full behavior, corruption, backup consistency, abrupt power loss, filesystem semantics, growth/retention limits, schema migrations and rollback behavior.
-
 ## Secrets
 
-Never commit or share seed phrases, wallet private keys, CometBFT private-validator keys, signer/HSM credentials, TLS private keys, faucet/mining reward keys, release/review/evidence/migration/lifecycle signing keys, execution-service bearer tokens or API secrets.
+Never commit or share seed phrases, wallet private keys, CometBFT private-validator keys, governance signing keys, signer/HSM credentials, TLS private keys, faucet/mining reward keys, release/review/evidence signing keys, execution-service bearer tokens or API secrets.
 
 Do not send these through support chats or issue trackers.
 
 ## Required before production mainnet
 
-Major open gates still include sustained independent-host validator operation, live clean-host state-sync evidence, real fault/partition/load campaigns, production WAF/DDoS/capacity engineering, deployed remote-signer/HSM custody, multi-operator genesis ceremony, complete transitive supply-chain review, deterministic reviewed live validator-set updates, independent consensus/application/network/cryptography/browser-wallet reviews, incident-response drills, finalized economics/incentives and applicable legal review.
+Major open gates include multi-host validator lifecycle campaigns, activation-boundary restart/partition/state-sync testing, sustained independent-host validator operation, real fault/load campaigns, protected remote/HSM signing and governance-key separation, multi-operator genesis ceremony, complete transitive supply-chain review, independent consensus/application/governance/network/cryptography/browser-wallet review, incident-response drills, production DDoS/capacity engineering, finalized economics/incentives and applicable legal review.
 
 The canonical gate list is [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md).
 
