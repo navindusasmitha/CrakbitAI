@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
+from pathlib import Path
 
 import uvicorn
 
@@ -12,6 +13,7 @@ def main() -> int:
     parser.add_argument("--key", required=True, help="Dedicated non-validator reward wallet key")
     parser.add_argument("--gateway", default="http://127.0.0.1:9600")
     parser.add_argument("--state", default="runtime/mining-state.sqlite3")
+    parser.add_argument("--rate-limit-db", default="", help="Durable request-rate database; defaults beside mining state")
     parser.add_argument("--reward", default="1", help="Test CRKBIT reward per valid solution")
     parser.add_argument("--difficulty-bits", type=int, default=18)
     parser.add_argument("--ttl", type=int, default=300)
@@ -33,8 +35,11 @@ def main() -> int:
     os.environ["CRAKBIT_MINING_ADDRESS_COOLDOWN"] = str(args.cooldown)
     os.environ["CRAKBIT_MINING_MAX_DAILY"] = str(args.max_daily)
     os.environ["CRAKBIT_MINING_CHALLENGE_RPM"] = str(args.challenge_rpm)
+    os.environ["CRAKBIT_RATE_LIMIT_DB"] = args.rate_limit_db or str(
+        Path(args.state).with_name("public-rate-limits.sqlite3")
+    )
 
-    from crakbit_chain.pow_mining import create_app
+    from crakbit_chain.pow_mining_v16 import create_app
 
     uvicorn.run(create_app(), host=args.host, port=args.port, reload=False)
     return 0
