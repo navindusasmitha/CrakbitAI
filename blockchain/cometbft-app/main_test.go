@@ -15,6 +15,7 @@ import (
 func mockExecutionServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	zeroHash := hex.EncodeToString(make([]byte, 32))
+	validatorKey := base64.StdEncoding.EncodeToString(make([]byte, 32))
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer test-token-12345678901234567890" {
 			http.Error(w, `{"detail":"unauthorized"}`, http.StatusUnauthorized)
@@ -22,29 +23,32 @@ func mockExecutionServer(t *testing.T) *httptest.Server {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
-		case "/v2/info":
+		case "/v4/info":
 			_ = json.NewEncoder(w).Encode(map[string]any{
-				"protocol":         "crakbit-execution/2",
+				"protocol":         "crakbit-execution/3",
 				"chain_id":         "crakbit-test",
 				"height":           0,
 				"application_hash": zeroHash,
 			})
-		case "/v2/check-tx":
+		case "/v4/check-tx":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"accepted": true,
 				"txid":     "abc",
 			})
-		case "/v2/finalize":
+		case "/v4/finalize":
 			_ = json.NewEncoder(w).Encode(map[string]any{
-				"protocol":              "crakbit-execution/2",
+				"protocol":              "crakbit-execution/3",
 				"height":                1,
 				"next_application_hash": zeroHash,
 				"request_hash":          zeroHash,
 				"transaction_count":     1,
+				"validator_updates": []map[string]any{
+					{"public_key": validatorKey, "power": 1},
+				},
 			})
-		case "/v2/commit":
+		case "/v4/commit":
 			_ = json.NewEncoder(w).Encode(map[string]any{
-				"protocol":         "crakbit-execution/2",
+				"protocol":         "crakbit-execution/3",
 				"height":           1,
 				"application_hash": zeroHash,
 				"committed":        true,
@@ -89,15 +93,11 @@ func TestInfoCheckFinalizeAndCommit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.LastBlockHeight != 0 || len(info.LastBlockAppHash) != 32 {
+	if info.LastBlockHeight != 0 || len(info.LastBlockAppHash) != 32 || info.AppVersion != 3 {
 		t.Fatalf("unexpected info response: %#v", info)
 	}
 
-	tx := []byte(`{"chain_id":"crakbit-test"}`)
-	// Raw string above contains backslashes, so use a real JSON transaction below.
-	tx = []byte(`{"noop":true}`)
-	// Replace the escaped fixture with valid JSON bytes for bridge framing tests.
-	tx = []byte("{\"chain_id\":\"crakbit-test\"}")
+	tx := []byte("{\"chain_id\":\"crakbit-test\"}")
 	check, err := app.CheckTx(ctx, &abci.RequestCheckTx{Tx: tx})
 	if err != nil {
 		t.Fatal(err)
@@ -118,6 +118,9 @@ func TestInfoCheckFinalizeAndCommit(t *testing.T) {
 	}
 	if len(finalized.AppHash) != 32 || len(finalized.TxResults) != 1 {
 		t.Fatalf("unexpected finalize response: %#v", finalized)
+	}
+	if len(finalized.ValidatorUpdates) != 1 || finalized.ValidatorUpdates[0].Power != 1 {
+		t.Fatalf("expected one validator update: %#v", finalized.ValidatorUpdates)
 	}
 
 	if _, err := app.Commit(ctx, &abci.RequestCommit{}); err != nil {
