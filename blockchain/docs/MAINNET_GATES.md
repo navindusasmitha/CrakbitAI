@@ -2,14 +2,14 @@
 
 This document defines conditions that must be satisfied before Crakbit Chain can responsibly be described as a production mainnet.
 
-**Current status: gates are not satisfied.** The active research direction is the native PoW path introduced in v0.31 and networked in v0.32. Production CRKBIT has not launched.
+**Current status: gates are not satisfied.** The active research direction is the native PoW path introduced in v0.31, networked in v0.32 and mining-hardened in v0.33. Production CRKBIT has not launched.
 
 The earlier CometBFT/BFT validator stack remains legacy/research infrastructure and does not satisfy PoW-specific launch gates by itself.
 
 ## 1. Native PoW consensus and chain selection
 
 - [ ] Freeze the production PoW algorithm after benchmarking and independent review.
-- [ ] Define deterministic seed/key scheduling for the final algorithm if required.
+- [x] Define a deterministic RandomX **candidate** key schedule for evaluation; final algorithm/schedule is not frozen.
 - [ ] Validate final PoW target rules against independent implementations/test vectors.
 - [x] Implement P2P block/header/transaction propagation path.
 - [x] Implement competing-fork storage and highest-cumulative-work fork choice.
@@ -20,7 +20,7 @@ The earlier CometBFT/BFT validator stack remains legacy/research infrastructure 
 - [ ] Add an efficient reviewed UTXO undo/reorg journal for long histories.
 - [ ] Verify difficulty retarget behavior under adversarial timestamp/hash-rate changes.
 - [ ] Test long/deep reorg boundaries, invalid work and malicious fork inputs.
-- [ ] Publish deterministic consensus test vectors.
+- [ ] Publish deterministic **final-consensus** test vectors.
 
 ## 2. UTXO / transaction / monetary correctness
 
@@ -37,14 +37,18 @@ The earlier CometBFT/BFT validator stack remains legacy/research infrastructure 
 
 ## 3. Mining algorithm and miner interoperability
 
-- [ ] Benchmark the final algorithm across representative CPUs and GPUs.
+- [x] Integrate a real optional native RandomX candidate through the pinned upstream C API.
+- [x] Add upstream RandomX API-example self-test and deterministic candidate blob/key-schedule vectors.
+- [x] Add a multi-thread reference CPU miner for the active scrypt devnet path.
+- [x] Add XMRig `rx/0` candidate job construction and native submit-hash verification.
+- [ ] Benchmark scrypt vs RandomX across representative CPUs and GPUs.
 - [ ] Evaluate ASIC/FPGA risk and state intended hardware-neutrality goals accurately.
 - [ ] Review PoW validation cost for CPU/memory denial-of-service exposure.
-- [ ] Build/verify a native optimized reference miner.
-- [ ] Implement standard mining interoperability for the final algorithm (e.g. Stratum where appropriate).
-- [ ] Verify third-party miner interoperability if supported.
-- [ ] Publish block-header/job-format test vectors.
-- [ ] Test stale work, duplicate shares and malformed mining submissions.
+- [ ] Freeze and independently review the final mining algorithm/hash-blob/target semantics.
+- [ ] Implement standard mining interoperability for the **final selected** algorithm.
+- [ ] Prove end-to-end stock third-party miner interoperability before advertising it.
+- [ ] Publish final block-header/job-format test vectors.
+- [ ] Test malformed mining submissions and algorithm downgrade/version mismatch behavior.
 - [ ] Ensure pool/miner protocol never exposes wallet/private keys.
 
 ## 4. P2P network security
@@ -66,14 +70,15 @@ The earlier CometBFT/BFT validator stack remains legacy/research infrastructure 
 
 - [x] First-party native pool prototype with separate share/network targets.
 - [x] Test PPLNS accounting.
-- [ ] Freeze/document a production pool protocol.
-- [ ] Add TLS/authentication/rate limits where exposed publicly.
-- [ ] Implement variable difficulty or a reviewed share-difficulty design.
-- [ ] Prevent duplicate/replayed/stale-share credit.
-- [ ] Independently review pool accounting.
+- [x] Add code-level per-worker variable difficulty in `crakbit-pool/2`.
+- [x] Reject stale, duplicate and replayed shares in the v0.33 pool path.
+- [x] Add code-level TLS 1.2+, optional token auth and per-connection message-rate limits.
+- [ ] Freeze/document a production pool protocol after final algorithm selection.
+- [ ] Independently review vardiff/share target arithmetic and pool accounting.
+- [ ] Place public pool endpoints behind production DDoS/reverse-proxy/monitoring controls.
 - [ ] Implement coinbase-maturity-aware payout construction.
 - [ ] Separate pool hot wallet, cold funds and operator/admin keys.
-- [ ] Add withdrawal/payout limits and reconciliation.
+- [ ] Add withdrawal/payout limits, holds and reconciliation.
 - [ ] Test pool outage without affecting consensus.
 - [ ] Preserve solo mining and third-party pool support.
 
@@ -160,7 +165,7 @@ Before a production-mainnet claim, publish at minimum:
 
 1. exact source tag and reproducible release hashes,
 2. final genesis + chain/PoW/economic parameters,
-3. final PoW algorithm specification and test vectors,
+3. final PoW algorithm specification and independent test vectors,
 4. P2P/fork-choice/reorg test evidence,
 5. independent multi-node soak/partition/reorg/load evidence,
 6. wallet/node/pool security-review reports or public summaries,
