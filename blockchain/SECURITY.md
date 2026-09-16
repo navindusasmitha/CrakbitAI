@@ -1,176 +1,203 @@
-# Crakbit Chain Security Notes — v0.15 Alpha
+# Crakbit Chain Security Notes — v0.16 Alpha
 
-Crakbit Chain is currently **research/public-testnet infrastructure**, not an audited production mainnet. It must not be used to custody real value.
+Crakbit Chain is currently **research/public-testnet/mainnet-candidate infrastructure**, not an audited production mainnet. It must not be used to custody real value.
 
 Production CRKBIT has not launched. There is no official presale or production token contract.
 
-## Current security architecture
+## Trust-domain separation
 
-The repository deliberately separates several trust domains:
+The repository deliberately separates security roles:
 
 ```text
 browser wallet
-    ↓ signed transaction only
+    │ signed transaction only
+    ▼
 public gateway
     ├→ research RPC, or
     ├→ CometBFT JSON-RPC
-    └→ authenticated read-only execution API
+    └→ private authenticated execution/index services
 
 CometBFT
-    ↓ ABCI
-Go bridge
-    ↓ authenticated private HTTP
+    │ ABCI
+    ▼
+Go application bridge
+    │ authenticated private HTTP
+    ▼
 crakbit-execution/2
-    ↓ crash-safe staged finalize / atomic commit
-SQLite application state
+    │
+    ├→ external application DB
+    ├→ deterministic checkpoint adapter
+    └→ read-only explorer index source
 ```
 
-The older Python prevote/precommit consensus remains for research compatibility and is **not** the intended production consensus path.
+Keys for CometBFT consensus, P2P identity, Crakbit wallets, research validators, TLS, release signing, faucet and Mining Lab rewards must not be reused across roles.
 
-## Key-role separation
+## Consensus
 
-Do not reuse keys across security roles. Keep separate:
+The old Python prevote/precommit implementation remains research-only. It is not the intended production consensus path.
 
-1. CometBFT validator/node keys,
-2. Crakbit research-validator keys,
-3. user wallet keys,
-4. TLS keys,
-5. release-signing keys,
-6. faucet keys,
-7. mining-reward keys.
+The external consensus integration candidate is CometBFT `v0.40.0`. The repository contains a Go ABCI bridge and a crash-safe `crakbit-execution/2` application boundary.
 
-Never commit private keys, wallet seeds, bearer tokens or production secrets to GitHub.
+`FinalizeBlock`-style state is staged first and committed account/state changes are applied atomically in SQLite. Pending finalization survives an application restart. Identical finalized-height replay can be handled idempotently while conflicting replay is rejected.
 
-## Browser wallet security
+This integration is still an alpha. Sustained multi-host external-consensus testing and independent review remain required.
 
-v0.15 adds a browser wallet using WebCrypto Ed25519. The browser derives `crk1...` addresses from the raw public key, signs canonical Crakbit transactions locally and sends only signed transactions to the gateway.
+## External application checkpoints
 
-The local vault uses:
+v0.16 adds deterministic checkpoint export/verify/import for the external application state.
 
-- PBKDF2-SHA256,
-- 250,000 iterations,
-- random 16-byte salt,
-- AES-GCM-256,
-- random 12-byte IV.
+A checkpoint commits to:
 
-This reduces exposure from plain-text local storage, but it does **not** protect against a compromised browser origin, malicious extension, active XSS, hostile injected JavaScript, unlocked-device access or credential phishing.
+- chain ID,
+- genesis fingerprint,
+- consensus height,
+- last consensus block hash,
+- deterministic application hash,
+- sorted account balances/nonces,
+- account-state root,
+- fixed issued-supply total,
+- complete artifact hash.
 
-Before production use, the wallet still needs:
+Restore can require a separately trusted expected consensus height/application hash. Import is restricted to a pristine external application database.
 
-- independent cryptographic and Web security review,
-- a formal browser-wallet threat model,
-- strict CSP and reviewed production headers,
-- dependency/integrity controls,
-- anti-phishing/network identity UX,
-- transaction confirmation review,
-- hardware-wallet/external-signer strategy for high-value use,
-- tested cross-client backup/recovery procedures.
+A restored application records an explicit snapshot base and does **not** invent historical commits before that base.
 
-The v0.15 browser wallet must not be marketed as hardware-wallet-grade custody.
+### State-sync limitation
 
-## Public gateway security
+This checkpoint mechanism is not yet fully wired to CometBFT's native snapshot/state-sync lifecycle. It should be treated as application recovery infrastructure until multi-node offer/apply/recovery behavior is implemented and reviewed.
 
-The public gateway is intended to be the browser-facing boundary. It validates transaction structure, chain ID and Ed25519 signatures before forwarding a signed transaction.
+## Browser wallet
 
-In CometBFT mode, the browser never receives the execution-service bearer token. The gateway talks privately to the authenticated execution-service API and broadcasts transaction bytes through CometBFT JSON-RPC.
+The browser wallet performs key generation/signing locally and encrypts its local vault with PBKDF2-SHA256-derived key material and AES-GCM.
 
-For a real Internet deployment, the gateway still requires:
+The public gateway is not intended to receive private wallet keys.
 
-- production TLS,
-- reverse proxy/load balancer,
-- upstream connection/request limits,
-- WAF/DDoS strategy,
-- trusted-proxy/IP handling,
-- horizontal/persistent rate-limit storage,
-- strict CORS/origin policy rather than development-wide origins,
-- audit logging without secret leakage,
-- secret manager integration,
-- independent API/Web penetration testing.
+v0.16 adds a restrictive gateway CSP/security-header profile and changes the default from wildcard CORS to same-origin access. These controls reduce some web attack surface but do not make the wallet an audited custody product.
 
-## Execution service / ABCI boundary
+Critical remaining threats include:
 
-`crakbit-execution/2` uses a dedicated application database and refuses to attach to research-consensus history. Finalize requests are persisted before committed state is changed. Commit revalidates and applies the staged transition inside one SQLite transaction.
+- compromised same-origin JavaScript,
+- malicious extensions,
+- compromised endpoint/browser,
+- vault password guessing after encrypted-storage theft,
+- phishing/fake origins,
+- clipboard/address substitution,
+- compromised gateway read data.
 
-The design supports replay/idempotency testing, but it is still a PoC. Keep the execution service and ABCI socket on loopback or explicitly authorized private networking.
+See [`docs/WALLET_THREAT_MODEL.md`](docs/WALLET_THREAT_MODEL.md).
 
-Outstanding work includes:
+## Public gateway / RPC
 
-- complete app-ahead/consensus-ahead crash matrix,
-- sustained multi-process restart testing,
-- external-consensus state sync,
-- validator-set lifecycle rules,
-- independent consensus/application review.
+v0.16 defaults include:
 
-## Research validator transport
+- same-origin browser access unless origins are explicitly allow-listed,
+- Content-Security-Policy,
+- frame denial,
+- `nosniff`,
+- no-referrer policy,
+- restrictive permissions policy,
+- same-origin opener/resource policy,
+- durable SQLite write-path rate limiting,
+- no automatic trust of client-controlled forwarding headers.
 
-Earlier phases added signed internal validator requests, durable replay nonces, mTLS deployment support, certificate pinning and rotation overlap. Those controls remain useful for the research path, but the Python consensus remains research-only.
+SQLite rate-limit state survives process restart but is not a distributed rate-limit database. Multiple public gateway instances still require a shared upstream API gateway/load balancer/rate-limit layer and an explicit trusted-proxy design.
 
-## Snapshots, archives and backups
+Execution service and ABCI sockets should remain loopback/private. Do not expose the execution-service bearer token to the browser.
 
-The repository includes quorum-certified snapshot experiments, chunked verified transfer, import journaling, genesis-anchored history verification, integrity checks and verified backups.
+## Faucet and Mining Lab
 
-These tools improve recovery, but the external CometBFT path still needs reviewed state-sync integration and multi-host recovery evidence before production use.
+Faucet distribution history/cooldowns and Mining Lab challenges/claims are persistent. v0.16 also persists request-rate state.
 
-## Persistent test faucet
+Both services require dedicated non-validator keys.
 
-v0.15 stores successful faucet distributions in SQLite so per-address cooldown survives process restart. Faucet transactions use a dedicated funded non-validator wallet.
+The Mining Lab is **not consensus mining**. It verifies a test browser proof-of-work challenge and pays from an already funded reward wallet via an ordinary signed transaction. It must not:
 
-The faucet remains **test-only**. Process-local global RPM is not sufficient for Internet-scale abuse prevention. A public testnet deployment still needs upstream distributed rate limiting, bot/abuse controls and monitored funding limits.
+- mint supply,
+- select validators,
+- alter CometBFT voting power,
+- claim to mine consensus blocks,
+- be marketed as guaranteed earnings.
 
-Never use a validator consensus key as the faucet key.
+## Dedicated explorer index
 
-## Mining Lab security
+v0.16 adds a read-optimized explorer database separate from the external execution database. The index verifies source genesis identity and execution ownership before copying commits, transactions and account state.
 
-The Mining Lab is a visible, opt-in Hashcash-style work-reward experiment. It is **not block mining and is not part of consensus**.
+It improves read isolation but is still an alpha index. Production use requires reconciliation/rebuild procedures, archive-retention decisions, clean-host rebuild tests and monitoring for index lag/divergence.
 
-A browser receives a random challenge and searches for a SHA-256 digest under a configured target. The server verifies the solution. A dedicated non-validator reward wallet then submits an ordinary test CRKBIT transfer.
+## Durable state and SQLite
 
-The service persists challenge, solution and reward metadata in SQLite and enforces per-address cooldown/daily limits. It still requires upstream abuse controls before public Internet exposure.
+SQLite is currently used for research/application/index/service state. Existing protections include WAL mode and explicit transactions for critical state transitions.
 
-Important properties:
+Production review must still cover:
 
-- mining does not mint new supply,
-- mining does not choose or finalize blocks,
-- reward funds must already exist in the dedicated reward wallet,
-- reward key must never be a validator key,
-- work is opt-in and visible in the UI,
-- closing/stopping the worker stops browser hashing.
+- storage durability/fsync expectations,
+- disk-full behavior,
+- database corruption,
+- backup consistency,
+- abrupt power loss,
+- filesystem semantics on actual deployment hosts,
+- growth/retention limits,
+- migration/versioning.
 
-Changing Crakbit to proof-of-work consensus would be a separate protocol redesign and security model.
+## Validator key security
 
-## DoS and resource limits
+The generated local CometBFT lab stores disposable private-validator keys in local runtime directories. Those keys are not suitable for reuse.
 
-Earlier phases added request body, transaction, mempool and block bounds plus development metrics. These are node-level controls, not a replacement for production edge/network protection.
+A production candidate should use a remote signer, HSM or equivalent protected signing design and tested anti-double-sign/recovery procedures. Documentation alone does not satisfy this gate.
 
-Before public production use, test:
+See [`docs/VALIDATOR_REMOTE_SIGNER.md`](docs/VALIDATOR_REMOTE_SIGNER.md).
 
-- concurrent connection exhaustion,
-- expensive query patterns,
-- broadcast floods,
-- state growth,
-- snapshot/archive bandwidth,
-- CometBFT P2P/RPC pressure,
-- wallet/faucet/mining gateway abuse.
+## Replay / crash testing
 
-## Release and genesis integrity
+v0.16 contains an isolated application crash/replay matrix covering:
 
-The repository includes signed release manifests and strict >2/3 application-genesis ceremony attestations.
+- persisted FinalizeBlock staging,
+- restart before Commit,
+- Commit after restart,
+- restart after Commit,
+- identical replay,
+- conflicting replay,
+- checkpoint restore,
+- next-height commit after restore.
 
-A production launch must still use reproducible builds, independently held operator keys, verified final artifacts, documented ceremony procedures, rollback/upgrade plans and protected release-signing custody.
+This is useful deterministic application evidence but is not equivalent to real process kills, filesystem faults and CometBFT/network failures on independent hosts.
 
-## Required before a production mainnet claim
+## Multi-host monitoring
 
-The authoritative checklist is [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md). Major outstanding gates include:
+The testnet inventory checker can detect RPC reachability, catch-up state and validator-height divergence. Operator-only endpoints should stay private/authorized; do not expose sensitive interfaces merely to make monitoring easier.
 
-- long-lived independent-host CometBFT testnet,
-- external state-sync completion,
-- sustained fault/restart/partition/load evidence,
+## Secrets
+
+Never commit or share:
+
+- seed phrases,
+- wallet private keys,
+- CometBFT private-validator keys,
+- signer/HSM credentials,
+- TLS private keys,
+- faucet/mining reward keys,
+- release-signing private keys,
+- execution-service bearer tokens,
+- API secrets.
+
+Do not send any of these through support chats or issue trackers.
+
+## Required before production mainnet
+
+Major open gates include:
+
+- complete reviewed CometBFT state-sync integration,
+- sustained independent-host testnet operation,
+- reproducible partition/latency/packet-loss/restart/load evidence,
+- production reverse-proxy/WAF/DDoS architecture,
+- horizontally shared abuse controls,
 - remote-signer/HSM-equivalent validator custody,
-- production gateway/TLS/WAF/DDoS/secrets design,
-- indexed explorer and recovery plan,
-- independent wallet review,
-- independent consensus/application/network review,
+- explorer reconciliation/archive procedures,
+- reproducible signed releases and final genesis ceremony,
+- independent consensus/application/network/cryptography/wallet reviews,
 - incident-response drills,
-- final economic and legal/regulatory review.
+- finalized economics/incentives and applicable legal review.
 
-Security findings should be reported through the repository-level [`SECURITY.md`](../SECURITY.md) process.
+The canonical gate list is [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md).
+
+Until those gates are satisfied, the repository should use **research devnet**, **public testnet**, or **mainnet-candidate infrastructure**, not production mainnet.
