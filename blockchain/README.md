@@ -1,8 +1,8 @@
 # Crakbit Chain — Development Network Prototype
 
-**Status: early devnet / research prototype (`0.5.0-alpha`)**
+**Status: early devnet / research prototype (`0.6.0-alpha`)**
 
-Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosystem. The current devnet implements native test-only **CRKBIT** accounting, signed transactions, certified view changes, a two-phase **prevote → precommit** finality pipeline, durable local consensus locks, persistent consensus event history, validator telemetry, peer synchronization, RPC/CLI tooling and a development explorer.
+Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosystem. The current devnet implements native test-only **CRKBIT** accounting, signed transactions, certified view changes, a two-phase **prevote → precommit** finality pipeline, durable local consensus locks, persistent consensus event history, authenticated validator-to-validator requests, signed identity handshakes, signed state snapshots, validator telemetry, peer synchronization, RPC/CLI tooling and a development explorer.
 
 > This is **not a production mainnet**, has not been independently audited, and must not be used to custody real value.
 
@@ -13,7 +13,7 @@ Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosyst
 - Proposed maximum genesis supply: `21,000,000 CRKBIT`
 - Default local validator count: `4`
 - Default quorum: `3 of 4`
-- Transaction/block/vote signatures: Ed25519
+- Transaction/block/vote/request signatures: Ed25519
 - Address format: `crk1...`
 - Default block interval: 5 seconds
 - Default view timeout: 10 seconds
@@ -22,9 +22,29 @@ Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosyst
 
 The 21M cap is a **devnet configuration parameter**, not a promise of future token value or final mainnet economics.
 
-## What v0.5 Adds
+## v0.6 Security Upgrade
 
-v0.4 finalized a proposal after one signed quorum vote phase. v0.5 introduces two explicit validator phases:
+v0.6 keeps the v0.5 consensus flow and hardens the validator-network boundary.
+
+Internal validator requests now include an Ed25519 signature that commits to the HTTP method, request path, request-body hash, validator identity, timestamp and random nonce. Receivers verify the signer against the configured validator set, reject stale timestamps and reject duplicate nonces during the active replay window.
+
+The node also exposes a signed challenge/response validator identity handshake and can require `https://` peer URLs in hardened deployments.
+
+Enable HTTPS URL enforcement with:
+
+```bash
+crakchain node ... --require-peer-tls
+```
+
+or:
+
+```bash
+CRAKBIT_REQUIRE_PEER_TLS=1
+```
+
+This enforcement mode does **not** provision TLS certificates automatically. Local Docker development remains HTTP unless operators explicitly deploy HTTPS/TLS infrastructure.
+
+## Consensus Flow
 
 ```text
 proposal
@@ -36,31 +56,9 @@ proposal
 finalized block
 ```
 
-A validator only signs a precommit after locally validating a quorum prevote certificate for the exact block hash, height and round.
+Certified view changes remain required for later rounds. A validator persists its local lock when precommitting. The current lock remains deliberately conservative: a validator that precommits one block hash at a height refuses to vote for another hash at that height.
 
-The node also persists local prevotes, local precommits, a per-height consensus lock, round changes, local view-change actions, consensus event history and conflicting signed-proposal evidence in SQLite.
-
-## Consensus Flow
-
-For height `H` and round `R`, the expected proposer is:
-
-```text
-validator_index = (H - 1 + R) mod validator_count
-```
-
-The proposer builds and signs a block. Validators independently validate the proposal and sign a **prevote**. Once the proposer has a strict greater-than-two-thirds prevote certificate, validators may sign a **precommit** for that same block.
-
-A validator persists its local lock when precommitting. A finalized block must contain both a valid prevote quorum certificate and a valid precommit quorum certificate.
-
-If a round times out before finalization, validators can sign a certified view change for the next round, as introduced in v0.4.
-
-## Conservative Lock Rule
-
-v0.5 deliberately uses a conservative lock rule: once a validator has precommitted a block hash at a height, it refuses to vote for a different block hash at that height in a later round.
-
-This improves safety compared with unrestricted cross-round voting, but it is **not a complete production BFT lock/unlock protocol**. If a quorum becomes locked and the block is not finalized/broadcast successfully, the devnet may halt rather than unlock unsafely.
-
-A reviewed proof-of-lock/unlock rule or mature BFT implementation is still required before public-value use.
+This is not yet a complete production BFT unlock protocol.
 
 ## What Works
 
@@ -74,21 +72,25 @@ A reviewed proof-of-lock/unlock rule or mature BFT implementation is still requi
 - Transaction Merkle root and deterministic state root
 - Round-specific proposer selection
 - Quorum-certified view changes
-- Signed prevotes
-- Signed precommits
-- >2/3 prevote certificate validation
-- >2/3 precommit certificate validation
+- Signed prevotes and precommits
+- >2/3 prevote and precommit certificate validation
 - Durable same-phase anti-double-vote records
 - Durable per-height consensus lock
 - Conflicting signed-proposal evidence
 - Persistent consensus event journal
+- Ed25519-authenticated `/internal/*` validator requests
+- Timestamp + nonce replay-window checks for peer requests
+- Signed validator challenge/response identity handshake
+- Optional HTTPS peer-URL enforcement mode
+- Signed state snapshot export and verification
+- JSON and Prometheus-style development metrics
 - Finalized-block peer sync
 - Validator health/height/round telemetry
 - REST/RPC endpoints
-- CLI key/balance/send tooling
+- CLI key/balance/send/snapshot verification tooling
 - 4-validator Docker Compose devnet
 - Browser development explorer
-- Automated ledger/consensus tests in GitHub Actions
+- Automated ledger/consensus/peer-auth/snapshot tests in GitHub Actions
 
 ## Quick Start — Fresh Local Devnet
 
@@ -110,23 +112,6 @@ Local RPC endpoints:
 - Node 4: `http://127.0.0.1:9104`
 - API docs: `http://127.0.0.1:9101/docs`
 
-### Upgrading from v0.4 or earlier
-
-The devnet schema and consensus certificate format changed. Treat previous local devnet data as disposable:
-
-```bash
-docker compose down -v
-```
-
-Delete local `runtime/`, regenerate it, then restart:
-
-```bash
-python scripts/bootstrap_devnet.py
-docker compose up --build
-```
-
-Never use this reset procedure for an environment containing real-value keys or production data.
-
 ## Monitoring
 
 ```bash
@@ -137,11 +122,38 @@ curl http://127.0.0.1:9101/validators
 curl http://127.0.0.1:9101/evidence
 curl http://127.0.0.1:9101/consensus/events
 curl http://127.0.0.1:9101/metrics
+curl http://127.0.0.1:9101/metrics/prometheus
 ```
 
-Useful v0.5 status fields include `candidate_prevotes`, `candidate_precommits`, `local_lock`, `persistent_phase_votes`, `consensus_events`, `view_certificate_votes` and `equivocation_evidence`.
+## Signed Snapshot
 
-## Wallet / Transfers
+Export the latest validator-signed state snapshot:
+
+```bash
+curl http://127.0.0.1:9101/snapshot/latest -o snapshot.json
+```
+
+Verify it locally:
+
+```bash
+crakchain snapshot-verify \
+  --snapshot snapshot.json \
+  --genesis runtime/genesis.json
+```
+
+v0.6 supports signed snapshot **generation and verification only**. Snapshot-based database import / fast state sync is not yet implemented.
+
+## Peer Security Model
+
+Application-level request authentication covers consensus/internal request identity and body integrity. It does not by itself encrypt network traffic.
+
+The local devnet uses ordinary HTTP. A hardened remote validator deployment should use HTTPS/TLS and should eventually move to a reviewed mutually authenticated validator transport with certificate/key lifecycle management.
+
+Replay-nonce memory is currently process-local. Timestamp validation limits the accepted replay window, but stronger session-level replay guarantees are still required before production use.
+
+## Wallet / Test CRKBIT
+
+Bootstrap creates a **devnet-only** treasury key at `runtime/treasury.json` unless an existing test address is supplied.
 
 ```bash
 crakchain keygen --output runtime/alice.json
@@ -149,7 +161,7 @@ crakchain address --key runtime/alice.json
 crakchain balance YOUR_ADDRESS --rpc http://127.0.0.1:9101
 ```
 
-Send test CRKBIT:
+Send test units:
 
 ```bash
 crakchain send \
@@ -160,9 +172,17 @@ crakchain send \
   --rpc http://127.0.0.1:9101
 ```
 
-## RPC Endpoints
+## Explorer
 
-Public development endpoints:
+```bash
+python -m http.server 8080 -d explorer
+```
+
+Open `http://127.0.0.1:8080`.
+
+## Development RPC Endpoints
+
+Public development endpoints include:
 
 - `GET /health`
 - `GET /status`
@@ -171,22 +191,24 @@ Public development endpoints:
 - `GET /evidence`
 - `GET /consensus/events`
 - `GET /metrics`
+- `GET /metrics/prometheus`
+- `GET /snapshot/latest`
 - `GET /balance/{address}`
 - `GET /blocks/{height}`
 - `GET /transactions/{txid}`
 - `POST /transactions`
 
-Development peer endpoints:
+Authenticated development peer endpoints include:
 
+- `POST /internal/hello`
 - `POST /internal/transaction`
 - `POST /internal/view-change-request`
 - `POST /internal/prevote`
 - `POST /internal/precommit`
+- `POST /internal/proposal`
 - `POST /internal/block`
 
-`/internal/*` is still development-only and **must not be exposed as production validator networking**.
-
-## Tests
+## Run Tests
 
 ```bash
 cd blockchain
@@ -194,33 +216,28 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-GitHub Actions runs the blockchain test suite on repository changes.
+GitHub Actions also runs the blockchain test suite on repository changes.
 
-## Important Security Limitations
+## Important Limitations
 
-v0.5 is still a research network. Major remaining blockers include:
+- The conservative cross-round lock has no mature proof-based unlock rule.
+- Validator request replay state is process-local.
+- Local Docker peer traffic is not encrypted by default.
+- HTTPS enforcement does not provide certificate provisioning or mTLS automatically.
+- Signed snapshots cannot yet be imported for fast state sync.
+- No validator-set changes, staking/slashing or production governance exists.
+- No independent consensus/network security audit has been completed.
 
-- no mature proof-based cross-round unlock rule
-- no formal safety/liveness proof
-- validator transport is still unauthenticated HTTP
-- no encrypted/mutually authenticated P2P channel
-- no production DoS/rate controls
-- no signed state snapshots or fast state sync
-- no production validator key-management standard
-- no staking/slashing/governance system
-- no independent audit
-- no long-lived public testnet
+See [`V0.6.md`](V0.6.md), [`SPEC.md`](SPEC.md) and [`SECURITY.md`](SECURITY.md) for protocol and security notes.
 
-## Next Phase — v0.6
+## Next Engineering Milestones — v0.7
 
-1. Define/review a safer cross-round lock/unlock rule or migrate to a mature BFT core.
-2. Add authenticated validator identity handshakes.
-3. Add encrypted validator transport / deployment TLS requirements.
-4. Add signed state snapshots and verified fast state sync.
-5. Add crash/recovery, partition and long-running load tests.
-6. Add Prometheus-style metrics, dashboard and alerts.
-7. Add public-testnet deployment manifests and operator runbooks.
-8. Improve faucet, explorer and testnet wallet UX.
-9. Commission external consensus/network review before any production-value launch.
-
-Read [`SPEC.md`](SPEC.md) and [`SECURITY.md`](SECURITY.md) before extending consensus or networking.
+1. Review/replace the conservative cross-round lock with a mature proof-based unlock/BFT design.
+2. Add mutually authenticated encrypted validator transport with certificate/key rotation.
+3. Harden replay/session handling across restarts.
+4. Add snapshot quorum certification and verified snapshot import / fast state sync.
+5. Add database-corruption and crash/restart recovery testing.
+6. Run long-lived partition, latency, Byzantine-behavior and load tests.
+7. Add Grafana/alerting deployment examples and public-testnet observability.
+8. Add public-testnet infrastructure, faucet controls and operator runbooks.
+9. Commission independent consensus/network review before any real-value launch.
