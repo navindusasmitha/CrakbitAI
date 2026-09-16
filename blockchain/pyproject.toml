@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crakbit-chain"
-version = "0.13.0a1"
-description = "Crakbit Chain external-consensus protocol, signed-release and public-testnet automation development-network prototype"
+version = "0.14.0a1"
+description = "Crakbit Chain external-BFT bridge, crash-safe commit protocol and signed-genesis ceremony development-network prototype"
 requires-python = ">=3.11"
 dependencies = [
   "cryptography>=42.0.0",
@@ -18,7 +18,7 @@ dependencies = [
 dev = ["pytest>=8.0.0"]
 
 [project.scripts]
-crakchain = "crakbit_chain.cli_v13:main"
+crakchain = "crakbit_chain.cli_v14:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
