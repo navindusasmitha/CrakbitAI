@@ -6,7 +6,7 @@ This roadmap describes the intended development order for Crakbit AI. Dates are 
 
 **Technology first. Security first. Tokens later.**
 
-The immediate product focus remains a useful defensive-security MVP. In parallel, the Crakbit Chain local research network has progressed through signed quorum finality, certified view changes, two-phase prevote/precommit finality, authenticated validator requests and v0.7 quorum-certified snapshot recovery. Public testnet/mainnet work still depends on a mature cross-round BFT unlock design, mutually authenticated encrypted validator transport, adversarial testing and independent security review.
+The immediate product focus remains a useful defensive-security MVP. In parallel, the Crakbit Chain local research network has progressed through signed quorum finality, certified view changes, a two-phase prevote/precommit pipeline, authenticated validator requests, durable replay protection, quorum-certified snapshots and v0.8 chunked/resumable snapshot recovery. Public testnet/mainnet work still depends on a mature BFT lock/unlock design, mutually authenticated encrypted validator transport, adversarial testing and independent security review.
 
 ## Phase 1 — Foundation
 **Target: Q3–Q4 2026**
@@ -34,6 +34,10 @@ The immediate product focus remains a useful defensive-security MVP. In parallel
 - [x] Human-readable findings and remediation fields
 - [x] Severity/confidence model
 - [ ] Public web demo
+
+### MVP success criteria
+
+A developer should be able to submit or scan a small codebase and receive a clear, defensible report describing potential security issues and remediation guidance.
 
 ## Phase 3 — Developer Tooling
 **Target: Q1 2027**
@@ -72,66 +76,64 @@ The immediate product focus remains a useful defensive-security MVP. In parallel
 
 A runnable local devnet exists to turn network research into testable code. This does **not** mean a production blockchain or public-value CRKBIT asset has launched.
 
-### Completed through v0.7
+### Completed through v0.8
 
 - [x] Native devnet CRKBIT accounting unit
 - [x] 8-decimal atomic-unit model
 - [x] Proposed 21,000,000 maximum genesis supply encoded for devnet
 - [x] Ed25519 wallet/key generation and `crk1...` addresses
-- [x] Signed transfers, transaction nonces/replay protection and fees
+- [x] Signed transfers, nonces/replay protection and minimum fees
 - [x] Signed block proposals
 - [x] Previous-block hash linking
 - [x] Transaction Merkle roots and deterministic state roots
 - [x] SQLite chain/account/consensus persistence
 - [x] Round-specific deterministic proposer schedule
 - [x] Signed quorum-certified view changes
-- [x] Signed prevote and precommit phases
-- [x] >2/3 prevote certificate before precommit
-- [x] >2/3 precommit certificate before finalization
-- [x] Persistent phase anti-double-vote records
-- [x] Persistent per-height conservative consensus lock
-- [x] Persistent consensus event journal
-- [x] Conflicting signed proposal/equivocation evidence
+- [x] Signed prevote + precommit phases
+- [x] >2/3 prevote and precommit certificates before finalization
+- [x] Persistent anti-double-vote records and conservative per-height lock
+- [x] Persistent consensus event journal and equivocation evidence
 - [x] Ed25519-authenticated validator internal requests
-- [x] Request signatures bind method/path/body hash/timestamp/nonce
 - [x] Signed validator challenge/response identity handshake
+- [x] Durable SQLite-backed validator request replay protection
 - [x] Optional HTTPS peer-URL enforcement mode
-- [x] **Persistent SQLite validator-request replay cache**
-- [x] Validator-signed state snapshots
-- [x] **>2/3 matching-state snapshot certificates**
-- [x] **Snapshot quorum verification with issued-supply conservation**
-- [x] **Fresh-database snapshot import / state bootstrap**
-- [x] **Node `--bootstrap-snapshot` startup path**
-- [x] **Recovery metadata and `/recovery/status`**
+- [x] Signed state snapshot generation and verification
+- [x] >2/3 quorum snapshot certificates over identical state
+- [x] Safe snapshot import/bootstrap for fresh node databases
+- [x] Snapshot recovery metadata and recovery-status endpoint
+- [x] Bounded chunked snapshot transfer manifest
+- [x] Per-chunk + complete artifact hash validation
+- [x] Resumable verified chunk cache in `snapshot-fetch-chunked`
+- [x] Crash-visible snapshot import sidecar journal
+- [x] Snapshot-base-aware history status/block API
 - [x] Prometheus-style development metrics endpoint
 - [x] Finalized-block broadcast and catch-up synchronization
-- [x] REST/RPC endpoints and CLI tooling
+- [x] REST/RPC endpoints and CLI key/balance/send/recovery tooling
+- [x] Validator health/height/round telemetry
 - [x] 4-validator Docker Compose devnet with default 3-of-4 quorum
 - [x] Simple development explorer
-- [x] Automated consensus/peer-auth/recovery tests and CI
-- [x] v0.7 protocol/security/recovery documentation
+- [x] Automated consensus/peer-authentication/snapshot/recovery tests and CI
+- [x] v0.8 recovery-hardening documentation
 
-### v0.8 BFT / transport / public-testnet hardening — next
+### v0.9 consensus/network/public-testnet hardening — next
 
-- [ ] Review/replace conservative cross-round lock with mature proof-based BFT lock/unlock, or migrate to a reviewed BFT core
-- [ ] Add mutually authenticated TLS validator transport
+- [ ] Review/replace the conservative cross-round lock with mature proof-based BFT lock/unlock, or migrate to a reviewed BFT core
+- [ ] Add mutually authenticated encrypted validator transport
 - [ ] Add certificate pinning and validator certificate/key rotation lifecycle
-- [ ] Add snapshot chunking, maximum-size controls and resumable transfer
-- [ ] Make block/history APIs snapshot-base aware
-- [ ] Add interrupted-import rollback/recovery journal
-- [ ] Add database-corruption and crash/restart recovery testing
-- [ ] Add long-running multi-validator partition/latency/Byzantine/load tests
-- [ ] Add validator key-management / remote-signer specification
+- [ ] Add archive/history synchronization design for snapshot-bootstrapped nodes
+- [ ] Add database corruption, abrupt-power-loss and crash/restart recovery testing
+- [ ] Add long-running partition, latency, Byzantine-behavior and load tests
+- [ ] Add validator key-management and incident-response specification
 - [ ] Add Grafana dashboards and alert rules
-- [ ] Add public-testnet deployment manifests and operator runbooks
+- [ ] Add public-testnet deployment configuration and operator runbooks
 - [ ] Add faucet policy and abuse controls
-- [ ] Improve explorer/wallet testnet UX
+- [ ] Add stronger explorer/wallet testnet UX
 - [ ] Add economic/incentive design review
 - [ ] Commission external consensus/network review
 
 ### Current consensus/network warning
 
-v0.7 improves durable request authentication and state recovery but is still **not** a production BFT/P2P implementation. The consensus lock has no mature proof-based cross-round unlock rule, default Docker peer traffic is not encrypted, HTTPS enforcement is not mTLS lifecycle management, and snapshot bootstrap reconstructs certified state rather than pre-snapshot historical blocks.
+v0.8 materially improves authenticated recovery and state-transfer operations, but it is still **not** a production BFT or production P2P implementation. The consensus lock has no mature proof-based unlock rule, HTTPS enforcement is not a reviewed mTLS/certificate lifecycle, snapshot bootstrap does not reconstruct pre-snapshot historical block bodies, and no formal safety/liveness proof or independent audit exists.
 
 ## Phase 7 — Public Testnet
 **Only after Phase 6 security gates are met**
