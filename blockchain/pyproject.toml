@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crakbit-chain"
-version = "0.17.0a1"
-description = "Crakbit Chain public-testnet candidate with native CometBFT state-sync lifecycle, hardened multi-host evidence tooling and wallet/explorer infrastructure"
+version = "0.18.0a1"
+description = "Crakbit Chain review-candidate alpha with native CometBFT state sync, signed evidence freeze, explorer reconciliation and sustained testnet evidence tooling"
 requires-python = ">=3.11"
 dependencies = [
   "cryptography>=42.0.0",
@@ -18,7 +18,7 @@ dependencies = [
 dev = ["pytest>=8.0.0"]
 
 [project.scripts]
-crakchain = "crakbit_chain.cli_v17:main"
+crakchain = "crakbit_chain.cli_v18:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
