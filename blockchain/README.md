@@ -1,37 +1,32 @@
-# Crakbit Chain — v0.27 Final Mainnet-Candidate Policy Alpha
+# Crakbit Chain — v0.28 Launch Rehearsal / Corroborated Evidence Alpha
 
-**Current package:** `0.27.0a1`  
+**Current package:** `0.28.0a1`  
 **Consensus candidate:** CometBFT `v0.40.0`  
 **Execution path:** `crakbit-execution/3`  
-**Status:** final mainnet-candidate policy/evidence tooling — **not production mainnet**.
+**Status:** launch-rehearsal / independently-corroborated-evidence tooling — **not production mainnet**.
 
 Production CRKBIT has **not** launched. There is no official presale or production token contract. Do not use this software to custody real value.
 
-## v0.27 scope
+## v0.28 scope
 
-v0.27 builds on the v0.26 remediation/re-freeze gate and adds the final modeled policy/evidence layer before any production-mainnet consideration:
+v0.28 builds on the v0.27 final mainnet-candidate policy layer and adds the rehearsal/evidence boundary immediately before any real launch/no-launch decision:
 
-- signed coordinated upgrade plan,
-- exact source/package/schema/migration/rollback binding,
-- strict `>2/3` validator-readiness threshold,
-- signed normal/emergency governance timelock policy,
-- pre-activation cancellation window,
-- emergency strict-supermajority requirement,
-- emergency policy cannot authorize arbitrary user-balance reassignment or silent supply changes,
-- signed CRKBIT economics/genesis parameter freeze,
-- supply/decimals/fees/incentive/distribution commitment hash binding,
-- explicit no-investment-return and no-token-sale-authorization claims,
-- signed independent economic-security review attestation,
-- signed independent legal/regulatory review attestation,
-- exact review binding to the frozen economics manifest and candidate source commit,
-- deterministic candidate-identity SHA-256,
-- separate signed release approvals,
-- minimum three unique release approvers/signers,
-- final candidate gate consuming operational readiness + v0.26 remediation + governance + economics + upgrade + external review + release approvals,
-- signed final readiness report,
-- v0.27 regression tests.
+- signed launch runbook with 4+ validators, genesis steps, exact validator start order and rollback steps,
+- dry-run/no automatic network mutation, DNS change or fund movement,
+- signed DNS/RPC/explorer cutover rehearsal with rollback and redundant failover checks,
+- configurable public-edge availability/latency/error-rate/capacity/failover evidence,
+- protected HSM/remote-signer rotation + catastrophic-recovery drill records,
+- coordinated upgrade + rollback rehearsal bound to the signed v0.27 upgrade plan,
+- final signed risk register with unmitigated high/critical risks as hard blockers,
+- signed technical reviewer sign-offs bound to the exact v0.27 final report,
+- required technical review scopes for consensus/application, network/RPC, cryptography/key-management and browser wallet,
+- external reproducible-build/transitive-dependency attestation,
+- aggregate launch-rehearsal gate,
+- signed exact release-candidate freeze after the rehearsal gate passes,
+- signed manual human decision record (`hold` or `approve-launch-window`) with no automatic execution,
+- v0.28 regression tests.
 
-See [`V0.27.md`](V0.27.md).
+See [`V0.28.md`](V0.28.md).
 
 ## Install / test
 
@@ -50,75 +45,87 @@ go mod download
 go test -mod=mod ./...
 ```
 
-## v0.27 commands
+## v0.28 commands
 
 ```text
-upgrade-plan-v27-build
-upgrade-plan-v27-verify
-governance-policy-v27-build
-governance-policy-v27-verify
-economics-freeze-v27-build
-economics-freeze-v27-verify
-external-review-v27-build
-external-review-v27-verify
-candidate-identity-v27-build
-release-approval-v27-build
-release-approval-v27-verify
-final-gate-v27-build
-final-report-v27-build
-final-report-v27-verify
+launch-runbook-v28-build
+launch-runbook-v28-verify
+cutover-rehearsal-v28-build
+cutover-rehearsal-v28-verify
+edge-slo-v28-build
+edge-slo-v28-verify
+signer-drill-v28-build
+signer-drill-v28-verify
+upgrade-rehearsal-v28-build
+upgrade-rehearsal-v28-verify
+risk-register-v28-build
+risk-register-v28-verify
+review-signoff-v28-build
+review-signoff-v28-verify
+repro-attestation-v28-build
+repro-attestation-v28-verify
+rehearsal-gate-v28-build
+release-freeze-v28-build
+release-freeze-v28-verify
+launch-decision-v28-record
+launch-decision-v28-verify
 ```
 
-All v0.26 and earlier review/public-testnet/governance commands remain available through CLI delegation.
+All v0.27 and earlier review/public-testnet/governance commands remain available through CLI delegation.
 
-## Final candidate identity
+## Exact candidate binding
 
-The v0.27 candidate identity commits to:
+The v0.28 aggregate gate takes a signed v0.27 final report as its root candidate identity. Every launch-runbook, cutover, SLO, protected-signer, upgrade, risk, reviewer and reproducible-build artifact must match the exact source commit and candidate identity.
 
-- exact Git source commit,
-- package and CometBFT versions,
-- application + consensus genesis hashes,
-- dependency-lock + SBOM hashes inherited from v0.26,
-- v0.24 operational-readiness artifact hash,
-- v0.26 remediation-gate artifact hash,
-- governance-policy manifest hash,
-- economics-freeze manifest hash,
-- coordinated-upgrade manifest hash,
-- economic-security review manifest hash,
-- legal/regulatory review manifest hash.
+Technical reviewer sign-offs must additionally bind the exact v0.27 final-report manifest SHA-256. A review signed for an older or different final report does not satisfy the gate.
 
-Release approvals must sign this exact identity. An approval for a different identity or source commit is rejected.
+## Launch-rehearsal gate
 
-## Release approval model
+The modeled gate requires:
 
-A single release signer is intentionally insufficient. The modeled final gate requires at least three unique approver IDs and three unique signing identities, and every decision must be `approve`.
+- a valid v0.27 final report with `mainnet_candidate_gate_satisfied=true`,
+- a passing launch runbook,
+- a passing cutover rehearsal,
+- at least two unique passing edge-SLO records,
+- a passing protected-signer recovery drill,
+- a passing coordinated upgrade/rollback rehearsal,
+- no unmitigated high/critical risks,
+- a passing external reproducible-build/transitive-dependency attestation,
+- passed independent technical review sign-offs covering all required technical scopes,
+- at least three unique reviewer signing identities by default.
 
-This is evidence tooling, not an automatic launch mechanism. The final gate never starts validators, changes DNS, publishes a token contract, moves funds or changes chain state.
-
-## Economics boundary
-
-v0.27 accepts economics parameters only from an explicit JSON file. It does not invent final economics. The 21,000,000 / 8-decimal values used during development remain proposals unless they are deliberately frozen and independently reviewed.
-
-The economics artifact explicitly records:
+Even after all checks pass the artifact records:
 
 ```text
-investment_return_promised=false
-token_sale_authorized_by_this_artifact=false
-requires_independent_economic_and_legal_review=true
-production_mainnet_ready=false
-```
-
-## Production boundary
-
-Even when `mainnet_candidate_gate_satisfied=true`, v0.27 deliberately keeps:
-
-```text
+launch_rehearsal_gate_satisfied=true
+manual_launch_decision_required=true
+automatic_launch=false
 production_mainnet_ready=false
 production_mainnet_launched=false
 production_crkbit_launched=false
 ```
 
-Actual production launch still requires real independently managed validators, independently corroborated operations and review evidence, protected key custody, production public-edge engineering/capacity, final operator procedures, an explicit human launch decision and any required legal/regulatory steps.
+## Risk boundary
+
+`risk-register-v28-build` allows low/medium residual risks to be documented, including accepted risks with explicit rationale. High/critical risks block the modeled rehearsal gate unless they are marked mitigated.
+
+This does not replace independent risk judgment; it prevents the release evidence model from silently treating an unmitigated high/critical risk as launch-ready.
+
+## Manual launch decision boundary
+
+`launch-decision-v28-record` supports only `hold` or `approve-launch-window`. The command records a signed human decision but does not:
+
+- start validators,
+- change production DNS,
+- move treasury/user funds,
+- enable a token sale,
+- mark mainnet as launched.
+
+Actual production launch remains a separate external operational act after real evidence is reviewed.
+
+## Production boundary
+
+The v0.28 code can model and verify evidence, but it does not independently prove the real-world claims behind that evidence. Before production-value launch consideration the project still needs genuine independent-host operation, real genesis ceremony, long soak/fault/state-sync/governance evidence, protected key custody, production public-edge measurements, genuinely independent review, final economics/legal conclusions and a deliberate human launch/no-launch decision.
 
 See [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md).
 
