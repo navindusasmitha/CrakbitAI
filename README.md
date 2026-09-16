@@ -33,57 +33,52 @@ Current alpha checks include:
 The scanner performs static checks only and does not execute target code. It is an early architecture proof and **not yet a production-grade security scanner**.
 
 ### Blockchain Security
-Planned security tooling includes:
+Planned security tooling includes smart-contract analysis, contract-risk assessment, blockchain transaction analysis, security-focused developer guidance and human-readable reports.
 
-- Smart-contract analysis
-- Contract-risk assessment
-- Blockchain transaction analysis
-- Security-focused developer guidance
-- Human-readable security reports
-
-### Crakbit Chain — Devnet v0.6 Alpha
+### Crakbit Chain — Devnet v0.7 Alpha
 A runnable experimental blockchain prototype exists in [`blockchain/`](blockchain/).
 
-The current development network includes:
+The current research network includes:
 
 - Native test-only `CRKBIT` unit
 - Ed25519 wallets and signed transfers
 - `crk1...` account addresses
 - Nonces, replay protection and transaction fees
 - Signed block proposals
-- Strict greater-than-two-thirds **prevote** quorum
-- Strict greater-than-two-thirds **precommit** quorum
+- Strict >2/3 **prevote** quorum
+- Strict >2/3 **precommit** quorum
 - Finalization only after both phase certificates validate
 - Round-specific proposer rotation
-- Signed greater-than-two-thirds view-change certificates for non-zero rounds
-- Persistent prevote/precommit anti-double-vote state across restarts
+- >2/3 signed view-change certificates for non-zero rounds
+- Persistent phase-vote anti-double-vote state
 - Persistent per-height conservative consensus lock
-- Persistent consensus event journal
-- Conflicting signed proposal/equivocation evidence
-- Ed25519-authenticated validator-to-validator internal requests
+- Consensus event journal and equivocation evidence
+- Ed25519-authenticated validator-to-validator requests
 - Signed validator challenge/response identity handshake
+- **Persistent SQLite replay-nonce protection across process restarts**
 - Optional HTTPS peer-URL enforcement mode
-- Signed state snapshot generation and verification
+- Validator-signed state snapshots
+- **>2/3 quorum-certified snapshot recovery**
+- **Fresh-database snapshot import / node bootstrap**
+- Recovery metadata endpoint
 - Prometheus-style development metrics
-- Transaction Merkle roots and deterministic state roots
-- SQLite-backed chain and consensus state
-- Finalized-block broadcast and catch-up synchronization
-- Validator health/height/round telemetry
-- REST/RPC API
-- CLI wallet/transfer/snapshot verification commands
-- 4-validator Docker Compose devnet with a default 3-of-4 quorum
+- SQLite-backed chain/consensus state
+- Finalized-block broadcast and catch-up sync
+- REST/RPC API and CLI tooling
+- 4-validator Docker Compose devnet with default 3-of-4 quorum
 - Browser development explorer
-- Automated ledger/multiphase-consensus/view-change/evidence/peer-auth/snapshot tests and CI
+- Automated blockchain/consensus/peer-auth/recovery tests and CI
 
 The proposed devnet parameters use 8 decimals and a 21,000,000 CRKBIT maximum genesis supply. These parameters remain subject to technical, security, economic and legal review before any production network.
 
-**Important:** v0.6 is still not a production BFT/mainnet protocol. The current cross-round lock still lacks a mature proof-based unlock rule, local Docker networking is not encrypted by default, snapshot import/fast sync is not implemented, and the network has not been independently audited.
+**Important:** v0.7 is still not a production BFT/mainnet protocol. The current cross-round lock lacks a mature proof-based unlock rule, default local networking is not encrypted, mTLS/certificate lifecycle management is not implemented, snapshot bootstrap does not recreate pre-snapshot history, and the network has not been independently audited.
 
 Test CRKBIT units created by this devnet are not a production token, investment product or public presale.
 
-See [`blockchain/README.md`](blockchain/README.md), [`blockchain/V0.6.md`](blockchain/V0.6.md), [`blockchain/SPEC.md`](blockchain/SPEC.md) and [`blockchain/SECURITY.md`](blockchain/SECURITY.md).
+See [`blockchain/README.md`](blockchain/README.md), [`blockchain/V0.7.md`](blockchain/V0.7.md), [`blockchain/SPEC.md`](blockchain/SPEC.md) and [`blockchain/SECURITY.md`](blockchain/SECURITY.md).
 
-### Developer Platform
+## Developer Platform
+
 Planned developer-facing components include:
 
 - Web application
@@ -131,7 +126,7 @@ Default local RPC endpoints:
 - `http://127.0.0.1:9103`
 - `http://127.0.0.1:9104`
 
-Consensus/validator telemetry:
+Consensus/recovery telemetry:
 
 ```bash
 curl http://127.0.0.1:9101/status
@@ -139,9 +134,16 @@ curl http://127.0.0.1:9101/peers
 curl http://127.0.0.1:9101/validators
 curl http://127.0.0.1:9101/evidence
 curl http://127.0.0.1:9101/consensus/events
-curl http://127.0.0.1:9101/metrics
 curl http://127.0.0.1:9101/metrics/prometheus
-curl http://127.0.0.1:9101/snapshot/latest
+curl http://127.0.0.1:9101/recovery/status
+```
+
+Quorum snapshot recovery:
+
+```bash
+crakchain snapshot-fetch --genesis runtime/genesis.json --output runtime/snapshot-cert.json
+crakchain snapshot-verify --snapshot runtime/snapshot-cert.json --genesis runtime/genesis.json
+crakchain snapshot-import --snapshot runtime/snapshot-cert.json --genesis runtime/genesis.json --data runtime/recovered-node
 ```
 
 ## Architecture Direction
@@ -163,9 +165,8 @@ Developer / Researcher
    |-- Secret detection   |-- Transactions/fees
    |-- Dependency checks  |-- Certified view changes
    |-- Solidity analysis  |-- Prevote / precommit quorum
-   `-- AI remediation     |-- Durable lock/evidence
-                          |-- Authenticated peer requests
-                          |-- Signed state snapshots
+   `-- AI remediation     |-- Authenticated peer requests
+                          |-- Quorum snapshot recovery
                           `-- Validator/RPC telemetry
 ```
 
@@ -183,14 +184,17 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the evolving platform des
 | Security CLI | Early alpha |
 | Developer API | Planned |
 | Smart Contract Scanner | Planned |
-| Crakbit Chain local devnet | **v0.6 alpha available** |
+| Crakbit Chain local devnet | **v0.7 alpha available** |
 | Quorum-certified view changes | **Devnet prototype implemented** |
 | Prevote/precommit finality | **Devnet prototype implemented** |
 | Persistent phase-vote state | **Prototype implemented** |
 | Conservative per-height consensus lock | **Research rule implemented** |
-| Validator request authentication | **v0.6 prototype implemented** |
-| Validator identity handshake | **v0.6 prototype implemented** |
-| Signed state snapshots | **Export/verification implemented** |
+| Validator request authentication | **Prototype implemented** |
+| Durable peer replay cache | **v0.7 prototype implemented** |
+| Validator identity handshake | **Prototype implemented** |
+| Signed state snapshots | **Implemented for devnet** |
+| Quorum snapshot certificate | **v0.7 prototype implemented** |
+| Snapshot bootstrap/import | **v0.7 prototype implemented** |
 | Prometheus-style metrics | **Prototype implemented** |
 | Public blockchain testnet | Not launched |
 | Production CRKBIT | **Not launched** |
@@ -212,18 +216,17 @@ Our development sequence includes:
 9. Quorum-certified view changes and equivocation evidence
 10. Multi-phase prevote/precommit finality + durable lock
 11. Authenticated validator requests + signed snapshot foundation
-12. Mature encrypted validator transport + state recovery / fast sync
-13. Public testnet preparation
-14. Long-lived public testnet and independent security review
-15. Mainnet consideration only after technical, economic and legal validation
+12. Durable replay protection + quorum-certified snapshot recovery
+13. Mature BFT unlock + mutually authenticated encrypted transport
+14. Public testnet preparation
+15. Long-lived public testnet and independent security review
+16. Mainnet consideration only after technical, economic and legal validation
 
 See [`ROADMAP.md`](ROADMAP.md) for milestones and target phases.
 
 ## Open Source
 
 Crakbit AI intends to release useful developer-security and blockchain research components openly where practical, including selected scanners, rules, SDKs, documentation and testnet tooling.
-
-Our goal is to make security knowledge and practical tooling useful to developers, students and researchers regardless of company size or budget.
 
 ## Public-Benefit Funding
 
@@ -239,7 +242,7 @@ See [`docs/FUNDING.md`](docs/FUNDING.md) for the proposed allocation and transpa
 
 **Production CRKBIT has not been launched. There is currently no official CRKBIT presale or production token contract.**
 
-The repository contains test-only CRKBIT units used inside the local Crakbit Chain development network. They have no represented production value and should not be marketed or sold as mainnet CRKBIT.
+The repository contains test-only CRKBIT units used inside the local development network. They have no represented production value and should not be marketed or sold as mainnet CRKBIT.
 
 Any future production utility asset is subject to public testing, security review, economic design and applicable legal/regulatory consideration.
 
@@ -247,11 +250,9 @@ Any future production utility asset is subject to public testing, security revie
 
 Crakbit AI is being developed primarily for defensive security, secure software development, code review, research and educational use.
 
-Please read [`SECURITY.md`](SECURITY.md) before reporting a vulnerability in this repository or project infrastructure. The blockchain devnet has additional limitations documented in [`blockchain/SECURITY.md`](blockchain/SECURITY.md).
+Please read [`SECURITY.md`](SECURITY.md) and [`blockchain/SECURITY.md`](blockchain/SECURITY.md) before reporting or evaluating security issues.
 
 ## Contributing
-
-Contributions, research, documentation improvements and security-focused ideas are welcome as the project opens more components.
 
 Read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) before participating.
 
@@ -260,8 +261,6 @@ Read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](CODE_OF_CON
 - Website: https://crakbit.space
 - Repository: https://github.com/navindusasmitha/CrakbitAI
 - Funding / Giveth: Crakbit AI is publicly listed on Giveth
-
-Additional official community links will be added here as they are launched.
 
 ## Transparency
 
