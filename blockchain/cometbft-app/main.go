@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -18,7 +19,7 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 )
 
-const bridgeVersion = "crakbit-cometbft-bridge/0.14"
+const bridgeVersion = "crakbit-cometbft-bridge/0.17"
 
 type executionClient struct {
 	baseURL string
@@ -70,12 +71,54 @@ type finalizeEnvelope struct {
 	Transactions       []json.RawMessage `json:"transactions"`
 }
 
+type snapshotDescriptor struct {
+	Height         uint64 `json:"height"`
+	Format         uint32 `json:"format"`
+	Chunks         uint32 `json:"chunks"`
+	HashHex        string `json:"hash_hex"`
+	MetadataBase64 string `json:"metadata_base64"`
+}
+
+type snapshotListResponse struct {
+	Snapshots []snapshotDescriptor `json:"snapshots"`
+}
+
+type snapshotOfferEnvelope struct {
+	Height         uint64 `json:"height"`
+	Format         uint32 `json:"format"`
+	Chunks         uint32 `json:"chunks"`
+	HashHex        string `json:"hash_hex"`
+	MetadataBase64 string `json:"metadata_base64"`
+	AppHashHex     string `json:"app_hash_hex"`
+}
+
+type snapshotOfferResponse struct {
+	Result string `json:"result"`
+	Reason string `json:"reason"`
+}
+
+type snapshotChunkResponse struct {
+	ChunkBase64 string `json:"chunk_base64"`
+}
+
+type snapshotApplyEnvelope struct {
+	Index       uint32 `json:"index"`
+	ChunkBase64 string `json:"chunk_base64"`
+	Sender      string `json:"sender"`
+}
+
+type snapshotApplyResponse struct {
+	Result        string   `json:"result"`
+	RefetchChunks []uint32 `json:"refetch_chunks"`
+	RejectSenders []string `json:"reject_senders"`
+}
+
 func newBridge(baseURL, token string) *bridgeApp {
 	return &bridgeApp{
 		execution: executionClient{
 			baseURL: strings.TrimRight(baseURL, "/"),
 			token:   token,
-			http:    &http.Client{Timeout: 8 * time.Second},
+			http:    &http.Client{Timeout: 30 * time.Second},
 		},
 	}
 }
@@ -128,7 +171,7 @@ func rawTransactions(txs [][]byte) ([]json.RawMessage, error) {
 	items := make([]json.RawMessage, 0, len(txs))
 	for _, tx := range txs {
 		if !json.Valid(tx) {
-			return nil, errors.New("Crakbit transaction must be canonical JSON for the ABCI PoC")
+			return nil, errors.New("Crakbit transaction must be canonical JSON for the ABCI bridge")
 		}
 		items = append(items, json.RawMessage(append([]byte(nil), tx...)))
 	}
@@ -248,6 +291,130 @@ func (app *bridgeApp) Commit(ctx context.Context, _ *abci.RequestCommit) (*abci.
 		return nil, err
 	}
 	return &abci.ResponseCommit{}, nil
+}
+
+func (app *bridgeApp) ListSnapshots(ctx context.Context, _ *abci.RequestListSnapshots) (*abci.ResponseListSnapshots, error) {
+	var result snapshotListResponse
+	if err := app.execution.doJSON(ctx, http.MethodGet, "/v3/state-sync/snapshots?limit=2", nil, &result); err != nil {
+		return nil, err
+	}
+	snapshots := make([]*abci.Snapshot, 0, len(result.Snapshots))
+	for _, item := range result.Snapshots {
+		hash, err := decodeHash(item.HashHex)
+		if err != nil {
+			return nil, err
+		}
+		metadata, err := base64.StdEncoding.DecodeString(item.MetadataBase64)
+		if err != nil {
+			return nil, fmt.Errorf("decode snapshot metadata: %w", err)
+		}
+		snapshots = append(snapshots, &abci.Snapshot{
+			Height:   item.Height,
+			Format:   item.Format,
+			Chunks:   item.Chunks,
+			Hash:     hash,
+			Metadata: metadata,
+		})
+	}
+	return &abci.ResponseListSnapshots{Snapshots: snapshots}, nil
+}
+
+func offerResult(value string) abci.ResponseOfferSnapshot_Result {
+	switch strings.ToUpper(value) {
+	case "ACCEPT":
+		return abci.ResponseOfferSnapshot_ACCEPT
+	case "ABORT":
+		return abci.ResponseOfferSnapshot_ABORT
+	case "REJECT":
+		return abci.ResponseOfferSnapshot_REJECT
+	case "REJECT_FORMAT":
+		return abci.ResponseOfferSnapshot_REJECT_FORMAT
+	case "REJECT_SENDER":
+		return abci.ResponseOfferSnapshot_REJECT_SENDER
+	default:
+		return abci.ResponseOfferSnapshot_UNKNOWN
+	}
+}
+
+func (app *bridgeApp) OfferSnapshot(ctx context.Context, req *abci.RequestOfferSnapshot) (*abci.ResponseOfferSnapshot, error) {
+	if req.Snapshot == nil {
+		return &abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_REJECT}, nil
+	}
+	var result snapshotOfferResponse
+	if err := app.execution.doJSON(
+		ctx,
+		http.MethodPost,
+		"/v3/state-sync/offer",
+		snapshotOfferEnvelope{
+			Height:         req.Snapshot.Height,
+			Format:         req.Snapshot.Format,
+			Chunks:         req.Snapshot.Chunks,
+			HashHex:        hex.EncodeToString(req.Snapshot.Hash),
+			MetadataBase64: base64.StdEncoding.EncodeToString(req.Snapshot.Metadata),
+			AppHashHex:     hex.EncodeToString(req.AppHash),
+		},
+		&result,
+	); err != nil {
+		return nil, err
+	}
+	return &abci.ResponseOfferSnapshot{Result: offerResult(result.Result)}, nil
+}
+
+func (app *bridgeApp) LoadSnapshotChunk(ctx context.Context, req *abci.RequestLoadSnapshotChunk) (*abci.ResponseLoadSnapshotChunk, error) {
+	var result snapshotChunkResponse
+	path := fmt.Sprintf(
+		"/v3/state-sync/chunk?height=%d&format=%d&chunk=%d",
+		req.Height,
+		req.Format,
+		req.Chunk,
+	)
+	if err := app.execution.doJSON(ctx, http.MethodGet, path, nil, &result); err != nil {
+		return nil, err
+	}
+	chunk, err := base64.StdEncoding.DecodeString(result.ChunkBase64)
+	if err != nil {
+		return nil, fmt.Errorf("decode state-sync chunk: %w", err)
+	}
+	return &abci.ResponseLoadSnapshotChunk{Chunk: chunk}, nil
+}
+
+func applyResult(value string) abci.ResponseApplySnapshotChunk_Result {
+	switch strings.ToUpper(value) {
+	case "ACCEPT":
+		return abci.ResponseApplySnapshotChunk_ACCEPT
+	case "ABORT":
+		return abci.ResponseApplySnapshotChunk_ABORT
+	case "RETRY":
+		return abci.ResponseApplySnapshotChunk_RETRY
+	case "RETRY_SNAPSHOT":
+		return abci.ResponseApplySnapshotChunk_RETRY_SNAPSHOT
+	case "REJECT_SNAPSHOT":
+		return abci.ResponseApplySnapshotChunk_REJECT_SNAPSHOT
+	default:
+		return abci.ResponseApplySnapshotChunk_UNKNOWN
+	}
+}
+
+func (app *bridgeApp) ApplySnapshotChunk(ctx context.Context, req *abci.RequestApplySnapshotChunk) (*abci.ResponseApplySnapshotChunk, error) {
+	var result snapshotApplyResponse
+	if err := app.execution.doJSON(
+		ctx,
+		http.MethodPost,
+		"/v3/state-sync/apply",
+		snapshotApplyEnvelope{
+			Index:       req.Index,
+			ChunkBase64: base64.StdEncoding.EncodeToString(req.Chunk),
+			Sender:      req.Sender,
+		},
+		&result,
+	); err != nil {
+		return nil, err
+	}
+	return &abci.ResponseApplySnapshotChunk{
+		Result:        applyResult(result.Result),
+		RefetchChunks: result.RefetchChunks,
+		RejectSenders: result.RejectSenders,
+	}, nil
 }
 
 func (app *bridgeApp) Query(ctx context.Context, req *abci.RequestQuery) (*abci.ResponseQuery, error) {
