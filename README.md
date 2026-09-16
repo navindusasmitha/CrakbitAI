@@ -11,37 +11,37 @@ Crakbit AI is an independent technology project building defensive-security tool
 - Security scanner: early alpha
 - Security CLI: early alpha
 - AI Security Assistant: in development
-- Crakbit Chain: **v0.29.0a1 real independent-host execution/evidence alpha**
+- Crakbit Chain: **v0.30.0a1 continuous-operations / evidence-publication alpha**
 - External consensus candidate: CometBFT `v0.40.0`
 - Governed execution protocol: `crakbit-execution/3`
 - Browser wallet/public gateway: alpha
-- Public-testnet, review/remediation, final-candidate, launch-rehearsal and real-host evidence tooling: implemented
+- Public-testnet, review/remediation, final-candidate, launch-rehearsal, live-host and continuous-evidence tooling: implemented
 - Production CRKBIT: **not launched**
 - Official CRKBIT presale: **none**
 
 Crakbit Chain is **not a production mainnet** and should not be used to custody real value.
 
-## Crakbit Chain v0.29
+## Crakbit Chain v0.30
 
-The chain stack now includes the v0.28 launch-rehearsal layer plus a new real-host evidence path:
+v0.30 adds an operations layer on top of the v0.29 real-host evidence path:
 
-- live CometBFT `/status` + `/abci_info` probing,
-- signed per-validator live host observations,
-- exact source/candidate/application-genesis/consensus-genesis binding,
-- 4+ validator/operator/evidence-signer cluster checks,
-- provider/region diversity gates,
-- bounded observation windows and height spread,
-- same-height application-hash divergence detection,
-- signed multi-operator genesis ceremony attestations,
-- signed long-lived soak evidence with a default seven-day target,
-- signed fault/recovery results bound to raw evidence SHA-256,
-- required restart/process-kill/partition/latency/packet-loss/load/storage/state-sync/governance/upgrade campaign coverage,
-- exact v0.28 release-freeze/rehearsal-gate binding,
-- final signed v0.29 real-evidence freeze for human/independent review only.
+- signed non-secret 4+ validator monitoring inventory,
+- rejection of secret-bearing inventory fields,
+- read-only live CometBFT cluster monitoring,
+- signed height-spread/app-hash-divergence monitoring samples,
+- resumable hash-chained monitoring checkpoints,
+- default seven-day monitoring target with >=0.99 success ratio,
+- `scripts/run_v30_monitor.py` for continuous checkpoint/resume collection,
+- raw evidence archive manifests with SHA-256 + retention policy,
+- active RPC/explorer/gateway health probes,
+- redundant public-edge gate with two healthy endpoints per role by default,
+- protected HSM/remote-signer connectivity checks without reading private keys,
+- signed public evidence bundle bound to the exact v0.29 real-evidence freeze,
+- signed operator checklist that keeps DNS, treasury movement and launch execution manual.
 
-A passing v0.29 real-execution gate still does **not** automatically launch validators, change DNS, move funds or create production-value CRKBIT. Production readiness/launch claims remain false in the tooling.
+A passing v0.30 evidence bundle still does **not** automatically start validators, change DNS, move funds or create production-value CRKBIT. Production readiness and launch flags stay false.
 
-See [`blockchain/V0.29.md`](blockchain/V0.29.md) and [`blockchain/README.md`](blockchain/README.md).
+See [`blockchain/V0.30.md`](blockchain/V0.30.md) and [`blockchain/README.md`](blockchain/README.md).
 
 ## Quick test
 
@@ -53,17 +53,24 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-## v0.29 real-host workflow
+## v0.30 operations workflow
 
 ```bash
-crakchain live-host-v29-probe --help
-crakchain cluster-v29-build --help
-crakchain genesis-attest-v29-build --help
-crakchain genesis-gate-v29-build --help
-crakchain soak-v29-build --help
-crakchain fault-result-v29-build --help
-crakchain real-gate-v29-build --help
-crakchain real-freeze-v29-build --help
+crakchain monitor-inventory-v30-build --help
+crakchain monitor-sample-v30-probe --help
+crakchain monitor-checkpoint-v30-build --help
+crakchain archive-v30-build --help
+crakchain edge-v30-probe --help
+crakchain edge-gate-v30-build --help
+crakchain signer-v30-probe --help
+crakchain public-evidence-v30-build --help
+crakchain operator-checklist-v30-build --help
+```
+
+For a resumable seven-day read-only campaign:
+
+```bash
+python scripts/run_v30_monitor.py --help
 ```
 
 ## Mainnet path
