@@ -1,9 +1,9 @@
-# Crakbit Chain — v0.24 Operational-Hardening Alpha
+# Crakbit Chain — v0.25 Independent-Review-Candidate Tooling Alpha
 
-**Current package:** `0.24.0a1`  
+**Current package:** `0.25.0a1`  
 **Consensus candidate:** CometBFT `v0.40.0`  
 **Execution path:** `crakbit-execution/3`  
-**Status:** research/public-testnet/operational-review-candidate infrastructure — **not production mainnet**.
+**Status:** research/public-testnet/independent-review-candidate tooling — **not production mainnet**.
 
 Production CRKBIT has **not** launched. There is no official presale or production token contract. Do not use this software to custody real value.
 
@@ -34,28 +34,28 @@ crakbit-execution/3
 
 The older Python prevote/precommit implementation remains research-only and is not the intended production BFT path.
 
-## v0.24 scope
+## v0.25 scope
 
-v0.24 builds on the v0.23 public-testnet deployment layer and adds **operational fault/recovery hardening**:
+v0.25 builds on v0.24 operational hardening and adds the **evidence and freeze boundary before independent review**:
 
-- exact host preflight before a validator starts,
-- package / CometBFT / application-genesis / consensus-genesis identity gates,
-- loopback/private execution and ABCI bind checks,
-- execution-token presence check without reading or exposing the token,
-- data-directory writability and minimum free-space check,
-- typed fault plans for restart, process-kill, partition, latency, packet-loss, load and storage,
-- mandatory recovery command for every planned fault,
-- explicit normalization of real executed fault-campaign results,
-- backup/restore and clean-host state-sync convergence records,
-- remote-signer/HSM-style drill records with key-export rejection,
-- redundant RPC/explorer checks,
-- same-height application-hash conflict detection across redundant RPC endpoints,
-- separate 24h, 72h and 7-day soak gates,
-- aggregate operational-review-candidate readiness,
-- signed v0.24 operations evidence bound to exact source commit and artifact hashes,
-- v0.24 regression tests.
+- incident-response records with acknowledgement/resolution ordering,
+- escalation requirement for high/critical incidents,
+- recovery-verification requirement before incident closure,
+- signed per-operator host attestations using dedicated evidence-signing keys,
+- exact source commit / package / CometBFT / application-genesis / consensus-genesis binding,
+- required 7-day soak, backup/restore, clean-host state sync, validator-governance and protected-signer assertions,
+- required restart/process-kill/partition/latency/packet-loss/load/storage coverage,
+- at least four unique operator IDs, validator IDs and evidence signers,
+- provider and region diversity gates,
+- one exact source/package/CometBFT/application-genesis/consensus-genesis identity across the candidate,
+- dependency on a successful v0.24 operational-readiness artifact,
+- dependency on closed incident-response drill evidence,
+- signed exact review-candidate freeze,
+- explicit independent-review scope,
+- hard-coded `independent_security_review_completed=false` and `production_mainnet_ready=false` claims,
+- v0.25 regression tests.
 
-See [`V0.24.md`](V0.24.md) for the full runbook and limitations.
+See [`V0.25.md`](V0.25.md) and [`docs/INDEPENDENT_REVIEW_HANDOFF_V25.md`](docs/INDEPENDENT_REVIEW_HANDOFF_V25.md).
 
 ## Install / test
 
@@ -74,80 +74,64 @@ go mod download
 go test -mod=mod ./...
 ```
 
-## v0.24 commands
+## v0.25 commands
 
 ```text
-host-preflight-v24
-fault-v24-plan-build
-fault-v24-result-build
-recovery-v24-record
-remote-signer-v24-record
-redundancy-v24-check
-readiness-v24-build
-ops-v24-sign
-ops-v24-verify
+incident-v25-record
+host-attestation-v25-build
+host-attestation-v25-verify
+review-gate-v25-build
+review-freeze-v25-build
+review-freeze-v25-verify
 ```
 
-All v0.23 public-testnet commands and earlier validator-governance/release/recovery commands remain available through CLI delegation.
+All v0.24 host-preflight/fault/recovery/signer/redundancy/readiness commands and earlier public-testnet/governance/release commands remain available through CLI delegation.
 
-## Preflight each validator
+## Evidence key separation
 
-```bash
-crakchain host-preflight-v24 \
-  --node-name validator-1 \
-  --application-genesis /etc/crakbit/application-genesis.json \
-  --application-genesis-sha256 EXPECTED_APP_GENESIS_SHA256 \
-  --consensus-genesis /var/lib/crakbit/cometbft/config/genesis.json \
-  --consensus-genesis-sha256 EXPECTED_COMET_GENESIS_SHA256 \
-  --data /var/lib/crakbit/app \
-  --token-file /etc/crakbit/node.env \
-  --execution-bind 127.0.0.1:26659 \
-  --abci-bind tcp://127.0.0.1:26658 \
-  --cometbft /usr/local/bin/cometbft \
-  --expected-cometbft-version v0.40.0 \
-  --output runtime/evidence/validator-1-preflight.json
+Each operator should use a dedicated **evidence-signing key** for v0.25 host attestations. It should not be the validator consensus key, governance wallet key, user wallet key, TLS key or release key.
+
+A valid cryptographic signature proves that the holder of the evidence key signed the record. It does **not** independently prove the operator/provider/region/soak/drill claims. Every v0.25 host attestation therefore records:
+
+```text
+operator_self_attested=true
+independently_verified=false
+production_mainnet_ready=false
 ```
 
-The evidence output contains only a token-presence boolean; it must never contain the token/private key itself.
+## Review gate
 
-## Fault campaigns are opt-in
+The aggregate v0.25 review gate requires:
 
-`fault-v24-plan-build` creates a plan only. It requires a recovery command for every step. Existing `scripts/run_fault_campaign.py` remains dry-run unless the operator explicitly provides `--execute`.
+- v0.24 `operational_review_candidate=true`,
+- at least four signed host attestations,
+- unique operator / validator / evidence-signer identities,
+- >=2 providers and >=2 regions,
+- every per-host gate satisfied,
+- single source commit and exact network identity,
+- at least one incident-response drill,
+- every incident closed with recovery verified.
 
-Never run partition/storage/process-kill commands against infrastructure you do not own or administer. Real campaign evidence must preserve raw logs and recovery observations.
+Only then can `candidate_freeze_allowed=true` be produced.
 
-## Long-soak readiness
+## Freeze candidate for independent review
 
-Use actual elapsed v0.23 soak summaries:
+`review-freeze-v25-build` refuses to create a freeze if the supplied v0.25 review gate is unsatisfied. The freeze binds the exact source commit, package, CometBFT version, both genesis files, the review-gate hash and each review artifact SHA-256, then signs the manifest.
 
-```bash
-crakchain readiness-v24-build \
-  --soak-24h runtime/evidence/soak-24h-summary.json \
-  --soak-72h runtime/evidence/soak-72h-summary.json \
-  --soak-7d runtime/evidence/soak-7d-summary.json \
-  --fault-result runtime/evidence/fault-restart.json \
-  --recovery runtime/evidence/backup-restore.json \
-  --recovery runtime/evidence/clean-host-state-sync.json \
-  --signer-record runtime/evidence/validator-1-signer.json \
-  --redundancy runtime/evidence/redundancy.json \
-  --output runtime/evidence/v24-readiness.json
-```
+The freeze does **not** claim an audit has happened. It explicitly keeps independent review and production-mainnet readiness false.
 
-The complete operational gate requires all seven modeled fault classes, both recovery classes, redundancy, protected-signer drill evidence and genuine 24h/72h/7d soak evidence. Even if those operator gates pass, the result still has `production_mainnet_ready=false` and `independent_security_review_completed=false`.
+## v0.24 operational layer retained
 
-## Existing public-testnet layer retained
+v0.24 remains the source of:
 
-v0.23 remains the deployment foundation:
-
-- public-only validator identities,
-- >=4-validator inventory,
-- operator/provider/region diversity checks,
-- matching application + CometBFT genesis bundles,
-- non-secret per-operator deployment bundles,
-- public-testnet observations and JSONL soak collection,
-- signed public-testnet operations evidence.
-
-v0.22/v0.21 retain governed validator `join` / `remove` / `replace` flows with strict `>2/3` current voting-power approval and modeled `H → H+2` application activation.
+- validator host preflight,
+- exact package/CometBFT/genesis identity checks,
+- authorized typed fault/recovery records,
+- backup/restore and clean-host state-sync convergence,
+- protected remote-signer/HSM-style drill evidence,
+- redundant RPC/explorer convergence checks,
+- separate 24h/72h/7-day readiness gates,
+- signed operational evidence.
 
 ## Mining note
 
@@ -155,6 +139,6 @@ The Mining Lab is a **test-only work-reward service**, not consensus mining. It 
 
 ## Production boundary
 
-Code and operator-generated evidence are not substitutes for independent review. Before any production-value mainnet consideration the project still needs real independently managed validators, genuine multi-operator genesis, sustained independent-host operation, real fault/load/storage/state-sync results, protected signer deployment, production RPC/TLS/WAF/DDoS/secret-management engineering, independent consensus/application/governance/network/cryptography/browser-wallet review, finalized economics/incentives and applicable legal/regulatory review.
+Tooling, signatures and operator attestations are not substitutes for actual independent-host operation or independent review. Before production-value mainnet consideration the project still needs real independently managed validators, real multi-operator genesis, genuine long-running/fault/recovery evidence, protected signer deployment, production RPC/TLS/WAF/DDoS/secret-management engineering, independent consensus/application/governance/network/cryptography/browser-wallet review, remediation/retest of high/critical findings, finalized economics/incentives and applicable legal/regulatory review.
 
 See [`docs/MAINNET_GATES.md`](docs/MAINNET_GATES.md).
