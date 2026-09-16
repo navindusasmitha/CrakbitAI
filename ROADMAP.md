@@ -83,19 +83,12 @@ A runnable research/devnet exists to turn network ideas into testable code. This
 - [x] Signed transfers, nonces/replay protection and minimum fees
 - [x] Signed block proposals, previous-hash linking, Merkle roots and deterministic state roots
 - [x] SQLite chain/account/consensus persistence
-- [x] Round-specific deterministic proposer schedule
-- [x] Signed quorum-certified view changes
-- [x] Signed prevote + precommit phases with >2/3 certificates
-- [x] Persistent anti-double-vote records and conservative per-height lock
-- [x] Consensus event journal and equivocation evidence
-- [x] Ed25519-authenticated validator internal requests
-- [x] Signed validator challenge/response identity handshake
-- [x] Durable validator request replay protection
-- [x] Signed state snapshots and >2/3 quorum snapshot certificates
-- [x] Resumable verified chunked snapshot transfer
-- [x] Safe snapshot import/bootstrap for fresh node databases
-- [x] Snapshot-base-aware history semantics
-- [x] Local integrity verification and verified backups/restore drills
+- [x] Round-specific proposer schedule and quorum-certified view changes
+- [x] Signed prevote/precommit phases with >2/3 certificates
+- [x] Persistent anti-double-vote records, locks, event journal and equivocation evidence
+- [x] Authenticated validator requests, challenge/response and durable replay protection
+- [x] Quorum snapshots, resumable state transfer and safe snapshot bootstrap
+- [x] Local integrity verification and verified backup/restore drills
 - [x] Prometheus/Grafana development observability and alerts
 - [x] Bounded RPC, transaction, mempool and block resource controls
 - [x] Public-testnet deployment/operator scaffold
@@ -104,85 +97,86 @@ A runnable research/devnet exists to turn network ideas into testable code. This
 ### v0.11 — validator transport hardening
 
 - [x] Record consensus architecture decision: do not treat the bespoke Python consensus as a production BFT path
-- [x] Set reviewed/established BFT core migration evaluation as a release gate
-- [x] Operator-managed outbound validator mTLS trust configuration
-- [x] Dedicated inbound mutual-TLS validator launcher
-- [x] Validator-address → TLS leaf certificate SHA-256 pin enforcement
-- [x] `/transport/status`
-- [x] Certificate fingerprint helper
-- [x] Repeatable Toxiproxy latency/timeout/reachability fault harness
-- [x] Validator TLS/consensus-key rotation and incident-response runbook
+- [x] Set reviewed external BFT migration/evaluation as a release gate
+- [x] Operator-managed validator mTLS, CA/hostname validation and certificate pinning
+- [x] Inbound mutual-TLS launcher
+- [x] Certificate fingerprint helper and dual-key/transport incident runbook
+- [x] Toxiproxy transport-fault harness
 - [x] Public-testnet reverse-proxy hardening example
 
 ### v0.12 — archive, recovery and testnet hardening
 
-- [x] Genesis-anchored full-history archive export
-- [x] Full archive verification by replaying proposer signatures, quorum certificates, transactions, balances, nonces, state roots and hash continuity
-- [x] Snapshot-node pre-snapshot history backfill without mutating current state
-- [x] `archive-export`, `archive-verify` and `archive-import` CLI commands
-- [x] `/archive/status` and history-status integration
-- [x] Consensus/execution boundary groundwork for future reviewed-BFT integration
-- [x] Dual certificate-pin overlap for coordinated TLS certificate rotation
-- [x] Optional bearer authentication for monitoring/operator endpoints
-- [x] Explicit duplicate/conflicting/forged validator-vote adversarial fixtures
-- [x] Repeatable multi-node soak/divergence monitor
+- [x] Genesis-anchored full-history archive export/verify/import
+- [x] Snapshot-node historical backfill without current-state mutation
+- [x] Consensus/execution boundary groundwork
+- [x] Dual TLS certificate-pin overlap during rotation
+- [x] Optional bearer authentication for operator endpoints
+- [x] Duplicate/conflicting/forged validator-vote fixtures
+- [x] Multi-node soak/divergence tooling
 - [x] Deny-by-default nftables public-testnet example
-- [x] Expanded public-testnet operator guidance
 
-### v0.13 — large external-consensus and public-testnet tooling phase
+### v0.13 — external-consensus preparation and public-testnet tooling
 
-- [x] Versioned deterministic `crakbit-execution/1` process/application boundary
-- [x] Deterministic application hash independent from consensus-local state
-- [x] Transaction validation and ordered batch preview without state mutation
-- [x] Authenticated loopback external execution-service PoC
-- [x] Protocol compatibility/non-mutation tests
-- [x] Signed genesis/release artifact generation and verification
-- [x] Release manifest binding to genesis fingerprint, exact genesis hash and artifact hashes
-- [x] Dedicated release-signer identity verification
-- [x] Non-secret validator provisioning automation for multiple independent hosts
-- [x] Strictly test-only faucet with amount, cooldown and global request limits
-- [x] Validator-consensus-key rejection in faucet configuration
-- [x] Bounded read-only explorer summary/block/address APIs
-- [x] Reproducible soak JSONL summary generation
-- [x] External BFT integration evaluation criteria
-- [x] External consensus/network/security review package checklist
-- [x] `release-build`, `release-verify`, `protocol-status`, `protocol-preview` CLI tooling
-- [x] v0.13 automated tests and GitHub Actions pass
-- [ ] Run sustained independent-host partition/latency/load/soak campaigns
-- [ ] Publish real multi-host test results and incident logs
-- [ ] Integrate an independently reviewed external BFT core
+- [x] Deterministic `crakbit-execution/1` preview/process boundary
+- [x] Deterministic application hash independent from consensus-local metadata
+- [x] Authenticated loopback execution-service PoC
+- [x] Signed release/genesis manifest tooling
+- [x] Non-secret independent-host provisioning scaffolds
+- [x] Strictly test-only faucet foundation
+- [x] Bounded read-only explorer APIs
+- [x] Reproducible soak summary generation
+- [x] External BFT evaluation criteria and external-review package checklist
 
-### v0.14 — real external-BFT integration test network
+### v0.14 — external BFT bridge + crash-safe application commit
 
-- [ ] Select and pin an established independently reviewed BFT implementation/version
-- [ ] Define authenticated versioned finalize/commit protocol
-- [ ] Persist deterministic application hashes at commit boundaries
-- [ ] Make duplicate finalize/commit requests idempotent and crash-safe
-- [ ] Add external-consensus replay/recovery and process-crash tests
-- [ ] Add signed testnet release-bundle and genesis-ceremony workflow
-- [ ] Deploy validators on multiple independent hosts using generated operator bundles
-- [ ] Automate partition, latency, restart and sustained-load campaigns
-- [ ] Publish soak/fault summaries and incident logs
-- [ ] Add dedicated indexed explorer backend
-- [ ] Harden faucet with upstream abuse controls and persistent distribution limits
-- [ ] Prepare first external consensus/network/security review candidate
+- [x] Pin CometBFT `v0.40.0` for the integration PoC
+- [x] Add Go ABCI bridge module
+- [x] Implement ABCI `Info`, `CheckTx`, `PrepareProposal`, `ProcessProposal`, `FinalizeBlock`, `Commit` and minimal query support
+- [x] Add versioned mutating `crakbit-execution/2` protocol
+- [x] Add deterministic application hash bound to external consensus block hash
+- [x] Add dedicated external application database isolation checks
+- [x] Persist FinalizeBlock stage without mutating committed application state
+- [x] Atomically apply staged Commit in SQLite
+- [x] Persist external commit records and pending-finalize recovery state
+- [x] Accept identical app-ahead FinalizeBlock replay and reject conflicting replay
+- [x] Add authenticated v0.14 execution service
+- [x] Add signed strict >2/3 genesis ceremony/validator attestations
+- [x] Add external-consensus and ceremony CLI tooling
+- [x] Add local CometBFT PoC runbook
+- [x] Extend CI to test Python and Go bridge code
+
+### v0.15 — repeatable external-BFT test network
+
+- [ ] Add one-command local four-node CometBFT lab generation
+- [ ] Generate/verify CometBFT consensus genesis and peer inventory separately from Crakbit application genesis
+- [ ] Add exhaustive crash-point replay matrix around FinalizeBlock/Commit
+- [ ] Add external-consensus snapshot/state-sync adapter work
+- [ ] Add dedicated indexed explorer database for external-consensus history
+- [ ] Make faucet cooldown/distribution accounting persistent across restart
+- [ ] Add multi-host deployment inventory and automated health checks
+- [ ] Automate partition, latency, restart and sustained-load campaigns against the CometBFT path
+- [ ] Publish signed testnet release + application-genesis ceremony + soak/fault evidence bundle
+- [ ] Add production-oriented validator key/remote-signer/HSM evaluation
+- [ ] Prepare first independent consensus/network/application review handoff
 
 ### Current consensus/network warning
 
-v0.13 improves deterministic execution boundaries, release verification and testnet operations, but it is still **not** a production BFT or production P2P implementation. The current Python consensus is research-only and is not the intended production mainnet path. No independently reviewed external BFT engine has been integrated and no independent security audit has been completed.
+v0.14 provides a real ABCI bridge and crash-safe external application commit PoC, but it is still **not a production mainnet**. The older Python consensus remains research-only, the CometBFT path has not yet completed a sustained independent-host public testnet campaign, full state sync and production key operations are incomplete, and no independent consensus/network/security audit has been completed.
 
 ## Phase 7 — Public Testnet
 **Only after Phase 6 security gates are met**
 
-- [ ] Public node software release
-- [ ] Signed testnet genesis/release process
-- [ ] Public testnet explorer
+- [ ] Public external-BFT node software release
+- [x] Signed application-genesis ceremony foundation
+- [x] Signed release-manifest foundation
+- [ ] CometBFT consensus-genesis ceremony/process
+- [ ] Public indexed testnet explorer
 - [ ] Testnet wallet support
 - [x] Test-only faucet implementation foundation
 - [x] Public node/operator documentation foundation
 - [x] Network monitoring/soak tooling foundation
 - [ ] Multi-host public deployment
-- [ ] Stress/partition testing with published evidence
+- [ ] Stress/partition/restart testing with published evidence
 - [ ] Community test program
 
 Any CRKBIT units used on testnet are test-only and should have no represented production value.
@@ -193,7 +187,7 @@ Before any production network launch:
 
 - [ ] Internal security review
 - [ ] Independent code/security audit
-- [ ] Consensus-failure testing
+- [ ] External-consensus replay/failure testing
 - [ ] Network partition/fault testing
 - [ ] Economic-security review
 - [ ] Cryptography/key-management review
@@ -206,11 +200,11 @@ A production mainnet should only be considered after successful long-lived publi
 
 Potential items:
 
-- Final consensus mechanism
+- Final consensus mechanism/version
 - Genesis process
 - Production explorer
 - Production wallet ecosystem
-- Validator onboarding
+- Validator onboarding and remote-signer/key-custody model
 - CRKBIT utility implementation
 - Developer/network services
 - Upgrade/governance process
