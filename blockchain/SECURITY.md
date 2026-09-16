@@ -2,13 +2,15 @@
 
 The current Crakbit Chain implementation is a **research/devnet prototype**. It is not an audited production blockchain and must not be used to custody real value.
 
-## Security Goals of v0.5
+## Security Goals of v0.6
 
-v0.5 adds development-stage protections including:
+v0.6 retains the v0.5 multiphase consensus safeguards and adds application-level validator-network authentication plus signed state-snapshot verification.
+
+Current development protections include:
 
 - Ed25519 signatures for transactions, proposals, prevotes, precommits and view changes,
 - sender/public-key binding,
-- nonce-based replay protection,
+- nonce-based transaction replay protection,
 - deterministic transaction/state commitments,
 - strict greater-than-two-thirds prevote quorum,
 - strict greater-than-two-thirds precommit quorum,
@@ -17,6 +19,12 @@ v0.5 adds development-stage protections including:
 - persistent per-height consensus locks,
 - persistent consensus event history,
 - conflicting signed-proposal evidence,
+- Ed25519-authenticated `/internal/*` validator requests,
+- peer request signatures bound to method, path and request-body hash,
+- timestamp-window and nonce replay checks for validator HTTP requests,
+- signed validator challenge/response identity handshake,
+- optional HTTPS peer-URL enforcement,
+- validator-signed state snapshot export and verification,
 - finalized-block revalidation during sync,
 - validator health/height/round telemetry.
 
@@ -24,7 +32,7 @@ These controls improve the research network but remain **insufficient for a publ
 
 ## Consensus Safety Model
 
-The v0.5 finalization path is:
+The finalization path remains:
 
 ```text
 signed proposal
@@ -39,7 +47,7 @@ Before/while precommitting, it persists a local lock on that block hash. A resta
 
 ### Conservative lock limitation
 
-The current lock has **no proof-based unlock rule**. Once locked on a block hash at a height, a validator refuses to vote for another block hash at that height.
+The current lock has **no mature proof-based unlock rule**. Once locked on a block hash at a height, a validator refuses to vote for another block hash at that height.
 
 This is intentionally safety-biased, but it can hurt liveness. Under some failure/partition sequences the devnet may halt rather than unlock.
 
@@ -47,13 +55,78 @@ This is not a complete Tendermint/HotStuff-style or otherwise formally reviewed 
 
 ### Certified view changes
 
-Later proposal rounds still require >2/3 signed view-change messages. View changes carry local lock metadata but do not override a local v0.5 lock.
+Later proposal rounds require >2/3 signed view-change messages. View changes carry local lock metadata but do not override the current conservative lock.
 
 ### Equivocation evidence
 
 The node records the first valid signed proposal for `(height, round, proposer)`. A conflicting valid signed proposal from the same proposer is stored as evidence and rejected for voting.
 
 There is no automatic slashing, validator removal or evidence gossip/consensus processing.
+
+## Validator Request Authentication
+
+v0.6 signs validator-to-validator internal HTTP requests. The signed request commitment includes:
+
+```text
+HTTP method
+request path
+SHA-256(request body)
+validator address
+timestamp
+random nonce
+```
+
+The receiver checks that the signer belongs to the configured validator set, verifies the Ed25519 signature, rejects timestamps outside the configured window and rejects a recently repeated nonce.
+
+### Replay limitation
+
+The nonce replay cache is currently process-local. Restarting a node clears that in-memory cache. Timestamp validation bounds the replay window, but this is not equivalent to a mature mutually authenticated session protocol with durable anti-replay state.
+
+## Validator Identity Handshake
+
+`POST /internal/hello` implements a signed challenge/response handshake. The signed response binds chain ID, validator address/public key, caller challenge and timestamp.
+
+This proves possession of the configured validator private key at handshake time.
+
+Peer status telemetry fetched afterward remains operational data and should not be treated as signed consensus evidence.
+
+## Encryption / TLS Limitations
+
+The default local Docker devnet still uses ordinary HTTP.
+
+Operators can enable:
+
+```text
+CRAKBIT_REQUIRE_PEER_TLS=1
+```
+
+or the CLI flag:
+
+```text
+--require-peer-tls
+```
+
+which makes a node reject non-HTTPS validator peer URLs.
+
+This is **URL-policy enforcement only**. It does not automatically provide:
+
+- TLS certificate issuance,
+- mutual TLS,
+- certificate pinning,
+- certificate/key rotation,
+- secure discovery,
+- session-level replay protection,
+- eclipse/Sybil resistance.
+
+A future public testnet requires a reviewed mutually authenticated encrypted validator transport.
+
+## Signed Snapshot Security
+
+`GET /snapshot/latest` exports a validator-signed snapshot envelope containing chain identity, genesis fingerprint, finalized height/hash, sorted account balances/nonces, a deterministic accounts root and a snapshot hash.
+
+`crakchain snapshot-verify` verifies the snapshot contents and validator signature against genesis.
+
+v0.6 does **not** implement snapshot quorum certification or snapshot import / fast state sync. A single validator signature is useful for integrity testing but is not enough to establish production trust in state recovery.
 
 ## Persistent Consensus State
 
@@ -67,21 +140,7 @@ SQLite persists:
 - proposal/equivocation records,
 - consensus event journal entries.
 
-This improves restart safety, but SQLite remains a development storage choice and is not a production storage architecture decision.
-
-## Network Risk
-
-Validator communication still uses ordinary HTTP and static peer URLs. Consensus objects are signed, but the transport does **not** yet provide:
-
-- encryption,
-- mutual validator authentication,
-- peer identity handshakes,
-- certificate/key rotation,
-- connection/rate limits,
-- eclipse/Sybil defenses,
-- authenticated peer telemetry.
-
-The `/internal/*` endpoints are development-only and should not be publicly exposed.
+SQLite remains a development storage choice and is not a production storage architecture decision.
 
 ## Private Keys
 
@@ -97,16 +156,16 @@ Rules:
 
 ## Monitoring / DoS Limitations
 
-`/health`, `/status`, `/peers`, `/metrics`, `/consensus/events` and `/evidence` are useful development diagnostics, but they are not production observability/security infrastructure.
+`/health`, `/status`, `/peers`, `/metrics`, `/metrics/prometheus`, `/consensus/events` and `/evidence` are development diagnostics, not production observability/security infrastructure.
 
 Before public testnet, add explicit controls for request size, transaction/memo size, certificate size, RPC rate, mempool size, concurrent connections, sync bandwidth and consensus-request frequency.
 
 ## State / Recovery Risk
 
-v0.5 still lacks:
+v0.6 now has signed snapshot export/verification but still lacks:
 
-- signed state snapshots,
-- verified fast state sync,
+- snapshot quorum certification,
+- verified snapshot import / fast state sync,
 - pruning/archival policy,
 - corruption recovery procedures,
 - crash-consistency stress testing,
@@ -118,20 +177,16 @@ The devnet has no staking, slashing, inflation or on-chain governance. Fees are 
 
 No production economics or investment value should be inferred from the devnet implementation.
 
-## Smart Contracts
-
-No smart-contract VM is included. Adding one should require a separate threat model, deterministic execution specification, sandbox design, resource/gas model and independent review.
-
 ## Required Before Public Testnet
 
 - reviewed cross-round unlock/mature BFT design,
-- authenticated validator identity,
-- encrypted validator transport,
-- state snapshot/recovery design,
+- mutually authenticated encrypted validator transport,
+- certificate/key rotation and key-management runbook,
+- durable/session-grade replay protection,
+- snapshot quorum and recovery/import design,
 - parser fuzzing and malformed-message testing,
 - partition/restart/load testing,
 - RPC abuse controls,
-- key-management runbook,
 - reproducible build/container review,
 - external consensus/network review.
 
