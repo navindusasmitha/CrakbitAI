@@ -6,7 +6,7 @@ This roadmap describes the intended development order for Crakbit AI. Dates are 
 
 **Technology first. Security first. Tokens later.**
 
-The immediate product focus remains a useful defensive-security MVP. In parallel, Crakbit Chain is being used as a research network to turn blockchain, validator-security and recovery ideas into testable code. Production mainnet planning remains gated on reviewed consensus, long-running public testing and independent security review.
+The immediate product focus remains a useful defensive-security MVP. In parallel, Crakbit Chain is being used as a research network to turn blockchain, validator-security, recovery and external-consensus integration ideas into testable code. Production mainnet planning remains gated on reviewed consensus, long-running public testing and independent security review.
 
 ## Phase 1 — Foundation
 **Target: Q3–Q4 2026**
@@ -71,12 +71,12 @@ A developer should be able to submit or scan a small codebase and receive a clea
 - [ ] Plugin/extension architecture
 - [ ] Open-source rule contribution framework
 
-## Phase 6 — Crakbit Chain Research & Local Devnet
+## Phase 6 — Crakbit Chain Research & Devnet
 **Prototype started September 2026**
 
-A runnable local devnet exists to turn network research into testable code. This does **not** mean a production blockchain or public-value CRKBIT asset has launched.
+A runnable research/devnet exists to turn network ideas into testable code. This does **not** mean a production blockchain or public-value CRKBIT asset has launched.
 
-### Completed research/devnet milestones through v0.10
+### Completed research/devnet foundation through v0.10
 
 - [x] Native test-only CRKBIT accounting unit
 - [x] Ed25519 wallet/key generation and `crk1...` addresses
@@ -90,7 +90,7 @@ A runnable local devnet exists to turn network research into testable code. This
 - [x] Consensus event journal and equivocation evidence
 - [x] Ed25519-authenticated validator internal requests
 - [x] Signed validator challenge/response identity handshake
-- [x] Durable SQLite-backed validator request replay protection
+- [x] Durable validator request replay protection
 - [x] Signed state snapshots and >2/3 quorum snapshot certificates
 - [x] Resumable verified chunked snapshot transfer
 - [x] Safe snapshot import/bootstrap for fresh node databases
@@ -105,62 +105,85 @@ A runnable local devnet exists to turn network research into testable code. This
 
 - [x] Record consensus architecture decision: do not treat the bespoke Python consensus as a production BFT path
 - [x] Set reviewed/established BFT core migration evaluation as a release gate
-- [x] Add operator-managed outbound validator mTLS trust configuration
-- [x] Add dedicated inbound mutual-TLS validator launcher
-- [x] Add validator-address → TLS leaf certificate SHA-256 pin enforcement
-- [x] Add `/transport/status`
-- [x] Add certificate fingerprint helper
-- [x] Add repeatable Toxiproxy latency/timeout/reachability fault harness
-- [x] Add validator TLS/consensus-key rotation and incident-response runbook
-- [x] Add public-testnet reverse-proxy hardening example
+- [x] Operator-managed outbound validator mTLS trust configuration
+- [x] Dedicated inbound mutual-TLS validator launcher
+- [x] Validator-address → TLS leaf certificate SHA-256 pin enforcement
+- [x] `/transport/status`
+- [x] Certificate fingerprint helper
+- [x] Repeatable Toxiproxy latency/timeout/reachability fault harness
+- [x] Validator TLS/consensus-key rotation and incident-response runbook
+- [x] Public-testnet reverse-proxy hardening example
 
-### v0.12 — large archive, recovery and testnet-hardening phase
+### v0.12 — archive, recovery and testnet hardening
 
 - [x] Genesis-anchored full-history archive export
 - [x] Full archive verification by replaying proposer signatures, quorum certificates, transactions, balances, nonces, state roots and hash continuity
 - [x] Snapshot-node pre-snapshot history backfill without mutating current state
 - [x] `archive-export`, `archive-verify` and `archive-import` CLI commands
 - [x] `/archive/status` and history-status integration
-- [x] Add consensus/execution boundary groundwork for future reviewed-BFT integration
-- [x] Add dual certificate-pin overlap for coordinated TLS certificate rotation
-- [x] Add optional bearer authentication for monitoring/operator endpoints
-- [x] Add explicit duplicate/conflicting/forged validator-vote adversarial fixtures
-- [x] Add repeatable multi-node soak/divergence monitor
-- [x] Add deny-by-default nftables public-testnet example
-- [x] Expand public-testnet operator guidance
-- [x] Add v0.12 automated tests and documentation
+- [x] Consensus/execution boundary groundwork for future reviewed-BFT integration
+- [x] Dual certificate-pin overlap for coordinated TLS certificate rotation
+- [x] Optional bearer authentication for monitoring/operator endpoints
+- [x] Explicit duplicate/conflicting/forged validator-vote adversarial fixtures
+- [x] Repeatable multi-node soak/divergence monitor
+- [x] Deny-by-default nftables public-testnet example
+- [x] Expanded public-testnet operator guidance
 
-### v0.13 — reviewed BFT integration proof-of-concept
+### v0.13 — large external-consensus and public-testnet tooling phase
 
-- [ ] Define a versioned process/protocol boundary between external consensus and Crakbit execution/state
-- [ ] Evaluate an established independently reviewed BFT core against the v0.12 execution adapter
-- [ ] Define deterministic application-hash/state-transition request/response contracts
-- [ ] Add consensus-adapter compatibility and integration tests
-- [ ] Add signed genesis/release artifact generation and verification
-- [ ] Add validator provisioning automation for multiple independent hosts
-- [ ] Add a strictly test-only public faucet with abuse limits
-- [ ] Improve read-only explorer/history access
+- [x] Versioned deterministic `crakbit-execution/1` process/application boundary
+- [x] Deterministic application hash independent from consensus-local state
+- [x] Transaction validation and ordered batch preview without state mutation
+- [x] Authenticated loopback external execution-service PoC
+- [x] Protocol compatibility/non-mutation tests
+- [x] Signed genesis/release artifact generation and verification
+- [x] Release manifest binding to genesis fingerprint, exact genesis hash and artifact hashes
+- [x] Dedicated release-signer identity verification
+- [x] Non-secret validator provisioning automation for multiple independent hosts
+- [x] Strictly test-only faucet with amount, cooldown and global request limits
+- [x] Validator-consensus-key rejection in faucet configuration
+- [x] Bounded read-only explorer summary/block/address APIs
+- [x] Reproducible soak JSONL summary generation
+- [x] External BFT integration evaluation criteria
+- [x] External consensus/network/security review package checklist
+- [x] `release-build`, `release-verify`, `protocol-status`, `protocol-preview` CLI tooling
+- [x] v0.13 automated tests and GitHub Actions pass
 - [ ] Run sustained independent-host partition/latency/load/soak campaigns
-- [ ] Publish reproducible test results and incident logs
-- [ ] Prepare an external consensus/network/security review package
+- [ ] Publish real multi-host test results and incident logs
+- [ ] Integrate an independently reviewed external BFT core
+
+### v0.14 — real external-BFT integration test network
+
+- [ ] Select and pin an established independently reviewed BFT implementation/version
+- [ ] Define authenticated versioned finalize/commit protocol
+- [ ] Persist deterministic application hashes at commit boundaries
+- [ ] Make duplicate finalize/commit requests idempotent and crash-safe
+- [ ] Add external-consensus replay/recovery and process-crash tests
+- [ ] Add signed testnet release-bundle and genesis-ceremony workflow
+- [ ] Deploy validators on multiple independent hosts using generated operator bundles
+- [ ] Automate partition, latency, restart and sustained-load campaigns
+- [ ] Publish soak/fault summaries and incident logs
+- [ ] Add dedicated indexed explorer backend
+- [ ] Harden faucet with upstream abuse controls and persistent distribution limits
+- [ ] Prepare first external consensus/network/security review candidate
 
 ### Current consensus/network warning
 
-v0.12 materially improves recoverability, history verification, validator transport operations and testability, but it is still **not** a production BFT or production P2P implementation. The current Python consensus is research-only and is not the intended production mainnet path. No formal safety/liveness proof or independent audit exists.
+v0.13 improves deterministic execution boundaries, release verification and testnet operations, but it is still **not** a production BFT or production P2P implementation. The current Python consensus is research-only and is not the intended production mainnet path. No independently reviewed external BFT engine has been integrated and no independent security audit has been completed.
 
 ## Phase 7 — Public Testnet
 **Only after Phase 6 security gates are met**
 
 - [ ] Public node software release
-- [ ] Testnet genesis ceremony/process
+- [ ] Signed testnet genesis/release process
 - [ ] Public testnet explorer
 - [ ] Testnet wallet support
-- [ ] Faucet
-- [ ] Public node/operator documentation
-- [ ] Network monitoring
-- [ ] Stress testing
+- [x] Test-only faucet implementation foundation
+- [x] Public node/operator documentation foundation
+- [x] Network monitoring/soak tooling foundation
+- [ ] Multi-host public deployment
+- [ ] Stress/partition testing with published evidence
 - [ ] Community test program
-- [ ] Sustained soak/partition testing with published evidence
 
 Any CRKBIT units used on testnet are test-only and should have no represented production value.
 
@@ -196,8 +219,8 @@ Potential items:
 
 **Production CRKBIT is not launched. No official presale. No production token contract.**
 
-The local development network implements test-only CRKBIT accounting with a proposed maximum genesis supply of 21,000,000 and 8 decimals. Those devnet parameters remain subject to technical, security, economic and legal review before any production implementation.
+The research/devnet implements test-only CRKBIT accounting with a proposed maximum genesis supply of 21,000,000 and 8 decimals. Those parameters remain subject to technical, security, economic and legal review before any production implementation.
 
 ## Roadmap Updates
 
-Major roadmap changes should be documented in repository commits and project updates so supporters and contributors can distinguish completed work from prototypes, public testnets and production systems.
+Major roadmap changes should be documented in repository commits and project updates so supporters and contributors can distinguish completed prototypes, public testnets and production systems.
