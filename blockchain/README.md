@@ -1,8 +1,8 @@
 # Crakbit Chain — Development Network Prototype
 
-**Status: research/devnet alpha (`0.13.0-alpha`)**
+**Status: research/devnet alpha (`0.14.0-alpha`)**
 
-Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosystem. The development network includes native test-only `CRKBIT` accounting, Ed25519-signed transactions, research prevote/precommit consensus, authenticated validator requests, quorum-certified snapshots, resumable recovery, verified history archives, mTLS/certificate pinning, bounded RPC behavior, signed release tooling, a deterministic external-consensus execution PoC, testnet provisioning scaffolds, a bounded test faucet and read-only explorer APIs.
+Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosystem. The project now includes the earlier research Python consensus/devnet plus a separate v0.14 external-consensus integration path built around a pinned CometBFT ABCI bridge and a dedicated crash-safe Crakbit application-state service.
 
 > This is **not a production mainnet**, has not completed independent consensus/network review, and must not be used to custody real value.
 
@@ -11,52 +11,59 @@ Crakbit Chain is the experimental blockchain component of the Crakbit AI ecosyst
 - Symbol: `CRKBIT`
 - Decimals: `8`
 - Proposed development genesis cap: `21,000,000 CRKBIT`
-- Default validators: `4`
-- Default quorum: `3 of 4`
+- Default research validators: `4`
+- Default research quorum: `3 of 4`
 - Address format: `crk1...`
-- Signatures: Ed25519
-- State storage: SQLite
-- RPC: FastAPI / JSON
+- Application signatures: Ed25519
+- Application state: SQLite
+- Research RPC: FastAPI / JSON
 
-The 21M value is a development-network configuration parameter, not a promise of future token value or final mainnet economics.
+The 21M value is a development-network parameter, not a promise of future token value or final mainnet economics. Production CRKBIT has not launched, there is no official presale, and there is no production token contract.
 
 ## Consensus direction
 
-The current Python consensus remains a **research implementation**. Crakbit will not keep extending it as if it were production BFT. Before public-value mainnet planning, the execution/state layer must be integrated with an established independently reviewed BFT core, or the complete consensus protocol must receive equivalent independent review.
+The older Python prevote/precommit consensus remains a **research implementation only**. It is not the intended production BFT path.
 
-Current research flow:
+v0.14 adds a concrete external-consensus proof-of-concept:
 
 ```text
-proposal
-   ↓
->2/3 PREVOTE certificate
-   ↓
->2/3 PRECOMMIT certificate
-   ↓
-finalized block
+CometBFT v0.40.0
+      │ ABCI socket
+      ▼
+Crakbit Go ABCI bridge
+      │ authenticated loopback HTTP
+      ▼
+crakbit-execution/2 service
+      │ staged FinalizeBlock → atomic Commit
+      ▼
+Dedicated external application SQLite state
 ```
 
-See `docs/ADR-0001-consensus-direction.md`.
+This topology is separate from the normal research `crakchain node` database. Do not point both consensus owners at the same data directory.
 
-## v0.13 large phase
+See [`docs/ADR-0001-consensus-direction.md`](docs/ADR-0001-consensus-direction.md), [`docs/EXTERNAL_CONSENSUS_V2.md`](docs/EXTERNAL_CONSENSUS_V2.md) and [`V0.14.md`](V0.14.md).
 
-v0.13 adds:
+## v0.14 major update
 
-- deterministic `crakbit-execution/1` application protocol boundary,
-- deterministic application-state hash independent from consensus-local state,
-- non-mutating transaction and ordered-batch execution previews,
-- authenticated loopback execution-service process PoC,
-- signed genesis/release manifests with Ed25519 signatures and artifact SHA-256 hashes,
-- independent-host validator provisioning scaffold generator,
-- strictly test-only faucet with per-address cooldown and global request limits,
-- bounded read-only explorer summary/block/address APIs,
-- reproducible soak-test summary generation,
-- external consensus/network review package checklist,
-- all v0.12 archive/recovery, v0.11 transport and v0.10 resource-hardening features.
+v0.14 adds:
 
-See [`V0.13.md`](V0.13.md) for the full phase notes and limitations.
+- versioned `crakbit-execution/2` mutating external-consensus protocol,
+- deterministic application hash over height, consensus block hash and sorted account state,
+- persisted non-mutating FinalizeBlock staging,
+- atomic SQLite Commit with durable external commit records,
+- pending-finalize recovery across process restart,
+- dedicated external execution database isolation checks,
+- authenticated v0.14 execution service,
+- Go ABCI bridge pinned to `github.com/cometbft/cometbft v0.40.0`,
+- ABCI `Info`, `CheckTx`, `PrepareProposal`, `ProcessProposal`, `FinalizeBlock`, `Commit` and minimal query support,
+- signed >2/3 genesis ceremony/attestation tooling,
+- external-consensus local CLI/debug commands,
+- `/consensus/integration-status`,
+- combined Python + Go blockchain CI.
 
-## Quick start — local devnet
+All v0.13 signed release tooling, faucet/explorer experiments, v0.12 archive recovery, v0.11 mTLS/pinning and earlier backup/snapshot/resource-hardening work remain in the repository.
+
+## Quick start — research local devnet
 
 Requirements: Python 3.11+ and Docker Desktop / Docker Engine.
 
@@ -68,65 +75,115 @@ python scripts/bootstrap_devnet.py
 docker compose up --build
 ```
 
-Local RPC endpoints:
+Local research RPC endpoints:
 
 - Node 1: `http://127.0.0.1:9101`
 - Node 2: `http://127.0.0.1:9102`
 - Node 3: `http://127.0.0.1:9103`
 - Node 4: `http://127.0.0.1:9104`
-- API docs: `http://127.0.0.1:9101/docs`
 
-## Wallet / test transfers
+## v0.14 external application service
 
-```bash
-crakchain keygen --output runtime/alice.json
-crakchain address --key runtime/alice.json
-crakchain balance YOUR_ADDRESS --rpc http://127.0.0.1:9101
-
-crakchain send \
-  --key runtime/treasury.json \
-  --genesis runtime/genesis.json \
-  --to crk1RECIPIENT \
-  --amount 25 \
-  --rpc http://127.0.0.1:9101
-```
-
-Never commit or share validator/private wallet key files.
-
-## Deterministic execution protocol PoC
-
-Read local application protocol state:
+Use a **fresh dedicated data directory**:
 
 ```bash
-crakchain protocol-status \
+python scripts/run_execution_service_v14.py \
   --genesis runtime/genesis.json \
-  --data runtime/node1-data
+  --data runtime/comet-app \
+  --token REPLACE_WITH_LONG_RANDOM_SECRET \
+  --host 127.0.0.1 \
+  --port 26659
 ```
 
-Preview an ordered transaction batch without changing state:
+Useful authenticated endpoints:
+
+```text
+GET  /v2/info
+GET  /v2/pending
+POST /v2/check-tx
+POST /v2/preview-finalize
+POST /v2/finalize
+POST /v2/commit
+```
+
+Only `/health` is unauthenticated. Keep this service on loopback/private networking.
+
+## CometBFT bridge
+
+Requires Go 1.25+.
 
 ```bash
-crakchain protocol-preview \
-  --genesis runtime/genesis.json \
-  --data runtime/node1-data \
-  --transactions runtime/transactions.json \
-  --fee-recipient crk1VALIDATOR
+cd blockchain/cometbft-app
+go mod download
+go test -mod=mod ./...
+go build -o crakbit-cometbft-bridge .
 ```
 
-Run the isolated process-boundary PoC on loopback:
+Run:
 
 ```bash
-python scripts/run_execution_service.py \
-  --genesis runtime/genesis.json \
-  --data runtime/node1-data \
-  --token REPLACE_WITH_LONG_RANDOM_SECRET
+export CRAKBIT_EXECUTION_URL=http://127.0.0.1:26659
+export CRAKBIT_EXECUTION_TOKEN=REPLACE_WITH_LONG_RANDOM_SECRET
+export CRAKBIT_ABCI_LISTEN=tcp://127.0.0.1:26658
+./crakbit-cometbft-bridge
 ```
 
-The v0.13 execution service has **no external finalize/commit endpoint**. This is deliberate until a reviewed BFT integration and replay/crash contract are in place.
+Configure the CometBFT node's `proxy_app` to the bridge socket. CometBFT node/validator keys are separate from Crakbit application keys.
 
-## Signed release / genesis manifest
+See [`cometbft-app/README.md`](cometbft-app/README.md).
 
-Use a **dedicated release signing key**, not a validator key:
+## External execution CLI
+
+```bash
+crakchain external-status \
+  --genesis runtime/genesis.json \
+  --data runtime/comet-app
+```
+
+Preview a block transition without mutating state:
+
+```bash
+crakchain external-preview \
+  --genesis runtime/genesis.json \
+  --data runtime/comet-app \
+  --height 1 \
+  --block-hash 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
+  --transactions runtime/transactions.json
+```
+
+The `external-finalize` and `external-commit` commands expose the same staged lifecycle for local/debug testing.
+
+## Signed genesis ceremony
+
+Create the ceremony statement:
+
+```bash
+crakchain ceremony-create \
+  --genesis runtime/genesis.json \
+  --output runtime/genesis-ceremony.json
+```
+
+Each configured validator signs independently with its own local validator key:
+
+```bash
+crakchain ceremony-sign \
+  --ceremony runtime/genesis-ceremony.json \
+  --key runtime/node1/validator.json
+```
+
+After enough independent validator attestations, verify strict >2/3 quorum:
+
+```bash
+crakchain ceremony-verify \
+  --ceremony runtime/genesis-ceremony.json \
+  --genesis runtime/genesis.json
+```
+
+Never send validator private keys to another operator just to create a ceremony file. Only exchange the signed public ceremony artifact.
+
+## Signed release manifests
+
+Use a **dedicated release-signing key**, not a validator key:
 
 ```bash
 crakchain keygen --output runtime/release-signing-key.json
@@ -134,157 +191,53 @@ crakchain keygen --output runtime/release-signing-key.json
 crakchain release-build \
   --genesis runtime/genesis.json \
   --key runtime/release-signing-key.json \
-  --version 0.13.0a1 \
+  --version 0.14.0a1 \
   --artifact dist/crakbit-chain.whl \
-  --output runtime/release-0.13.json
+  --output runtime/release-0.14.json
 ```
 
-Verify:
+Verify with `crakchain release-verify` and an expected release-signer address.
 
-```bash
-crakchain release-verify \
-  --manifest runtime/release-0.13.json \
-  --genesis runtime/genesis.json \
-  --expected-signer crk1EXPECTED_RELEASE_SIGNER \
-  --artifact-dir dist
-```
+## Snapshot, archive, integrity and recovery
 
-## Snapshot and archive recovery
-
-```bash
-crakchain snapshot-fetch-chunked \
-  --genesis runtime/genesis.json \
-  --output runtime/snapshot-cert.json \
-  --cache-dir runtime/snapshot-cache
-
-crakchain snapshot-verify \
-  --snapshot runtime/snapshot-cert.json \
-  --genesis runtime/genesis.json
-
-crakchain snapshot-import \
-  --snapshot runtime/snapshot-cert.json \
-  --genesis runtime/genesis.json \
-  --data runtime/recovered-node
-```
-
-Export/verify/backfill full genesis-anchored history:
-
-```bash
-crakchain archive-export \
-  --genesis runtime/genesis.json \
-  --data runtime/node1-data \
-  --output runtime/history.json
-
-crakchain archive-verify \
-  --genesis runtime/genesis.json \
-  --archive runtime/history.json
-
-crakchain archive-import \
-  --genesis runtime/genesis.json \
-  --data runtime/recovered-node \
-  --archive runtime/history.json
-```
-
-## Independent-host operator scaffolds
-
-Generate non-secret per-validator deployment bundles:
-
-```bash
-python scripts/provision_testnet.py \
-  --genesis runtime/genesis.json \
-  --output runtime/operator-bundles
-```
-
-The generated folders contain public metadata and configuration templates only. They intentionally contain no private validator keys, TLS private keys or monitoring secrets.
-
-## Strictly test-only faucet
-
-Create/fund a **dedicated non-validator faucet key** and run:
-
-```bash
-python scripts/run_faucet.py \
-  --genesis runtime/genesis.json \
-  --key runtime/faucet.json \
-  --rpc http://127.0.0.1:9101 \
-  --amount 10 \
-  --cooldown-seconds 3600 \
-  --global-rpm 10
-```
-
-Default listener: `127.0.0.1:9400`. Put any public testnet faucet behind a hardened reverse proxy and upstream abuse controls. Faucet units are test-only and represent no production value.
-
-## Explorer/read APIs
-
-v0.13 adds:
+Earlier recovery tooling remains available:
 
 ```text
+snapshot-fetch-chunked
+snapshot-verify
+snapshot-import
+archive-export
+archive-verify
+archive-import
+doctor
+backup-create
+backup-verify
+```
+
+The genesis-anchored archive tooling verifies proposer signatures, view-change certificates, prevote/precommit quorum certificates, transaction signatures/nonces/balances, state roots and hash continuity for the research chain history.
+
+## Research explorer / faucet / operations
+
+The research node continues to provide bounded explorer APIs and test-only faucet tooling. Public deployment still requires upstream reverse-proxy/firewall/DDoS controls and persistent abuse limits.
+
+Useful research-node endpoints include:
+
+```text
+GET /consensus/integration-status
 GET /protocol/status
 GET /explorer/summary
-GET /explorer/blocks?limit=20
-GET /explorer/address/{address}?limit=50
+GET /explorer/blocks
+GET /explorer/address/{address}
+GET /transport/status
+GET /archive/status
+GET /execution/status
+GET /operator/security-status
+GET /metrics/prometheus
 ```
-
-Existing recovery/history/operator APIs remain available. Address activity is bounded and is not yet a dedicated indexed explorer backend.
-
-## Validator transport security
-
-v0.11+ supports operator-managed mTLS, CA/hostname verification and optional certificate SHA-256 pinning. v0.12+ supports a bounded two-pin overlap during certificate rotation.
-
-```json
-{
-  "crk1VALIDATOR": [
-    "old_certificate_sha256",
-    "new_certificate_sha256"
-  ]
-}
-```
-
-Operator monitoring can additionally require:
-
-```text
-CRAKBIT_MONITORING_BEARER_TOKEN=<secret-at-least-24-characters>
-```
-
-This does not replace private networking, firewall policy or reverse-proxy access controls.
-
-## Integrity & backups
-
-```bash
-crakchain doctor --genesis runtime/genesis.json --data runtime/node1-data --full
-
-crakchain backup-create \
-  --genesis runtime/genesis.json \
-  --data runtime/node1-data \
-  --output runtime/backups/node1.sqlite3
-
-crakchain backup-verify \
-  --genesis runtime/genesis.json \
-  --backup runtime/backups/node1.sqlite3 \
-  --manifest runtime/backups/node1.sqlite3.manifest.json \
-  --full
-```
-
-## Soak evidence
-
-```bash
-python scripts/soak_test.py \
-  --node http://127.0.0.1:9101 \
-  --node http://127.0.0.1:9102 \
-  --node http://127.0.0.1:9103 \
-  --node http://127.0.0.1:9104 \
-  --duration-seconds 3600 \
-  --interval-seconds 5 \
-  --output runtime/soak-results.jsonl \
-  --fail-on-divergence
-
-python scripts/soak_summary.py \
-  --input runtime/soak-results.jsonl \
-  --output runtime/soak-summary.json
-```
-
-These outputs are operational evidence, not a formal consensus-safety proof.
 
 ## Tests
+
+Python suite:
 
 ```bash
 cd blockchain
@@ -292,17 +245,28 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-GitHub Actions runs the blockchain suite on blockchain changes.
+Go bridge suite:
+
+```bash
+cd blockchain/cometbft-app
+go mod download
+go test -mod=mod ./...
+```
+
+GitHub Actions runs both suites on blockchain changes.
 
 ## Main remaining blockers
 
-- actual integration with an established independently reviewed BFT core,
-- reviewed mutating finalize/commit protocol and crash/replay semantics,
-- sustained independent-host partition/latency/Byzantine/load/soak campaigns,
-- production validator/release-key custody or HSM-equivalent strategy,
-- production monitoring/alert routing and secret management,
-- production reverse-proxy/firewall/DDoS architecture review,
-- independent consensus/network/security review,
+- sustained live multi-process CometBFT replay/restart testing,
+- multi-host CometBFT validator deployment with published partition/latency/load evidence,
+- exhaustive app-ahead/consensus-ahead crash recovery testing,
+- CometBFT state-sync integration with Crakbit snapshots,
+- reviewed validator-set lifecycle/governance design,
+- production validator/release-key custody or HSM/remote-signer strategy,
+- indexed external-consensus explorer storage,
+- persistent/upstream faucet abuse protection,
+- production monitoring/firewall/reverse-proxy/DDoS architecture,
+- independent consensus/network/application security review,
 - meaningful public-testnet operation before any mainnet planning.
 
-See [`V0.13.md`](V0.13.md), [`V0.12.md`](V0.12.md), [`docs/EXECUTION_PROTOCOL_V1.md`](docs/EXECUTION_PROTOCOL_V1.md), [`docs/EXTERNAL_REVIEW_PACKAGE.md`](docs/EXTERNAL_REVIEW_PACKAGE.md), [`SPEC.md`](SPEC.md) and [`SECURITY.md`](SECURITY.md).
+See [`V0.14.md`](V0.14.md), [`docs/EXTERNAL_CONSENSUS_V2.md`](docs/EXTERNAL_CONSENSUS_V2.md), [`cometbft-app/README.md`](cometbft-app/README.md), [`V0.13.md`](V0.13.md), [`SPEC.md`](SPEC.md) and [`SECURITY.md`](SECURITY.md).
