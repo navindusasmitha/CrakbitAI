@@ -10,13 +10,16 @@ Crakbit AI is an independent technology project building defensive-security tool
 
 - Security scanner / CLI: early alpha
 - AI Security Assistant: in development
-- Crakbit Chain package: **v0.32.0a1**
+- Crakbit Chain package: **v0.33.0a1**
 - Primary chain research direction: **native Proof of Work + UTXO**
-- Current PoW: **`crakpow-scrypt-v1` CPU-mineable devnet**
+- Active devnet PoW: **`crakpow-scrypt-v1`**
 - P2P protocol: **`crakbit-p2p/1`**
 - Fork choice: **highest cumulative valid work**
-- Side chains / orphan handling / automatic higher-work reorg: implemented in v0.32
-- First-party solo miner + mining-pool prototype: implemented
+- Side chains / orphan handling / higher-work reorg: implemented in v0.32
+- v0.33 multi-thread CPU solo/pool mining: implemented
+- v0.33 hardened pool protocol: **`crakbit-pool/2`** with vardiff, stale/duplicate-share protection and optional TLS/auth
+- Native RandomX `v1.1.8` adapter: implemented as an **optional candidate**, not active consensus
+- XMRig `rx/0` candidate job/submit verification: implemented; live stock-XMRig pool compatibility is not claimed yet
 - Previous CometBFT/BFT path: retained as legacy/research infrastructure
 - Production mainnet: **not launched**
 - Production CRKBIT: **not launched**
@@ -24,35 +27,28 @@ Crakbit AI is an independent technology project building defensive-security tool
 
 Do not use the current alpha to custody real value.
 
-## Crakbit Chain v0.32 — decentralized PoW network layer
+## Crakbit Chain v0.33 — mining hardening
 
-v0.31 introduced actual CPU-mined blocks and a UTXO ledger. v0.32 adds a separate signed peer-to-peer layer and changes the node from a tip-only prototype into a block-graph node capable of retaining competing branches and selecting a higher-work canonical chain.
+v0.33 keeps the working scrypt devnet consensus stable while adding the tooling needed to evaluate a CPU-first RandomX future safely.
 
 Implemented now:
 
-- native PoW genesis + UTXO accounting,
-- Ed25519 `crk1...` ownership/signatures,
-- coinbase rewards, fees and maturity,
-- CPU scrypt mining + difficulty/chainwork,
-- persistent all-branches block graph,
-- side-chain retention,
-- bounded orphan queue,
-- full candidate-branch replay before activation,
-- highest-cumulative-work fork choice,
-- canonical reorganization,
-- reorg mempool/disconnected-transaction reconciliation,
-- median-time-past branch timestamp rule,
-- exponential block locators,
-- signed chain/genesis-bound P2P handshakes,
-- static seed peers + bounded peer discovery,
-- header announcements + block fetch,
-- block/transaction inventory gossip,
-- peer scoring/rate/size limits,
-- v1 mining RPC compatibility plus v2 P2P-aware node RPC,
-- live peer/branch inspection,
-- a regression test that synchronizes a mined block between two real TCP nodes.
+- multi-thread CPU mining against node RPC,
+- multi-thread first-party pool miner,
+- per-worker vardiff,
+- stale-work rejection,
+- duplicate/replayed-share rejection,
+- pool connection rate limits,
+- optional pool TLS 1.2+ and token authorization,
+- native ctypes binding to pinned upstream RandomX `v1.1.8`,
+- RandomX light/full-dataset modes,
+- official upstream self-test vector,
+- deterministic candidate key schedule (`2048` interval / `64` delay),
+- candidate hashing blob with the common XMRig RandomX nonce offset,
+- XMRig `rx/0` candidate job construction and submitted-hash verification,
+- deterministic v0.33 algorithm/interoperability vectors.
 
-See [`blockchain/V0.32.md`](blockchain/V0.32.md).
+See [`blockchain/V0.33.md`](blockchain/V0.33.md).
 
 ## Quick test
 
@@ -64,18 +60,13 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-## Quick PoW P2P devnet
+## PoW P2P devnet
 
-Create a dedicated P2P identity and chain database:
+The v0.32 node remains the active network node:
 
 ```bash
 crakchain pow-p2p-key-v32-new --output private/node1-p2p.json
 crakchain pow-network-v32-init --db runtime/node1/chain.sqlite3
-```
-
-Run node 1:
-
-```bash
 crakchain pow-node-v32-run \
   --db runtime/node1/chain.sqlite3 \
   --network-key private/node1-p2p.json \
@@ -83,30 +74,64 @@ crakchain pow-node-v32-run \
   --p2p-port 28444
 ```
 
-A second node initialized with the exact same chain config/genesis can connect with:
+Mine it with multiple CPU threads:
 
 ```bash
-crakchain pow-node-v32-run \
-  --db runtime/node2/chain.sqlite3 \
-  --network-key private/node2-p2p.json \
-  --rpc-port 29443 \
-  --p2p-port 29444 \
-  --peer 127.0.0.1:28444
+crakchain pow-mine-v33-rpc \
+  --node-url http://127.0.0.1:28443 \
+  --miner-address crk1YOUR_ADDRESS \
+  --threads 8 \
+  --blocks 1
 ```
 
-The v0.31 solo miner and pool remain usable against the v0.32 node's `/pow/v1` compatibility RPC.
+## Hardened pool
 
-## Mining / algorithm boundary
+```bash
+crakchain pow-pool-v33-run \
+  --db runtime/pow-v33/pool.sqlite3 \
+  --node-url http://127.0.0.1:28443 \
+  --pool-address crk1POOL_ADDRESS \
+  --host 0.0.0.0 \
+  --port 3333
+```
 
-The current bootstrap algorithm is `crakpow-scrypt-v1`. It is real CPU-verifiable PoW, but the **production PoW algorithm is not frozen**. RandomX/native optimized mining and standard Stratum/XMRig interoperability remain separate future work.
+Multi-thread pool miner:
 
-The first-party `crakbit-pool/1` pool is not yet standard Stratum and its PPLNS balances remain test accounting only.
+```bash
+python scripts/run_pow_pool_miner_v33.py \
+  --host 127.0.0.1 \
+  --port 3333 \
+  --address crk1MINER_ADDRESS \
+  --worker cpu-01 \
+  --threads 8
+```
 
-## Important v0.32 boundary
+## RandomX candidate
 
-v0.32 is now a genuine multi-node PoW devnet architecture with competing-branch storage and higher-work reorganization, but it is still not a production Bitcoin-equivalent network. Remaining work includes deeper adversarial reorg/network testing, stronger peer/address persistence and DoS hardening, optimized sync, final PoW selection, mature Stratum/XMRig support, hardened pool payout construction, long-running independent public testnet operation and independent node/wallet/pool security review.
+The repository does not ship a prebuilt RandomX binary. Build the pinned upstream source and point Crakbit at the resulting shared library.
 
-The previous CometBFT/BFT code is retained as legacy/research infrastructure and is not silently mixed with PoW consensus.
+Windows helper:
+
+```powershell
+cd blockchain
+.\scripts\build_randomx_v33.ps1
+```
+
+Then:
+
+```powershell
+crakchain pow-randomx-v33-info
+crakchain pow-randomx-v33-selftest --mode light
+crakchain pow-randomx-v33-benchmark --mode light --seconds 5
+```
+
+RandomX is **not activated in v0.33 consensus**. This avoids splitting the network before the hashing blob, target semantics, benchmarks, test vectors and activation rules have been reviewed.
+
+## Important boundary
+
+v0.33 is a multi-node PoW devnet alpha, not a production Bitcoin-equivalent network. Remaining work includes final PoW algorithm selection, efficient production reorg/undo storage, deeper P2P/DoS/eclipsing/fuzz testing, end-to-end stock XMRig/Stratum interoperability if RandomX is selected, mature on-chain pool payouts, long-running independent public testnet operation, independent node/wallet/pool reviews, final economics and applicable legal/regulatory review.
+
+The previous CometBFT/BFT code is retained as legacy/research infrastructure and is not mixed with PoW consensus.
 
 ## Funding
 
