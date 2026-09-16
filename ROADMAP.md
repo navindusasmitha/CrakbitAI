@@ -10,7 +10,6 @@ Crakbit AI remains primarily a defensive-security and secure-development project
 
 ## Phase 1 — Foundation
 **Target: Q3–Q4 2026**
-
 - [x] Project identity, public website and GitHub repository
 - [x] Initial roadmap/security documentation
 - [x] Public Giveth project listing
@@ -19,7 +18,6 @@ Crakbit AI remains primarily a defensive-security and secure-development project
 
 ## Phase 2 — Security MVP
 **Target: Q4 2026**
-
 - [x] Initial secure-code scanning pipeline alpha
 - [x] Python + JavaScript/TypeScript rules and secret detection
 - [x] Human-readable/JSON findings and severity/confidence model
@@ -29,7 +27,6 @@ Crakbit AI remains primarily a defensive-security and secure-development project
 
 ## Phase 3 — Developer Tooling
 **Target: Q1 2027**
-
 - [x] `crak` CLI early alpha
 - [x] JSON output
 - [ ] Developer API alpha
@@ -39,7 +36,6 @@ Crakbit AI remains primarily a defensive-security and secure-development project
 
 ## Phase 4 — Blockchain Security
 **Target: Q2 2027**
-
 - [ ] Solidity analysis prototype
 - [ ] Smart-contract security rules
 - [ ] Contract permission/risk analysis
@@ -48,14 +44,12 @@ Crakbit AI remains primarily a defensive-security and secure-development project
 
 ## Phase 5 — Developer Ecosystem
 **Target: Q2–Q3 2027**
-
 - [ ] SDK design
 - [ ] Git/CI/CD/IDE integration research
 - [ ] Plugin architecture
 - [ ] Open-source rule contribution framework
 
 ## Phase 6 — Crakbit Chain Research → Public-Testnet Candidate
-
 - [x] Native test-only CRKBIT accounting, Ed25519 wallets and signed transfers
 - [x] CometBFT `v0.40.0` ABCI integration PoC
 - [x] Crash-safe FinalizeBlock → Commit path
@@ -64,105 +58,89 @@ Crakbit AI remains primarily a defensive-security and secure-development project
 - [x] Validator join/remove/replace governance with strict `>2/3` approval
 - [x] Versioned schema migration/rollback rehearsal
 - [x] Reproducible-build/SBOM/release evidence tooling
-- [x] v0.23 4+ validator inventory/genesis/deployment/monitoring tooling
-- [ ] Real independent-host public testnet operation
+- [x] v0.23 validator inventory/genesis/deployment/monitoring tooling
 
-## Phase 7 — Long-Lived Public Testnet / Independent Review Candidate
+## Phase 7 — Review / Candidate Policy
 
-### v0.24 — operational hardening
-- [x] Host preflight + exact package/CometBFT/genesis identity checks
-- [x] Typed restart/process-kill/partition/latency/packet-loss/load/storage plans
-- [x] Backup/restore + clean-host state-sync records
-- [x] Redundant RPC/explorer consistency checks
-- [x] Protected remote-signer/HSM-style evidence
-- [x] 24h / 72h / 7-day readiness gates
-- [ ] Execute modeled campaigns on real independent hosts
+### v0.24–v0.26
+- [x] Operational preflight/fault/recovery/redundancy/signer evidence
+- [x] 24h / 72h / 7-day readiness semantics
+- [x] Signed operator evidence and exact review freezes
+- [x] Findings/remediation/retest gates
+- [x] Supply-chain/public-edge evidence hooks
 
-### v0.25 — independent-host evidence / initial review freeze
-- [x] Signed operator host attestations and incident-response records
-- [x] 4+ unique operators/validators/signers + provider/region diversity gates
-- [x] Signed exact review candidate freeze
-- [ ] Build freeze from real independent-host evidence
-
-### v0.26 — independent-review remediation / re-freeze
-- [x] Signed structured findings register + stable IDs
-- [x] Remediation commit/config/regression-test binding
-- [x] Signed independent retest records
-- [x] Hard blocker for unresolved/un-retested high/critical findings
-- [x] Supply-chain/reproducible-build attestation hook
-- [x] Public-edge TLS/WAF/DDoS/load/failover evidence
-- [x] Candidate supersession + signed post-remediation re-freeze
-- [ ] Import real independent-review findings and retest final fixes
-
-### v0.27 — final mainnet-candidate policy / economics / release approval
+### v0.27 — final mainnet-candidate policy
 - [x] Package/CLI `0.27.0a1`
-- [x] Signed coordinated upgrade proposal with activation + rollback evidence binding
-- [x] Strict `>2/3` validator-readiness requirement
-- [x] Conservative governance normal/emergency timelock policy
-- [x] Pre-activation cancellation window + strict-supermajority emergency approval
-- [x] Economics/genesis parameter-freeze format
-- [x] Explicit no-return-promise / no-token-sale-authorization claims
-- [x] Economic-security and legal/regulatory reviewer attestation hooks
-- [x] Exact reviewer binding to candidate source + economics freeze
-- [x] Deterministic final candidate identity hash
+- [x] Coordinated upgrade + rollback policy
+- [x] Strict `>2/3` validator readiness
+- [x] Governance timelocks/cancellation/emergency policy
+- [x] Economics/genesis freeze format
+- [x] Economic-security + legal/regulatory review hooks
+- [x] Deterministic candidate identity
 - [x] Minimum three unique release approvers/signers
-- [x] Final candidate evidence gate + signed final report
-- [ ] Build final gate from real independently corroborated evidence
+- [x] Final candidate evidence gate + signed report
 
-## Phase 8 — Launch Rehearsal / Corroborated Evidence
+## Phase 8 — Launch Rehearsal
 
-### v0.28 — launch rehearsal and final release-candidate freeze tooling
-
+### v0.28
 - [x] Package/CLI `0.28.0a1`
-- [x] Signed 4+ validator launch runbook with genesis ceremony/start order/rollback
-- [x] Dry-run-only / no automatic DNS, network mutation or fund movement boundary
-- [x] Signed DNS/RPC/explorer cutover rehearsal
-- [x] Require redundant RPC/explorer failover + rollback verification
-- [x] Configurable public-edge availability/latency/error/capacity/failover evidence
-- [x] Protected HSM/remote-signer rotation + catastrophic recovery drill evidence
-- [x] Coordinated upgrade + rollback rehearsal bound to v0.27 upgrade plan
-- [x] Final signed unresolved-risk register
-- [x] Unmitigated high/critical risk blocks the modeled release gate
-- [x] Independent technical reviewer sign-offs bound to exact v0.27 final report
-- [x] Required technical scopes: consensus/application, network/RPC, cryptography/key-management, browser-wallet
-- [x] External reproducible-build/transitive-dependency attestation format
-- [x] Aggregate v0.28 launch-rehearsal gate
-- [x] Signed exact release-candidate freeze after the gate passes
-- [x] Signed human `hold` / `approve-launch-window` record with no automatic execution
-- [x] v0.28 regression tests and documentation
+- [x] Signed launch runbook
+- [x] DNS/RPC/explorer cutover rehearsal
+- [x] Public-edge SLO/capacity/failover evidence
+- [x] Protected signer rotation/recovery drill
+- [x] Coordinated upgrade/rollback rehearsal
+- [x] Final risk register
+- [x] Independent technical reviewer sign-off format
+- [x] External reproducible-build/transitive-dependency attestation
+- [x] Aggregate rehearsal gate + exact release freeze
+- [x] Manual `hold` / `approve-launch-window` record with no automatic launch
 
-### v0.28 external execution still required
+## Phase 9 — Real Independent-Host Execution
 
-- [ ] Run 4+ independently managed validators continuously on real hosts
-- [ ] Perform real multi-operator genesis ceremony with separately held keys
-- [ ] Complete genuine 24h → 72h → 7-day or longer soak windows
-- [ ] Execute real fault/load/storage/state-sync/governance campaigns
-- [ ] Deploy and drill protected remote signer/HSM-equivalent custody
-- [ ] Run real multi-edge SLO/capacity/outage/failover tests
-- [ ] Execute coordinated upgrade + rollback rehearsal on independent hosts
-- [ ] Execute DNS/RPC/explorer cutover rehearsal without production launch
-- [ ] Complete genuine independent technical review and import real sign-offs/findings/retests
-- [ ] Import external reproducible-build/transitive supply-chain evidence
-- [ ] Freeze the final release candidate only from real corroborated evidence
-- [ ] Keep actual production launch as an explicit human launch/no-launch decision
+### v0.29 — live host / cluster / genesis / soak / fault evidence
+- [x] Package/CLI `0.29.0a1`
+- [x] Live CometBFT `/status` + `/abci_info` probing
+- [x] Signed per-validator live observations
+- [x] Exact source/candidate/application-genesis/consensus-genesis binding
+- [x] Reject RPC evidence URLs containing embedded credentials
+- [x] 4+ unique validator/operator/evidence-signer cluster gate
+- [x] Provider + region diversity gate
+- [x] Height spread + observation-window bounds
+- [x] Same-height application-hash divergence detection
+- [x] Signed multi-operator genesis attestations + ceremony gate
+- [x] Signed soak evidence with >=0.99 configured success ratio
+- [x] Default seven-day candidate soak target
+- [x] Signed raw-evidence-bound fault/recovery results
+- [x] Require restart/process-kill/partition/latency/packet-loss/load/storage/state-sync/governance/upgrade coverage
+- [x] Bind real-execution gate to exact v0.28 release freeze + rehearsal gate
+- [x] Signed v0.29 real-evidence freeze
+- [x] v0.29 regression tests + docs
 
-## Phase 9 — Real Independent-Host Execution (v0.29 target)
+### v0.29 real external execution still required
+- [ ] Provision 4+ truly independent validator hosts
+- [ ] Run live observations from real authorized operator infrastructure
+- [ ] Perform genuine multi-operator genesis ceremony with separately held validator keys
+- [ ] Complete continuous 24h → 72h → 7-day or longer campaign
+- [ ] Execute authorized real fault/load/storage/state-sync/governance/upgrade campaigns
+- [ ] Deploy and inspect protected HSM/remote-signer custody
+- [ ] Operate redundant public RPC/explorer/gateway edges
+- [ ] Complete genuine independent technical/security review and remediation/retest
+- [ ] Import external reproducible-build/transitive dependency evidence
+- [ ] Finalize production economics/incentives and applicable legal/regulatory position
 
-The next useful phase is operational rather than another self-attestation-only layer:
-
-- [ ] Provision 4+ independent VPS validators
-- [ ] Keep execution/ABCI/signer/operator surfaces private
-- [ ] Generate and verify real genesis ceremony evidence
-- [ ] Start continuous monitoring and 24h/72h/7d evidence collection
-- [ ] Run authorized fault/recovery/state-sync/governance/upgrade campaigns
-- [ ] Deploy protected key custody
-- [ ] Deploy redundant public edges and collect real v0.28 SLO/cutover evidence
-- [ ] Commission independent technical/security review
-- [ ] Produce final release freeze from real evidence
+### v0.30 — next target: operator automation / evidence retention / publication
+- [ ] Non-secret multi-host deployment inventory/Ansible generation
+- [ ] Continuous resumable signed cluster-observation collector
+- [ ] Seven-day evidence rotation/checkpoint/resume support
+- [ ] Raw log/archive bundle hashing + retention manifest
+- [ ] Active redundant RPC/explorer health/failover collector
+- [ ] Remote-signer connectivity/rotation status checks without private-key access
+- [ ] Public release-candidate evidence bundle with hashes/SBOM/genesis/review summaries/runbooks
+- [ ] Final operator launch checklist that still requires explicit human execution
 
 ## Phase 10 — Mainnet Consideration
 
-A production mainnet can only be considered after successful long-lived public testing, reviewed external consensus/application/governance behavior, protected operations, independent security/economic/legal review, final economics and an explicit human launch decision.
+A production mainnet can only be considered after successful long-lived real-host testing, reviewed external consensus/application/governance behavior, protected operations, independent security/economic/legal review, final economics and an explicit human launch decision.
 
 A passing software evidence gate must never automatically launch the network.
 
