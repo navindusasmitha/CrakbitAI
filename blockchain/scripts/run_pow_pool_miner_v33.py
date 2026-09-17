@@ -11,6 +11,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from crakbit_chain.pow_v31 import PowConfig, parse_target, pow_hash
 
+MAX_NONCE = 0xFFFFFFFFFFFFFFFF
+
 
 def send_request(file, request_id: int, method: str, params: dict) -> dict:
     file.write((json.dumps({"id": request_id, "method": method, "params": params}, separators=(",", ":")) + "\n").encode())
@@ -24,7 +26,12 @@ def send_request(file, request_id: int, method: str, params: dict) -> dict:
     return response["result"]
 
 
-def mine_share(job: dict, threads: int, max_hashes_per_thread: int) -> tuple[int | None, int, float]:
+def mine_share(
+    job: dict,
+    threads: int,
+    max_hashes_per_thread: int,
+    start_nonce: int = 0,
+) -> tuple[int | None, int, float, int]:
     config = PowConfig(
         pow_algo=str(job["pow"]["algo"]),
         scrypt_n=int(job["pow"]["scrypt_n"]),
@@ -33,19 +40,25 @@ def mine_share(job: dict, threads: int, max_hashes_per_thread: int) -> tuple[int
     )
     if config.pow_algo != "crakpow-scrypt-v1":
         raise RuntimeError("v0.33 native pool miner currently supports the active scrypt consensus path")
+    if start_nonce < 0 or start_nonce > MAX_NONCE:
+        raise RuntimeError("nonce cursor is outside uint64 range")
+
     share_target = parse_target(job["share_target"])
     stop = threading.Event()
     winner_lock = threading.Lock()
     winner: int | None = None
     started = time.perf_counter()
 
-    def worker(worker_id: int) -> tuple[int | None, int]:
+    def worker(worker_id: int) -> tuple[int | None, int, int]:
         nonlocal winner
         block = json.loads(json.dumps(job["block"]))
         block["header"]["extra_nonce"] = int(job["extra_nonce"])
-        nonce = worker_id
+        nonce = start_nonce + worker_id
         hashes = 0
-        while not stop.is_set():
+        last_nonce = start_nonce - 1
+
+        while not stop.is_set() and nonce <= MAX_NONCE:
+            last_nonce = nonce
             block["header"]["nonce"] = nonce
             digest = pow_hash(block["header"], config)
             hashes += 1
@@ -54,22 +67,24 @@ def mine_share(job: dict, threads: int, max_hashes_per_thread: int) -> tuple[int
                     if winner is None:
                         winner = nonce
                         stop.set()
-                return winner, hashes
+                return winner, hashes, last_nonce
             if max_hashes_per_thread and hashes >= max_hashes_per_thread:
                 break
             nonce += threads
-            if nonce > 0xFFFFFFFFFFFFFFFF:
-                break
-        return None, hashes
+        return None, hashes, last_nonce
 
     total_hashes = 0
+    highest_nonce = start_nonce - 1
     with ThreadPoolExecutor(max_workers=threads, thread_name_prefix="crakbit-pool-miner") as executor:
         futures = [executor.submit(worker, worker_id) for worker_id in range(threads)]
         for future in as_completed(futures):
-            _, hashes = future.result()
+            _, hashes, last_nonce = future.result()
             total_hashes += hashes
+            highest_nonce = max(highest_nonce, last_nonce)
+
     elapsed = max(1e-9, time.perf_counter() - started)
-    return winner, total_hashes, elapsed
+    next_nonce = highest_nonce + 1
+    return winner, total_hashes, elapsed, next_nonce
 
 
 def main() -> int:
@@ -116,6 +131,8 @@ def main() -> int:
                     authorize_params["token"] = args.token
                 authorized = send_request(file, request_id, "mining.authorize", authorize_params)
                 job = authorized["job"]
+                active_job_id = str(job["job_id"])
+                nonce_cursor = 0
                 print(json.dumps({
                     "connected": True,
                     "protocol": subscribed["protocol"],
@@ -128,7 +145,12 @@ def main() -> int:
                 }))
 
                 while True:
-                    nonce, hashes, elapsed = mine_share(job, args.threads, args.max_hashes_per_thread)
+                    nonce, hashes, elapsed, next_nonce = mine_share(
+                        job,
+                        args.threads,
+                        args.max_hashes_per_thread,
+                        nonce_cursor,
+                    )
                     total_hashes += hashes
                     total_elapsed += elapsed
                     if nonce is not None:
@@ -145,13 +167,25 @@ def main() -> int:
                             "job_hashrate_hps": hashes / elapsed,
                             "total_hashrate_hps": total_hashes / max(1e-9, total_elapsed),
                         }))
+
                     request_id += 1
-                    job = send_request(file, request_id, "mining.get_job", {})
+                    next_job = send_request(file, request_id, "mining.get_job", {})
+                    next_job_id = str(next_job["job_id"])
+                    if next_job_id == active_job_id:
+                        if next_nonce > MAX_NONCE:
+                            raise RuntimeError("nonce space exhausted; reconnecting for a fresh extra_nonce")
+                        nonce_cursor = next_nonce
+                    else:
+                        active_job_id = next_job_id
+                        nonce_cursor = 0
+                    job = next_job
+
                     if nonce is None:
                         print(json.dumps({
                             "job_refresh": job["job_id"],
                             "height": job["height"],
                             "share_multiplier": job.get("share_multiplier"),
+                            "nonce_cursor": nonce_cursor,
                             "total_hashrate_hps": total_hashes / max(1e-9, total_elapsed),
                         }))
         except KeyboardInterrupt:
