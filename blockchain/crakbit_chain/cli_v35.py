@@ -5,6 +5,8 @@ import json
 import sys
 from pathlib import Path
 
+import httpx
+
 from . import cli_v34
 from .pow_testnet_v35 import (
     PowTestnetV35Error,
