@@ -179,7 +179,7 @@ services:
       - -lc
       - >-
         set -a; . /runtime/local.env; set +a;
-        exec crakchain pow-pool-v33-run
+        exec python /app/scripts/local_pool_server_v42.py
         --db /runtime/pool/pool.sqlite3
         --node-url http://node1:28443
         --pool-address "$$POOL_ADDRESS"
@@ -250,7 +250,7 @@ services:
         condition: service_started
     command:
       - python
-      - /app/scripts/local_dashboard_v41.py
+      - /app/scripts/local_dashboard_v42.py
       - --host
       - 0.0.0.0
       - --port
