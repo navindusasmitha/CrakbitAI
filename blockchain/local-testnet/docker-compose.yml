@@ -80,7 +80,7 @@ services:
       - ./runtime/node2:/runtime/node
     ports:
       - "127.0.0.1:29443:28443"
-      - "127.0.0.1:29444->28444"
+      - "127.0.0.1:29444:28444"
     networks: [craknet]
     restart: unless-stopped
     healthcheck:
