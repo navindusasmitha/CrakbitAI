@@ -10,7 +10,7 @@ Crakbit AI is an independent technology project building defensive-security tool
 
 - Security scanner / CLI: early alpha
 - AI Security Assistant: in development
-- Crakbit Chain package: **v0.36.0a1**
+- Crakbit Chain package: **v0.37.0a1**
 - Primary chain research direction: **native Proof of Work + UTXO**
 - Active devnet PoW: **`crakpow-scrypt-v1`**
 - P2P protocol: **`crakbit-p2p/1`**
@@ -21,17 +21,18 @@ Crakbit AI is an independent technology project building defensive-security tool
 - v0.34 payout/undo/peer/benchmark preparation: implemented
 - v0.35 public-testnet evidence gate: implemented
 - v0.36 controlled integration: real-time signed campaign log, peer-book node startup, incremental-undo rehearsal, explicit algorithm activation proposal and independent-review handoff tooling
+- v0.37 execution/review hardening: signed multi-host deployment plans, payout policy controls, algorithm-review gate and cross-bound public-testnet review candidate bundle
 - Production mainnet: **not launched**
 - Production CRKBIT: **not launched**
 - Official CRKBIT presale: **none**
 
 Do not use the current alpha to custody real value.
 
-## Crakbit Chain v0.36 — controlled public-testnet integration
+## Crakbit Chain v0.37 — public-testnet execution and review hardening
 
-v0.36 turns the v0.35 evidence layer into a resumable real campaign workflow. It adds append-only signed/hash-chained multi-node observations, real elapsed-time 24h/72h/7d campaign summaries, persistent peer-book seed selection in node startup, disposable incremental UTXO-undo rehearsals, explicit non-activating RandomX/scrypt testnet proposals, and an independent-review handoff artifact.
+v0.37 builds signed execution and review-preparation artifacts on top of the v0.36 campaign workflow. It adds multi-host deployment plans with diversity gates and runbooks, conservative pool payout-policy evidence, benchmark/decision/handoff binding checks, and a cross-bound independent-review candidate bundle. These artifacts prepare real public-testnet evidence for review; they do not claim that external operation or review has occurred.
 
-See [`blockchain/V0.36.md`](blockchain/V0.36.md).
+See [`blockchain/V0.37.md`](blockchain/V0.37.md).
 
 ## Quick test
 
@@ -94,11 +95,11 @@ This modifies a disposable database copy and compares incremental rollback again
 
 ## Mining / algorithm boundary
 
-The active chain still uses `crakpow-scrypt-v1`. RandomX remains an optional candidate. v0.36 can create a signed activation **proposal** after a human benchmark decision, but the artifact always records `consensus_activated=false`; an actual algorithm change needs a separately reviewed/versioned node release and multi-node fork/reorg testing.
+The active chain still uses `crakpow-scrypt-v1`. RandomX remains an optional candidate. v0.37 can bind a signed testnet activation **proposal** to the benchmark and human-decision evidence, but the artifact always records `consensus_activated=false`; an actual algorithm change needs a separately reviewed/versioned node release and multi-node fork/reorg testing.
 
 ## Important boundary
 
-v0.36 is controlled public-testnet integration tooling, not production mainnet. Real independent nodes/miners, 24h→72h→7d operation, authorized fault/reorg campaigns, cross-machine algorithm benchmarks, independent consensus/network/wallet/pool review, high/critical remediation, final economics and applicable legal/regulatory review remain external gates.
+v0.37 is public-testnet execution/review-preparation tooling, not production mainnet. Real independent nodes/miners, 24h→72h→7d operation, authorized fault/reorg campaigns, cross-machine algorithm benchmarks, independent consensus/network/wallet/pool review, high/critical remediation, final economics and applicable legal/regulatory review remain external gates.
 
 The previous CometBFT/BFT code is retained as legacy/research infrastructure and is not mixed with PoW consensus.
 

@@ -117,7 +117,7 @@ def build_deployment_plan(
     minimum_providers = max(2, int(minimum_providers))
     minimum_regions = max(2, int(minimum_regions))
     minimum_network_groups = max(2, int(minimum_network_groups))
-    minimum_miner_operators = max(1, int(minimum_miner_operators))
+    minimum_miner_operators = max(2, int(minimum_miner_operators))
     if len(nodes) < minimum_nodes:
         raise PowExecutionV37Error("deployment plan requires at least four nodes")
     _assert_no_secrets(nodes, "nodes")
@@ -185,6 +185,13 @@ def build_deployment_plan(
             "network_groups": len(network_groups),
             "miner_operators": len(miner_operators),
         },
+        "requirements": {
+            "minimum_nodes": minimum_nodes,
+            "minimum_providers": minimum_providers,
+            "minimum_regions": minimum_regions,
+            "minimum_network_groups": minimum_network_groups,
+            "minimum_miner_operators": minimum_miner_operators,
+        },
         "checks": checks,
         "deployment_gate_satisfied": all(checks.values()),
         "operator_metadata_self_attested": True,
@@ -204,6 +211,70 @@ def verify_deployment_plan(record: dict[str, Any]) -> dict[str, Any]:
     manifest = _verify_signed(record, DEPLOYMENT_FORMAT, "deployment_id")
     if manifest.get("production_mainnet_ready") or manifest.get("production_crkbit_launched"):
         raise PowExecutionV37Error("deployment plan contains prohibited production claims")
+    _commit(str(manifest.get("source_commit", "")))
+    _hash64(str(manifest.get("genesis_hash", "")), "genesis hash")
+    if not str(manifest.get("chain_id", "")).strip():
+        raise PowExecutionV37Error("deployment plan chain ID is empty")
+
+    nodes = manifest.get("nodes")
+    requirements = manifest.get("requirements")
+    if not isinstance(nodes, list) or not isinstance(requirements, dict):
+        raise PowExecutionV37Error("deployment plan nodes/requirements are malformed")
+    _assert_no_secrets(nodes, "nodes")
+    normalized_ids: list[str] = []
+    operators: set[str] = set()
+    providers: set[str] = set()
+    regions: set[str] = set()
+    network_groups: set[str] = set()
+    miner_operators: set[str] = set()
+    for node in nodes:
+        if not isinstance(node, dict):
+            raise PowExecutionV37Error("deployment plan node must be an object")
+        node_id = str(node.get("node_id", "")).strip()
+        operator_id = str(node.get("operator_id", "")).strip()
+        provider = str(node.get("provider", "")).strip()
+        region = str(node.get("region", "")).strip()
+        network_group = str(node.get("network_group", "")).strip()
+        roles = {str(role).strip().lower() for role in node.get("roles", []) if str(role).strip()}
+        if not all([node_id, operator_id, provider, region, network_group]) or not roles:
+            raise PowExecutionV37Error("deployment plan node metadata is incomplete")
+        _validate_rpc_url(str(node.get("rpc_url", "")))
+        _validate_endpoint(str(node.get("p2p_endpoint", "")))
+        normalized_ids.append(node_id)
+        operators.add(operator_id)
+        providers.add(provider)
+        regions.add(region)
+        network_groups.add(network_group)
+        if roles.intersection({"miner", "pool"}):
+            miner_operators.add(operator_id)
+
+    minimum_nodes = max(4, int(requirements.get("minimum_nodes", 4)))
+    minimum_providers = max(2, int(requirements.get("minimum_providers", 2)))
+    minimum_regions = max(2, int(requirements.get("minimum_regions", 2)))
+    minimum_network_groups = max(2, int(requirements.get("minimum_network_groups", 2)))
+    minimum_miner_operators = max(2, int(requirements.get("minimum_miner_operators", 2)))
+    expected_counts = {
+        "nodes": len(nodes),
+        "operators": len(operators),
+        "providers": len(providers),
+        "regions": len(regions),
+        "network_groups": len(network_groups),
+        "miner_operators": len(miner_operators),
+    }
+    expected_checks = {
+        "minimum_nodes": len(nodes) >= minimum_nodes,
+        "unique_node_ids": len(set(normalized_ids)) == len(nodes),
+        "unique_operators": len(operators) == len(nodes),
+        "provider_diversity": len(providers) >= minimum_providers,
+        "region_diversity": len(regions) >= minimum_regions,
+        "network_group_diversity": len(network_groups) >= minimum_network_groups,
+        "miner_operator_diversity": len(miner_operators) >= minimum_miner_operators,
+        "contains_no_secret_fields": True,
+    }
+    if manifest.get("counts") != expected_counts or manifest.get("checks") != expected_checks:
+        raise PowExecutionV37Error("deployment plan derived counts/checks mismatch")
+    if bool(manifest.get("deployment_gate_satisfied")) != all(expected_checks.values()):
+        raise PowExecutionV37Error("deployment gate result mismatch")
     return {
         "valid": True,
         "deployment_id": manifest["deployment_id"],
@@ -287,6 +358,30 @@ def verify_payout_policy(record: dict[str, Any]) -> dict[str, Any]:
     manifest = _verify_signed(record, PAYOUT_POLICY_FORMAT, "policy_id")
     if manifest.get("automatic_payouts_enabled") or manifest.get("production_mainnet_ready"):
         raise PowExecutionV37Error("payout policy contains unsafe/production claims")
+    hot = str(manifest.get("hot_wallet_address", ""))
+    cold = str(manifest.get("cold_wallet_address", ""))
+    if not hot.startswith("crk1") or not cold.startswith("crk1") or hot == cold:
+        raise PowExecutionV37Error("payout policy wallet separation is invalid")
+    single = int(manifest.get("maximum_single_payout_atomic", 0))
+    batch = int(manifest.get("maximum_batch_payout_atomic", 0))
+    daily = int(manifest.get("daily_payout_limit_atomic", 0))
+    hold = int(manifest.get("manual_hold_above_atomic", 0))
+    approvals = int(manifest.get("approvals_required", 0))
+    confirmations = int(manifest.get("minimum_confirmations", 0))
+    expected_checks = {
+        "separate_hot_and_cold_wallets": hot != cold,
+        "multi_operator_approval": approvals >= 2,
+        "manual_hold_enabled": hold > 0,
+        "single_cap_within_batch": 0 < single <= batch,
+        "batch_cap_within_daily": 0 < batch <= daily,
+        "confirmation_depth": confirmations >= 2,
+        "automatic_payouts_disabled": True,
+        "private_keys_not_embedded": True,
+    }
+    if hold > single or manifest.get("checks") != expected_checks:
+        raise PowExecutionV37Error("payout policy derived checks mismatch")
+    if bool(manifest.get("payout_policy_gate_satisfied")) != all(expected_checks.values()):
+        raise PowExecutionV37Error("payout policy gate result mismatch")
     return {
         "valid": True,
         "policy_id": manifest["policy_id"],
@@ -311,6 +406,8 @@ def build_algorithm_review_gate(
     decision = verify_algorithm_decision(algorithm_decision)
     handoff = verify_review_handoff(v36_handoff)
     decision_name = str(decision["decision"])
+    if str(algorithm_decision.get("manifest", {}).get("benchmark_gate_id")) != str(benchmark["gate_id"]):
+        raise PowExecutionV37Error("algorithm decision is not bound to the supplied benchmark gate")
     if decision_name == "hold":
         raise PowExecutionV37Error("algorithm review gate cannot pass while decision is hold")
 
@@ -319,6 +416,8 @@ def build_algorithm_review_gate(
         activation_verified = verify_activation_proposal(activation_proposal)
         if str(activation_verified["decision"]) != decision_name:
             raise PowExecutionV37Error("activation proposal decision differs from algorithm decision")
+        if str(activation_proposal.get("manifest", {}).get("algorithm_decision_id")) != str(decision["decision_id"]):
+            raise PowExecutionV37Error("activation proposal is not bound to the supplied algorithm decision")
     if decision_name == "randomx" and activation_verified is None:
         raise PowExecutionV37Error("RandomX decision requires a versioned testnet activation proposal")
 
@@ -356,6 +455,27 @@ def verify_algorithm_review_gate(record: dict[str, Any]) -> dict[str, Any]:
     manifest = _verify_signed(record, ALGORITHM_REVIEW_FORMAT, "algorithm_review_id")
     if manifest.get("consensus_activated") or manifest.get("production_mainnet_ready") or manifest.get("production_crkbit_launched"):
         raise PowExecutionV37Error("algorithm review gate contains prohibited activation/launch claims")
+    decision = str(manifest.get("decision", ""))
+    if decision not in {"scrypt", "randomx"}:
+        raise PowExecutionV37Error("algorithm review decision is unsupported")
+    if decision == "randomx" and not manifest.get("activation_proposal_id"):
+        raise PowExecutionV37Error("RandomX review gate is missing its activation proposal")
+    checks = manifest.get("checks")
+    required_checks = {
+        "benchmark_gate_satisfied",
+        "v36_review_handoff_ready",
+        "external_benchmark_review_asserted",
+        "external_consensus_review_asserted",
+        "algorithm_decision_not_hold",
+        "activation_proposal_bound_if_randomx",
+        "no_consensus_auto_activation",
+    }
+    if not isinstance(checks, dict) or set(checks) != required_checks:
+        raise PowExecutionV37Error("algorithm review checks are malformed")
+    if bool(manifest.get("algorithm_review_gate_satisfied")) != all(bool(value) for value in checks.values()):
+        raise PowExecutionV37Error("algorithm review gate result mismatch")
+    if not manifest.get("testnet_only") or not manifest.get("review_assertions_are_not_cryptographic_proof_of_independence"):
+        raise PowExecutionV37Error("algorithm review safety boundary is missing")
     return {
         "valid": True,
         "algorithm_review_id": manifest["algorithm_review_id"],
@@ -384,12 +504,17 @@ def build_review_bundle(
 
     dep_manifest = deployment_plan["manifest"]
     handoff_manifest = v36_handoff["manifest"]
+    algorithm_manifest = algorithm_review_gate["manifest"]
     if str(dep_manifest.get("source_commit")) != _commit(source_commit):
         raise PowExecutionV37Error("deployment plan source commit differs from review bundle")
-    if str(handoff_manifest.get("source_commit")) != _commit(source_commit):
-        raise PowExecutionV37Error("v0.36 handoff source commit differs from review bundle")
     if str(dep_manifest.get("package_version")) != str(package_version):
         raise PowExecutionV37Error("deployment package version differs from review bundle")
+    if str(handoff_manifest.get("chain_id")) != str(dep_manifest.get("chain_id")):
+        raise PowExecutionV37Error("v0.36 handoff chain ID differs from deployment plan")
+    if str(handoff_manifest.get("genesis_hash")).lower() != str(dep_manifest.get("genesis_hash")).lower():
+        raise PowExecutionV37Error("v0.36 handoff genesis differs from deployment plan")
+    if str(algorithm_manifest.get("v36_handoff_id")) != str(handoff["handoff_id"]):
+        raise PowExecutionV37Error("algorithm review gate is not bound to the supplied v0.36 handoff")
 
     checks = {
         "deployment_gate_satisfied": bool(deployment["deployment_gate_satisfied"]),
@@ -406,6 +531,7 @@ def build_review_bundle(
         "package_version": str(package_version),
         "chain_id": dep_manifest["chain_id"],
         "genesis_hash": dep_manifest["genesis_hash"],
+        "supersedes_v36_source_commit": _commit(str(handoff_manifest.get("source_commit", ""))),
         "deployment_id": deployment["deployment_id"],
         "payout_policy_id": payout["policy_id"],
         "algorithm_review_id": algorithm["algorithm_review_id"],
@@ -426,6 +552,24 @@ def verify_review_bundle(record: dict[str, Any]) -> dict[str, Any]:
     manifest = _verify_signed(record, REVIEW_BUNDLE_FORMAT, "review_bundle_id")
     if manifest.get("independent_security_review_completed") or manifest.get("mainnet_launch_authorized") or manifest.get("production_mainnet_ready") or manifest.get("production_crkbit_launched"):
         raise PowExecutionV37Error("review bundle contains prohibited completion/launch claims")
+    _commit(str(manifest.get("source_commit", "")))
+    _commit(str(manifest.get("supersedes_v36_source_commit", "")))
+    _hash64(str(manifest.get("genesis_hash", "")), "genesis hash")
+    if not str(manifest.get("chain_id", "")).strip():
+        raise PowExecutionV37Error("review bundle chain ID is empty")
+    checks = manifest.get("checks")
+    required_checks = {
+        "deployment_gate_satisfied",
+        "payout_policy_gate_satisfied",
+        "algorithm_review_gate_satisfied",
+        "v36_external_review_handoff_ready",
+        "minimum_four_nodes",
+        "production_launch_not_claimed",
+    }
+    if not isinstance(checks, dict) or set(checks) != required_checks:
+        raise PowExecutionV37Error("review bundle checks are malformed")
+    if bool(manifest.get("public_testnet_review_candidate_ready")) != all(bool(value) for value in checks.values()):
+        raise PowExecutionV37Error("review bundle candidate result mismatch")
     return {
         "valid": True,
         "review_bundle_id": manifest["review_bundle_id"],

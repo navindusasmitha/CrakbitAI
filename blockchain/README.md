@@ -1,38 +1,32 @@
-# Crakbit Chain — v0.36 Controlled PoW Integration Alpha
+# Crakbit Chain — v0.37 Public-Testnet Execution and Review-Hardening Alpha
 
-**Current package:** `0.36.0a1`  
-**Primary research consensus:** native Proof of Work  
-**Active devnet PoW:** `crakpow-scrypt-v1`  
-**RandomX:** optional candidate; not consensus-enabled  
-**P2P:** `crakbit-p2p/1`  
-**Pool:** `crakbit-pool/2`  
-**Ledger:** UTXO  
-**Fork choice:** highest cumulative valid work  
-**Status:** controlled public-testnet integration alpha — **not production mainnet**.
+**Current package:** `0.37.0a1`
+**Primary research consensus:** native Proof of Work
+**Active devnet PoW:** `crakpow-scrypt-v1`
+**RandomX:** optional candidate; not consensus-enabled
+**P2P:** `crakbit-p2p/1`
+**Pool:** `crakbit-pool/2`
+**Ledger:** UTXO
+**Fork choice:** highest cumulative valid work
+**Status:** public-testnet execution and review-preparation alpha — **not production mainnet**.
 
 Production CRKBIT has not launched. There is no official presale or production token contract. Do not use this alpha to custody real value.
 
-## What v0.36 adds
+## What v0.37 adds
 
-v0.36 builds on the v0.35 public-testnet evidence layer and adds controlled integration tooling for a real multi-host PoW campaign:
+v0.37 builds on the v0.36 campaign workflow and adds signed execution/review artifacts:
 
-- append-only signed campaign observation logs,
-- periodic probing of multiple `/pow/v2` nodes,
-- campaign verification and 24h / 72h / 7d summaries,
-- minimum node and sample-success-ratio gates,
-- same-chain/genesis/algorithm convergence checks,
-- controlled UTXO undo/disconnect rehearsal on a disposable database copy,
-- persistent peer-book seed selection for live node startup,
-- coarse peer-bucket diversity limits,
-- v0.36 node launcher using selected peer-book seeds,
-- signed PoW algorithm activation proposal format,
-- activation proposals require prior v0.34 human algorithm decision,
-- RandomX proposals require deterministic consensus-vector and native-library hashes,
-- minimum activation notice window,
-- proposal tooling never silently activates consensus,
-- regression tests for campaign logs, reorg rehearsal, peer diversity and activation policy.
+- signed multi-host deployment plans with operator runbooks,
+- node/operator/provider/region/network/miner diversity gates,
+- secret-like metadata and credential-bearing RPC URL rejection,
+- signed hot/cold pool payout-policy controls,
+- multi-operator approvals, caps, holds and confirmation-depth requirements,
+- final algorithm-review gate bound to benchmark, human decision and v0.36 handoff records,
+- optional RandomX testnet-proposal binding without automatic consensus activation,
+- cross-bound public-testnet independent-review candidate bundle,
+- semantic verification and regression coverage for the new artifacts.
 
-See [`V0.36.md`](V0.36.md).
+See [`V0.37.md`](V0.37.md). The v0.36 campaign collector, node integration and undo-rehearsal commands remain available.
 
 ## Install / test
 
@@ -43,20 +37,30 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-## v0.36 commands
+## v0.37 commands
 
 ```text
-pow-campaign-v36-probe
-pow-campaign-v36-verify
-pow-campaign-v36-summarize
-pow-undo-v36-rehearse
-pow-peer-seeds-v36-select
-pow-node-v36-run
-pow-activation-v36-build
-pow-activation-v36-verify
+pow-deployment-v37-build
+pow-deployment-v37-verify
+pow-payout-policy-v37-build
+pow-payout-policy-v37-verify
+pow-algorithm-review-v37-build
+pow-algorithm-review-v37-verify
+pow-review-bundle-v37-build
+pow-review-bundle-v37-verify
 ```
 
-All v0.35 and earlier commands remain available through CLI delegation.
+All v0.36 and earlier commands remain available through CLI delegation.
+
+## Execution/review workflow
+
+1. Complete the real v0.36 multi-node campaign and handoff evidence.
+2. Build a v0.37 deployment plan from reviewed public node metadata.
+3. Build a payout policy using public hot/cold watch addresses and conservative operator limits.
+4. Bind the real benchmark gate and human algorithm decision to the v0.36 handoff.
+5. Build and verify the v0.37 public-testnet review candidate bundle.
+
+The resulting bundle always records that independent review is not completed and production mainnet is not ready. See `V0.37.md` for commands and input formats.
 
 ## Campaign collector
 

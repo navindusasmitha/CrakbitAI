@@ -121,14 +121,17 @@ Earlier CometBFT/BFT work remains legacy/research infrastructure and is not mixe
 - [ ] Complete independent consensus/network/wallet/pool review
 
 ### v0.37 target — public-testnet execution / review hardening
-- [ ] Multi-host deployment bundles and operator runbooks for the PoW node/pool stack
+- [x] Package/CLI advanced to `0.37.0a1`
+- [x] Signed multi-host deployment plans and operator runbooks for the PoW node/pool stack
+- [x] Deployment evidence rejects secret-like fields and enforces node/operator/provider/region/network/miner diversity gates
 - [ ] Persistent peer-health feedback from live sessions into the peer book
 - [ ] Deeper anti-eclipse/diversity controls using externally reviewed network/operator metadata
 - [ ] Controlled fork/reorg harness using incremental undo on disposable/live-testnet copies
 - [ ] Public explorer/wallet reorg and confirmation UX
-- [ ] Pool payout policy evidence with hot/cold separation and operator limits
-- [ ] Independent-review handoff bundle from real campaign evidence
-- [ ] Final PoW-algorithm decision gate only from real evidence
+- [x] Pool payout policy evidence with hot/cold separation, operator approvals, caps and holds
+- [x] Independent-review candidate bundle that cross-binds v0.36 handoff and v0.37 execution artifacts
+- [x] Final PoW-algorithm review gate format requiring signed benchmark/decision evidence and external review assertions
+- [x] v0.37 regression tests for signatures, secret rejection, cross-artifact binding and CLI round trip
 - [ ] If justified, versioned candidate consensus activation on testnet only, never silent activation
 
 ## Mainnet Consideration
