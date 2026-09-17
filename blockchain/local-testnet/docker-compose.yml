@@ -182,7 +182,7 @@ services:
         exec crakchain pow-pool-v33-run
         --db /runtime/pool/pool.sqlite3
         --node-url http://node1:28443
-        --pool-address "$POOL_ADDRESS"
+        --pool-address "$$POOL_ADDRESS"
         --host 0.0.0.0
         --port 3333
         --vardiff-target-seconds 15
@@ -206,7 +206,7 @@ services:
         set -a; . /runtime/local.env; set +a;
         exec python /app/scripts/run_pow_pool_miner_v33.py
         --host pool --port 3333
-        --address "$MINER1_ADDRESS"
+        --address "$$MINER1_ADDRESS"
         --worker local-cpu-01
         --threads 2
     volumes:
@@ -226,7 +226,7 @@ services:
         set -a; . /runtime/local.env; set +a;
         exec python /app/scripts/run_pow_pool_miner_v33.py
         --host pool --port 3333
-        --address "$MINER2_ADDRESS"
+        --address "$$MINER2_ADDRESS"
         --worker local-cpu-02
         --threads 2
     volumes:
