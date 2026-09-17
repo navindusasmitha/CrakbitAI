@@ -155,12 +155,29 @@ def main() -> int:
                     total_elapsed += elapsed
                     if nonce is not None:
                         request_id += 1
-                        result = send_request(
-                            file,
-                            request_id,
-                            "mining.submit",
-                            {"job_id": job["job_id"], "nonce": nonce},
-                        )
+                        try:
+                            result = send_request(
+                                file,
+                                request_id,
+                                "mining.submit",
+                                {"job_id": job["job_id"], "nonce": nonce},
+                            )
+                        except RuntimeError as exc:
+                            if str(exc) != "stale or unknown job":
+                                raise
+                            request_id += 1
+                            job = send_request(file, request_id, "mining.get_job", {})
+                            active_job_id = str(job["job_id"])
+                            nonce_cursor = 0
+                            print(json.dumps({
+                                "stale_share": True,
+                                "action": "job_refreshed_without_reconnect",
+                                "height": job["height"],
+                                "job_id": job["job_id"],
+                                "share_multiplier": job.get("share_multiplier"),
+                            }))
+                            continue
+
                         print(json.dumps({
                             "share": result,
                             "job_hashes": hashes,
