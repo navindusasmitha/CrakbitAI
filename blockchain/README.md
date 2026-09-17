@@ -1,6 +1,6 @@
-# Crakbit Chain — v0.35 Public PoW Testnet Evidence Alpha
+# Crakbit Chain — v0.36 Controlled PoW Integration Alpha
 
-**Current package:** `0.35.0a1`  
+**Current package:** `0.36.0a1`  
 **Primary research consensus:** native Proof of Work  
 **Active devnet PoW:** `crakpow-scrypt-v1`  
 **RandomX:** optional candidate; not consensus-enabled  
@@ -8,30 +8,31 @@
 **Pool:** `crakbit-pool/2`  
 **Ledger:** UTXO  
 **Fork choice:** highest cumulative valid work  
-**Status:** public-testnet evidence alpha — **not production mainnet**.
+**Status:** controlled public-testnet integration alpha — **not production mainnet**.
 
 Production CRKBIT has not launched. There is no official presale or production token contract. Do not use this alpha to custody real value.
 
-## What v0.35 adds
+## What v0.36 adds
 
-v0.35 builds on the working PoW network/mining stack and adds the evidence layer needed for a real multi-operator public testnet:
+v0.36 builds on the v0.35 public-testnet evidence layer and adds controlled integration tooling for a real multi-host PoW campaign:
 
-- signed operator/host attestations,
-- exact source commit / package / chain / genesis binding,
-- public `/pow/v2` node probes,
-- 4+ node convergence checking,
-- same-height tip-conflict detection,
-- actual 24h / 72h / 7d soak-duration gates,
-- restart/partition/reconnect/invalid-block/invalid-tx/load campaign records,
-- higher-work reorg + post-partition convergence evidence fields,
-- unique node/operator/evidence-signer checks,
-- provider/region diversity checks,
-- multiple miner-operator requirement,
-- signed public-testnet gate,
-- signed review freeze,
-- regression tests including signer-reuse rejection.
+- append-only signed campaign observation logs,
+- periodic probing of multiple `/pow/v2` nodes,
+- campaign verification and 24h / 72h / 7d summaries,
+- minimum node and sample-success-ratio gates,
+- same-chain/genesis/algorithm convergence checks,
+- controlled UTXO undo/disconnect rehearsal on a disposable database copy,
+- persistent peer-book seed selection for live node startup,
+- coarse peer-bucket diversity limits,
+- v0.36 node launcher using selected peer-book seeds,
+- signed PoW algorithm activation proposal format,
+- activation proposals require prior v0.34 human algorithm decision,
+- RandomX proposals require deterministic consensus-vector and native-library hashes,
+- minimum activation notice window,
+- proposal tooling never silently activates consensus,
+- regression tests for campaign logs, reorg rehearsal, peer diversity and activation policy.
 
-See [`V0.35.md`](V0.35.md).
+See [`V0.36.md`](V0.36.md).
 
 ## Install / test
 
@@ -42,66 +43,113 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-## v0.35 commands
+## v0.36 commands
 
 ```text
-pow-host-v35-attest
-pow-host-v35-verify
-pow-node-v35-probe
-pow-convergence-v35-check
-pow-soak-v35-summarize
-pow-fault-v35-record
-pow-testnet-gate-v35-build
-pow-testnet-gate-v35-verify
-pow-testnet-freeze-v35-build
-pow-testnet-freeze-v35-verify
+pow-campaign-v36-probe
+pow-campaign-v36-verify
+pow-campaign-v36-summarize
+pow-undo-v36-rehearse
+pow-peer-seeds-v36-select
+pow-node-v36-run
+pow-activation-v36-build
+pow-activation-v36-verify
 ```
 
-All earlier v0.34/v0.33/v0.32/v0.31 commands remain available through CLI delegation.
+All v0.35 and earlier commands remain available through CLI delegation.
 
-## Public-testnet flow
+## Campaign collector
 
-1. Provision 4+ independently managed nodes on multiple providers/regions.
-2. Give each operator a dedicated evidence-signing key separate from wallet/mining/P2P keys.
-3. Create one host attestation per operator.
-4. Probe all nodes and check convergence.
-5. Collect periodic samples until 24h, then 72h, then 7d+ duration gates are actually satisfied.
-6. Run authorized restart/partition/reconnect/load/invalid-input/reorg campaigns.
-7. Build the signed public-testnet gate.
-8. Freeze the exact gated source/package/chain/genesis candidate for independent review.
+Append a signed sample from multiple real nodes:
 
-The software cannot fake elapsed time or independent infrastructure. Host/provider/region statements remain self-attested until independently verified.
+```powershell
+crakchain pow-campaign-v36-probe `
+  --key private\campaign-evidence.json `
+  --log evidence\campaign-v36.jsonl `
+  --rpc-url https://node-a.example `
+  --rpc-url https://node-b.example `
+  --rpc-url https://node-c.example `
+  --rpc-url https://node-d.example
+```
 
-## v0.34 operations already available
+Summarize only after real elapsed time exists:
 
-- signed scrypt/RandomX benchmark records + multi-machine gate,
-- explicit human algorithm decision with no auto-activation,
-- UTXO undo-journal backfill/verification,
-- persistent peer reputation/address book,
-- difficulty/hashrate/miner stats,
-- confirmations + fee-estimate helpers,
-- watch-only records,
-- mature coinbase-aware PPLNS payout planning and confirmation-depth reconciliation.
+```powershell
+crakchain pow-campaign-v36-summarize `
+  --log evidence\campaign-v36.jsonl `
+  --required-level 24h `
+  --minimum-nodes 4 `
+  --minimum-sample-success-ratio 0.99 `
+  --output evidence\campaign-summary-24h.json
+```
 
-## Consensus / RandomX boundary
+The collector cannot fabricate elapsed time or external operators.
 
-The active chain still uses `crakpow-scrypt-v1`. RandomX remains a real native candidate but is not activated. A future RandomX decision must be based on real benchmark evidence and followed by a separate versioned consensus change with deterministic vectors and multi-node fork/reorg testing.
+## UTXO undo rehearsal
 
-## Reorg boundary
+v0.34 created verified undo metadata. v0.36 adds a disposable-copy disconnect rehearsal so undo state can be tested without mutating the operator's live database:
 
-The live v0.32 reorg engine still performs full candidate replay/state replacement. v0.34 added verified undo metadata, but incremental disconnect/connect reorg mechanics are not active yet.
+```powershell
+crakchain pow-undo-v36-rehearse `
+  --db runtime\node1\chain.sqlite3 `
+  --disconnect-blocks 3 `
+  --output evidence\undo-rehearsal.json
+```
+
+This is still rehearsal tooling; the canonical live reorg engine continues to use the reviewed v0.32 replay/state-replacement path until incremental disconnect/connect logic receives deeper testing and review.
+
+## Peer-book node startup
+
+```powershell
+crakchain pow-peer-seeds-v36-select `
+  --peer-db runtime\node1\peers.sqlite3 `
+  --limit 16 `
+  --max-per-bucket 2
+```
+
+Run a node with persistent peer-book seed selection:
+
+```powershell
+crakchain pow-node-v36-run `
+  --db runtime\node1\chain.sqlite3 `
+  --network-key private\node1-p2p.json `
+  --peer-db runtime\node1\peers.sqlite3 `
+  --rpc-port 28443 `
+  --p2p-port 28444
+```
+
+The bucket policy reduces accidental concentration but is not complete Sybil/ASN anti-eclipse protection.
+
+## Algorithm activation boundary
+
+A v0.34 human decision may be converted into a signed v0.36 activation **proposal**. The proposal binds source commit, chain ID, genesis hash, current height, activation height and, for RandomX, deterministic vector/library hashes.
+
+```powershell
+crakchain pow-activation-v36-build `
+  --key private\release-evidence.json `
+  --algorithm-decision evidence\algorithm-decision.json `
+  --source-commit <40-char-git-sha> `
+  --chain-id crakbit-pow-testnet-v1 `
+  --genesis-hash <64-hex-genesis> `
+  --current-height 1000 `
+  --activation-height 3000 `
+  --output evidence\activation-proposal.json
+```
+
+The proposal always records that consensus is **not automatically activated**. A separate reviewed versioned consensus implementation is required.
 
 ## External work still required
 
-- 4+ real independently managed public nodes,
+- 4+ independently operated public nodes,
 - multiple independent miners/pools,
-- real 24h → 72h → 7d+ operation,
-- real authorized partition/restart/reorg/load campaigns,
-- real cross-machine algorithm benchmarks,
+- real 24h → 72h → 7d+ campaigns,
+- real partition/restart/reorg/load/invalid-input drills,
+- real cross-machine scrypt/RandomX benchmark evidence,
 - independent consensus/network/wallet/pool review,
-- high/critical remediation/retest,
-- final economics and applicable legal/regulatory review.
+- high/critical remediation and retest,
+- final mining algorithm/economics/legal review.
 
-## Monetary-policy boundary
-
-Subsidy, halving and difficulty values remain configurable devnet parameters. The proposed `21,000,000 CRKBIT` and 8-decimal design are not final production economics until deliberately frozen and independently reviewed.
+```text
+production_mainnet_ready=false
+production_crkbit_launched=false
+```
