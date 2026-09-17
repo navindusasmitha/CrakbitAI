@@ -179,10 +179,22 @@ class CrakbitPool:
         self._last_refresh = 0.0
 
     def _node_post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        url = self.config.node_url.rstrip("/") + path
+        attempts = 3
         with httpx.Client(timeout=10.0) as client:
-            response = client.post(self.config.node_url.rstrip("/") + path, json=payload)
-            response.raise_for_status()
-            return response.json()
+            for attempt in range(attempts):
+                try:
+                    response = client.post(url, json=payload)
+                    response.raise_for_status()
+                    return response.json()
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code < 500 or attempt == attempts - 1:
+                        raise
+                except httpx.TransportError:
+                    if attempt == attempts - 1:
+                        raise
+                time.sleep(0.15 * (attempt + 1))
+        raise PowPoolV31Error("PoW node RPC retry loop exhausted")
 
     def refresh_job(self, *, force: bool = False) -> dict[str, Any]:
         current = self.ledger.active_job()
