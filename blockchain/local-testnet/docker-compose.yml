@@ -235,6 +235,38 @@ services:
     networks: [craknet]
     restart: unless-stopped
 
+  dashboard:
+    <<: *crakbit-image
+    depends_on:
+      node1:
+        condition: service_started
+      node2:
+        condition: service_started
+      node3:
+        condition: service_started
+      node4:
+        condition: service_started
+      pool:
+        condition: service_started
+    command:
+      - python
+      - /app/scripts/local_dashboard_v39.py
+      - --host
+      - 0.0.0.0
+      - --port
+      - "38080"
+      - --auto-evidence-seconds
+      - "300"
+    environment:
+      CRAKBIT_SOURCE_COMMIT: "${CRAKBIT_SOURCE_COMMIT:-unknown}"
+    volumes:
+      - ./runtime:/runtime:ro
+      - ./evidence:/evidence
+    ports:
+      - "127.0.0.1:38080:38080"
+    networks: [craknet]
+    restart: unless-stopped
+
 networks:
   craknet:
     driver: bridge
