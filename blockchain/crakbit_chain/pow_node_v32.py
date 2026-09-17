@@ -187,13 +187,10 @@ def create_app(
     @app.post("/pow/v2/submitblock")
     @app.post("/pow/v1/submitblock")
     async def submitblock(request: BlockRequest) -> dict[str, Any]:
-        chain = with_chain()
         try:
-            result = chain.accept_block(request.block, source="rpc")
+            result = network_chain.accept_block(request.block, source="rpc")
         except (PowV31Error, PowNetworkV32Error) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        finally:
-            chain.close()
         if result.get("accepted") and not result.get("known"):
             await p2p.announce_block(str(result["block_hash"]))
         return result
@@ -201,13 +198,10 @@ def create_app(
     @app.post("/pow/v2/submittransaction")
     @app.post("/pow/v1/submittransaction")
     async def submittransaction(request: TransactionRequest) -> dict[str, Any]:
-        chain = with_chain()
         try:
-            result = chain.submit_transaction(request.transaction)
+            result = network_chain.submit_transaction(request.transaction)
         except (PowV31Error, PowNetworkV32Error) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        finally:
-            chain.close()
         await p2p.announce_transaction(str(result["txid"]))
         return result
 
