@@ -239,18 +239,18 @@ services:
     <<: *crakbit-image
     depends_on:
       node1:
-        condition: service_started
+        condition: service_healthy
       node2:
-        condition: service_started
+        condition: service_healthy
       node3:
-        condition: service_started
+        condition: service_healthy
       node4:
-        condition: service_started
+        condition: service_healthy
       pool:
         condition: service_started
     command:
       - python
-      - /app/scripts/local_dashboard_v39.py
+      - /app/scripts/local_dashboard_v40.py
       - --host
       - 0.0.0.0
       - --port
