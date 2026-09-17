@@ -1,42 +1,37 @@
-# Crakbit Chain — v0.33 PoW Mining-Hardening Alpha
+# Crakbit Chain — v0.35 Public PoW Testnet Evidence Alpha
 
-**Current package:** `0.33.0a1`  
+**Current package:** `0.35.0a1`  
 **Primary research consensus:** native Proof of Work  
 **Active devnet PoW:** `crakpow-scrypt-v1`  
-**RandomX candidate:** `crakpow-randomx-v1-candidate` — optional/native, not consensus-enabled  
+**RandomX:** optional candidate; not consensus-enabled  
 **P2P:** `crakbit-p2p/1`  
 **Pool:** `crakbit-pool/2`  
 **Ledger:** UTXO  
 **Fork choice:** highest cumulative valid work  
-**Status:** multi-node PoW devnet alpha — **not production mainnet**.
+**Status:** public-testnet evidence alpha — **not production mainnet**.
 
-Production CRKBIT has **not** launched. There is no official presale or production token contract. Do not use this software to custody real value.
+Production CRKBIT has not launched. There is no official presale or production token contract. Do not use this alpha to custody real value.
 
-## v0.33 scope
+## What v0.35 adds
 
-v0.32 remains the active P2P/fork-choice network layer. v0.33 hardens mining around it:
+v0.35 builds on the working PoW network/mining stack and adds the evidence layer needed for a real multi-operator public testnet:
 
-- multi-thread CPU solo mining over the existing node RPC,
-- multi-thread native pool miner,
-- `crakbit-pool/2` vardiff,
-- stale-job rejection,
-- duplicate/replayed-share rejection,
-- connection message-rate limits,
-- optional TLS 1.2+ pool transport,
-- optional pool authorization token,
-- pool stats,
-- optional native RandomX `v1.1.8` ctypes adapter,
-- RandomX light and fast/full-dataset modes,
-- official upstream self-test vector,
-- deterministic RandomX candidate key schedule,
-- deterministic candidate blob using XMRig's common RandomX nonce offset,
-- XMRig `rx/0` candidate job builder,
-- native recomputation/verification of XMRig-style submits,
-- deterministic candidate vector output,
-- Windows pinned-source RandomX build helper,
-- regression coverage with RandomX remaining optional in CI.
+- signed operator/host attestations,
+- exact source commit / package / chain / genesis binding,
+- public `/pow/v2` node probes,
+- 4+ node convergence checking,
+- same-height tip-conflict detection,
+- actual 24h / 72h / 7d soak-duration gates,
+- restart/partition/reconnect/invalid-block/invalid-tx/load campaign records,
+- higher-work reorg + post-partition convergence evidence fields,
+- unique node/operator/evidence-signer checks,
+- provider/region diversity checks,
+- multiple miner-operator requirement,
+- signed public-testnet gate,
+- signed review freeze,
+- regression tests including signer-reuse rejection.
 
-See [`V0.33.md`](V0.33.md).
+See [`V0.35.md`](V0.35.md).
 
 ## Install / test
 
@@ -47,112 +42,65 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-## Active network node
-
-The v0.32 P2P node remains the active devnet node:
-
-```bash
-crakchain pow-p2p-key-v32-new --output private/node1-p2p.json
-crakchain pow-network-v32-init --db runtime/node1/chain.sqlite3
-crakchain pow-node-v32-run \
-  --db runtime/node1/chain.sqlite3 \
-  --network-key private/node1-p2p.json \
-  --rpc-port 28443 \
-  --p2p-port 28444
-```
-
-## v0.33 commands
+## v0.35 commands
 
 ```text
-pow-randomx-v33-info
-pow-randomx-v33-selftest
-pow-randomx-v33-benchmark
-pow-randomx-v33-key-height
-pow-randomx-v33-vectors
-pow-mine-v33-rpc
-pow-pool-v33-run
-pow-pool-v33-stats
-pow-xmrig-v33-job
-pow-xmrig-v33-verify-submit
+pow-host-v35-attest
+pow-host-v35-verify
+pow-node-v35-probe
+pow-convergence-v35-check
+pow-soak-v35-summarize
+pow-fault-v35-record
+pow-testnet-gate-v35-build
+pow-testnet-gate-v35-verify
+pow-testnet-freeze-v35-build
+pow-testnet-freeze-v35-verify
 ```
 
-All v0.32/v0.31 commands remain available through CLI delegation.
+All earlier v0.34/v0.33/v0.32/v0.31 commands remain available through CLI delegation.
 
-## Multi-thread CPU mining
+## Public-testnet flow
 
-```bash
-crakchain pow-mine-v33-rpc \
-  --node-url http://127.0.0.1:28443 \
-  --miner-address crk1YOUR_ADDRESS \
-  --threads 8 \
-  --blocks 1
-```
+1. Provision 4+ independently managed nodes on multiple providers/regions.
+2. Give each operator a dedicated evidence-signing key separate from wallet/mining/P2P keys.
+3. Create one host attestation per operator.
+4. Probe all nodes and check convergence.
+5. Collect periodic samples until 24h, then 72h, then 7d+ duration gates are actually satisfied.
+6. Run authorized restart/partition/reconnect/load/invalid-input/reorg campaigns.
+7. Build the signed public-testnet gate.
+8. Freeze the exact gated source/package/chain/genesis candidate for independent review.
 
-The node independently verifies the resulting block. The miner cannot bypass network target validation.
+The software cannot fake elapsed time or independent infrastructure. Host/provider/region statements remain self-attested until independently verified.
 
-## Hardened pool
+## v0.34 operations already available
 
-```bash
-crakchain pow-pool-v33-run \
-  --db runtime/pow-v33/pool.sqlite3 \
-  --node-url http://127.0.0.1:28443 \
-  --pool-address crk1POOL_ADDRESS \
-  --host 0.0.0.0 \
-  --port 3333 \
-  --vardiff-target-seconds 15 \
-  --stale-job-seconds 120
-```
+- signed scrypt/RandomX benchmark records + multi-machine gate,
+- explicit human algorithm decision with no auto-activation,
+- UTXO undo-journal backfill/verification,
+- persistent peer reputation/address book,
+- difficulty/hashrate/miner stats,
+- confirmations + fee-estimate helpers,
+- watch-only records,
+- mature coinbase-aware PPLNS payout planning and confirmation-depth reconciliation.
 
-Native multi-thread miner:
+## Consensus / RandomX boundary
 
-```bash
-python scripts/run_pow_pool_miner_v33.py \
-  --host 127.0.0.1 \
-  --port 3333 \
-  --address crk1MINER_ADDRESS \
-  --worker cpu-01 \
-  --threads 8
-```
+The active chain still uses `crakpow-scrypt-v1`. RandomX remains a real native candidate but is not activated. A future RandomX decision must be based on real benchmark evidence and followed by a separate versioned consensus change with deterministic vectors and multi-node fork/reorg testing.
 
-For a public test pool, use TLS and external DDoS/reverse-proxy/monitoring controls. Do not commit pool TLS private keys or hot-wallet keys.
+## Reorg boundary
 
-## RandomX candidate
+The live v0.32 reorg engine still performs full candidate replay/state replacement. v0.34 added verified undo metadata, but incremental disconnect/connect reorg mechanics are not active yet.
 
-Crakbit does not ship a RandomX binary. The candidate uses the official C API from a pinned upstream build.
+## External work still required
 
-Windows:
-
-```powershell
-.\scripts\build_randomx_v33.ps1
-$env:CRAKBIT_RANDOMX_LIBRARY="C:\path\to\randomx.dll"
-crakchain pow-randomx-v33-selftest --mode light
-crakchain pow-randomx-v33-benchmark --mode light --seconds 5
-```
-
-The current consensus still uses scrypt. RandomX activation requires a separately reviewed/versioned consensus change so old and new nodes cannot disagree silently.
-
-## XMRig boundary
-
-v0.33 has a candidate `rx/0` job format and verifier matching key XMRig RandomX expectations: `job_id`, `blob`, `target`, `height`, `seed_hash`, and a four-byte nonce at offset 39.
-
-This is **not yet a live stock-XMRig mining claim**. End-to-end XMRig support depends on final RandomX consensus/blob/target semantics and must be tested against an actual stock XMRig release before being advertised.
-
-## Fork/reorg boundary
-
-The v0.32 network already stores competing branches and activates a strictly higher-work replay-valid branch. It still uses full branch replay/state replacement rather than a production-optimized UTXO undo journal. Efficient reorg storage and deeper adversarial reorg testing remain open.
-
-## Next priorities — v0.34
-
-- decide whether RandomX remains the preferred production candidate after real CPU/GPU benchmarks,
-- if selected, add explicit versioned RandomX consensus activation and fork tests,
-- run stock XMRig end-to-end interoperability against the selected job format,
-- add production-grade pool payout transactions after coinbase maturity,
-- pool hot/cold key separation and payout limits,
-- persistent peer reputation/address database + anti-eclipse controls,
-- PoW explorer hashrate/difficulty/miner views,
-- wallet confirmations/fee estimation/reorg awareness,
-- larger fuzz/load/fork/reorg campaigns,
-- long-running multi-host public PoW testnet.
+- 4+ real independently managed public nodes,
+- multiple independent miners/pools,
+- real 24h → 72h → 7d+ operation,
+- real authorized partition/restart/reorg/load campaigns,
+- real cross-machine algorithm benchmarks,
+- independent consensus/network/wallet/pool review,
+- high/critical remediation/retest,
+- final economics and applicable legal/regulatory review.
 
 ## Monetary-policy boundary
 
