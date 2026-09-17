@@ -1,0 +1,239 @@
+name: crakbit-local-testnet
+
+x-crakbit-image: &crakbit-image
+  image: crakbit-chain-local:v037
+  build:
+    context: ..
+    dockerfile: local-testnet/Dockerfile
+
+services:
+  setup:
+    <<: *crakbit-image
+    command: ["python", "/app/scripts/local_testnet_setup_v37.py", "--root", "/runtime"]
+    volumes:
+      - ./runtime:/runtime
+    networks: [craknet]
+    restart: "no"
+
+  node1:
+    <<: *crakbit-image
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    command:
+      - crakchain
+      - pow-node-v36-run
+      - --db
+      - /runtime/node/chain.sqlite3
+      - --network-key
+      - /runtime/node/p2p-key.json
+      - --rpc-host
+      - 0.0.0.0
+      - --rpc-port
+      - "28443"
+      - --p2p-host
+      - 0.0.0.0
+      - --p2p-port
+      - "28444"
+      - --advertised-endpoint
+      - node1:28444
+    volumes:
+      - ./runtime/node1:/runtime/node
+    ports:
+      - "127.0.0.1:28443:28443"
+      - "127.0.0.1:28444:28444"
+    networks: [craknet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:28443/pow/v2/info', timeout=3).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  node2:
+    <<: *crakbit-image
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+      node1:
+        condition: service_started
+    command:
+      - crakchain
+      - pow-node-v36-run
+      - --db
+      - /runtime/node/chain.sqlite3
+      - --network-key
+      - /runtime/node/p2p-key.json
+      - --rpc-host
+      - 0.0.0.0
+      - --rpc-port
+      - "28443"
+      - --p2p-host
+      - 0.0.0.0
+      - --p2p-port
+      - "28444"
+      - --advertised-endpoint
+      - node2:28444
+      - --peer
+      - node1:28444
+    volumes:
+      - ./runtime/node2:/runtime/node
+    ports:
+      - "127.0.0.1:29443:28443"
+      - "127.0.0.1:29444:28444"
+    networks: [craknet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:28443/pow/v2/info', timeout=3).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  node3:
+    <<: *crakbit-image
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+      node1:
+        condition: service_started
+    command:
+      - crakchain
+      - pow-node-v36-run
+      - --db
+      - /runtime/node/chain.sqlite3
+      - --network-key
+      - /runtime/node/p2p-key.json
+      - --rpc-host
+      - 0.0.0.0
+      - --rpc-port
+      - "28443"
+      - --p2p-host
+      - 0.0.0.0
+      - --p2p-port
+      - "28444"
+      - --advertised-endpoint
+      - node3:28444
+      - --peer
+      - node1:28444
+    volumes:
+      - ./runtime/node3:/runtime/node
+    ports:
+      - "127.0.0.1:30443:28443"
+      - "127.0.0.1:30444:28444"
+    networks: [craknet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:28443/pow/v2/info', timeout=3).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  node4:
+    <<: *crakbit-image
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+      node1:
+        condition: service_started
+    command:
+      - crakchain
+      - pow-node-v36-run
+      - --db
+      - /runtime/node/chain.sqlite3
+      - --network-key
+      - /runtime/node/p2p-key.json
+      - --rpc-host
+      - 0.0.0.0
+      - --rpc-port
+      - "28443"
+      - --p2p-host
+      - 0.0.0.0
+      - --p2p-port
+      - "28444"
+      - --advertised-endpoint
+      - node4:28444
+      - --peer
+      - node1:28444
+    volumes:
+      - ./runtime/node4:/runtime/node
+    ports:
+      - "127.0.0.1:31443:28443"
+      - "127.0.0.1:31444:28444"
+    networks: [craknet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:28443/pow/v2/info', timeout=3).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  pool:
+    <<: *crakbit-image
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+      node1:
+        condition: service_started
+    command:
+      - /bin/sh
+      - -lc
+      - >-
+        set -a; . /runtime/local.env; set +a;
+        exec crakchain pow-pool-v33-run
+        --db /runtime/pool/pool.sqlite3
+        --node-url http://node1:28443
+        --pool-address "$POOL_ADDRESS"
+        --host 0.0.0.0
+        --port 3333
+        --vardiff-target-seconds 15
+        --stale-job-seconds 120
+    volumes:
+      - ./runtime:/runtime
+    ports:
+      - "127.0.0.1:3333:3333"
+    networks: [craknet]
+    restart: unless-stopped
+
+  miner1:
+    <<: *crakbit-image
+    depends_on:
+      pool:
+        condition: service_started
+    command:
+      - /bin/sh
+      - -lc
+      - >-
+        set -a; . /runtime/local.env; set +a;
+        exec python /app/scripts/run_pow_pool_miner_v33.py
+        --host pool --port 3333
+        --address "$MINER1_ADDRESS"
+        --worker local-cpu-01
+        --threads 2
+    volumes:
+      - ./runtime:/runtime:ro
+    networks: [craknet]
+    restart: unless-stopped
+
+  miner2:
+    <<: *crakbit-image
+    depends_on:
+      pool:
+        condition: service_started
+    command:
+      - /bin/sh
+      - -lc
+      - >-
+        set -a; . /runtime/local.env; set +a;
+        exec python /app/scripts/run_pow_pool_miner_v33.py
+        --host pool --port 3333
+        --address "$MINER2_ADDRESS"
+        --worker local-cpu-02
+        --threads 2
+    volumes:
+      - ./runtime:/runtime:ro
+    networks: [craknet]
+    restart: unless-stopped
+
+networks:
+  craknet:
+    driver: bridge
