@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import socket
 import sqlite3
 import threading
 import time
@@ -76,16 +77,31 @@ def _local_pool_rpc(method: str, timeout: float = 2.0) -> dict[str, Any]:
     return _ORIGINAL_POOL_RPC(method)
 
 
+def _pool_service_reachable(timeout: float = 0.5) -> bool:
+    try:
+        with socket.create_connection((base.POOL_HOST, base.POOL_PORT), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
 base._pool_rpc = _local_pool_rpc
 
 
 def collect_status() -> dict[str, Any]:
     status = ops.collect_status()
+    service_reachable = _pool_service_reachable()
+    pool = dict(status.get("pool") or {})
+    stats_available = bool(pool.get("online"))
+    pool["stats_available"] = stats_available
+    pool["service_reachable"] = service_reachable
+    pool["online"] = bool(stats_available and service_reachable)
+    status["pool"] = pool
     status["format"] = "crakbit-local-dashboard-v42/1"
     status["source_commit"] = os.environ.get("CRAKBIT_SOURCE_COMMIT", "unknown")
     status["monitoring"] = {
         "pool_stats_source": "read-only-sqlite",
-        "pool_tcp_probe_required": False,
+        "pool_service_probe": "tcp-connect-only",
         "production_mainnet_ready": False,
     }
     return status
@@ -100,6 +116,7 @@ base.INDEX_HTML = base.INDEX_HTML.replace("v0.41", "v0.42")
 def api_pool_local_stats() -> dict[str, Any]:
     return {
         **_read_pool_db(),
+        "service_reachable": _pool_service_reachable(),
         "local_only": True,
         "production_mainnet_ready": False,
     }
