@@ -64,38 +64,27 @@ def create_app(
 
     app = FastAPI(title="Crakbit PoW P2P Node", version="0.32.0a1", lifespan=lifespan)
 
-    def with_chain() -> PowNetworkChain:
-        return PowNetworkChain(path)
-
     @app.get("/pow/v2/health")
     @app.get("/pow/v1/health")
-    def health() -> dict[str, Any]:
-        chain = with_chain()
-        try:
-            info = chain.info()
-            return {
-                "ok": True,
-                "height": info["height"],
-                "chain_id": info["chain_id"],
-                "pow_algo": info["pow_algo"],
-                "p2p_protocol": info["p2p_protocol"],
-                "peer_count": len(p2p.sessions),
-                "production_mainnet_ready": False,
-            }
-        finally:
-            chain.close()
+    async def health() -> dict[str, Any]:
+        info = network_chain.info()
+        return {
+            "ok": True,
+            "height": info["height"],
+            "chain_id": info["chain_id"],
+            "pow_algo": info["pow_algo"],
+            "p2p_protocol": info["p2p_protocol"],
+            "peer_count": len(p2p.sessions),
+            "production_mainnet_ready": False,
+        }
 
     @app.get("/pow/v2/info")
     @app.get("/pow/v1/info")
-    def info() -> dict[str, Any]:
-        chain = with_chain()
-        try:
-            return {**chain.info(), "peer_count": len(p2p.sessions), "p2p_listen_port": p2p.listen_port}
-        finally:
-            chain.close()
+    async def info() -> dict[str, Any]:
+        return {**network_chain.info(), "peer_count": len(p2p.sessions), "p2p_listen_port": p2p.listen_port}
 
     @app.get("/pow/v2/peers")
-    def peers_info() -> dict[str, Any]:
+    async def peers_info() -> dict[str, Any]:
         return {
             "node_id": p2p.node_id,
             "peer_count": len(p2p.sessions),
@@ -105,73 +94,57 @@ def create_app(
         }
 
     @app.get("/pow/v2/graph")
-    def graph(limit: int = 200) -> dict[str, Any]:
-        chain = with_chain()
-        try:
-            return {"blocks": chain.graph(limit=limit), "production_mainnet_ready": False}
-        finally:
-            chain.close()
+    async def graph(limit: int = 200) -> dict[str, Any]:
+        return {"blocks": network_chain.graph(limit=limit), "production_mainnet_ready": False}
 
     @app.get("/pow/v2/block/{height}")
     @app.get("/pow/v1/block/{height}")
-    def block(height: int) -> dict[str, Any]:
-        chain = with_chain()
+    async def block(height: int) -> dict[str, Any]:
         try:
-            return chain.chain.get_block(height)
+            return network_chain.chain.get_block(height)
         except (PowV31Error, PowNetworkV32Error) as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
-        finally:
-            chain.close()
 
     @app.get("/pow/v2/blockhash/{block_hash_value}")
-    def blockhash(block_hash_value: str) -> dict[str, Any]:
-        chain = with_chain()
+    async def blockhash(block_hash_value: str) -> dict[str, Any]:
         try:
-            return chain.get_block_by_hash(block_hash_value)
+            return network_chain.get_block_by_hash(block_hash_value)
         except PowNetworkV32Error as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
-        finally:
-            chain.close()
 
     @app.get("/pow/v2/balance/{address}")
     @app.get("/pow/v1/balance/{address}")
-    def balance(address: str) -> dict[str, Any]:
-        chain = with_chain()
-        try:
-            result = chain.chain.balance(address)
-            return {"address": address, **result, "production_mainnet_ready": False}
-        finally:
-            chain.close()
+    async def balance(address: str) -> dict[str, Any]:
+        result = network_chain.chain.balance(address)
+        return {"address": address, **result, "production_mainnet_ready": False}
 
     @app.get("/pow/v2/utxos/{address}")
     @app.get("/pow/v1/utxos/{address}")
-    def utxos(address: str) -> dict[str, Any]:
-        chain = with_chain()
-        try:
-            return {"address": address, "utxos": chain.chain.get_utxos(address), "production_mainnet_ready": False}
-        finally:
-            chain.close()
+    async def utxos(address: str) -> dict[str, Any]:
+        return {
+            "address": address,
+            "utxos": network_chain.chain.get_utxos(address),
+            "production_mainnet_ready": False,
+        }
 
     @app.get("/pow/v2/mempool")
     @app.get("/pow/v1/mempool")
-    def mempool() -> dict[str, Any]:
-        chain = with_chain()
-        try:
-            rows = chain.db.execute("SELECT txid,fee,received_at_ms,tx_json FROM mempool ORDER BY fee DESC,received_at_ms ASC").fetchall()
-            return {
-                "transactions": [
-                    {
-                        "txid": str(row["txid"]),
-                        "fee": int(row["fee"]),
-                        "received_at_ms": int(row["received_at_ms"]),
-                        "transaction": json.loads(row["tx_json"]),
-                    }
-                    for row in rows
-                ],
-                "production_mainnet_ready": False,
-            }
-        finally:
-            chain.close()
+    async def mempool() -> dict[str, Any]:
+        rows = network_chain.db.execute(
+            "SELECT txid,fee,received_at_ms,tx_json FROM mempool ORDER BY fee DESC,received_at_ms ASC"
+        ).fetchall()
+        return {
+            "transactions": [
+                {
+                    "txid": str(row["txid"]),
+                    "fee": int(row["fee"]),
+                    "received_at_ms": int(row["received_at_ms"]),
+                    "transaction": json.loads(row["tx_json"]),
+                }
+                for row in rows
+            ],
+            "production_mainnet_ready": False,
+        }
 
     @app.post("/pow/v2/getblocktemplate")
     @app.post("/pow/v1/getblocktemplate")
