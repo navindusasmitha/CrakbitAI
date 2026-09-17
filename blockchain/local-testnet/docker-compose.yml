@@ -250,7 +250,7 @@ services:
         condition: service_started
     command:
       - python
-      - /app/scripts/local_dashboard_v40.py
+      - /app/scripts/local_dashboard_v41.py
       - --host
       - 0.0.0.0
       - --port
