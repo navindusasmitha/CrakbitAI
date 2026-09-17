@@ -45,7 +45,7 @@ Earlier CometBFT/BFT work remains legacy/research infrastructure and is not mixe
 - [x] Mempool/disconnected-transaction reconciliation
 - [x] Median-time-past branch rule
 - [x] Basic peer scoring/rate/size limits
-- [x] Two-node real TCP sync regression test
+- [x] Two-node TCP sync regression test
 
 ### v0.33 — CPU mining / RandomX candidate / pool hardening
 - [x] Package `0.33.0a1`
@@ -54,7 +54,7 @@ Earlier CometBFT/BFT work remains legacy/research infrastructure and is not mixe
 - [x] Stale/duplicate/share-replay protection
 - [x] Optional TLS/auth/rate limits
 - [x] Native RandomX `v1.1.8` candidate adapter
-- [x] RandomX self-test + light/fast benchmark tooling
+- [x] RandomX self-test + benchmark tooling
 - [x] Deterministic candidate key schedule/blob
 - [x] XMRig `rx/0` candidate job/submit verifier
 - [ ] Real cross-machine CPU/GPU benchmark evidence
@@ -74,8 +74,6 @@ Earlier CometBFT/BFT work remains legacy/research infrastructure and is not mixe
 - [x] Watch-only address record
 - [x] Mature coinbase-aware PPLNS payout plan
 - [x] Payout reservation / confirmation-depth reconciliation
-- [ ] Live incremental undo-based reorg engine
-- [ ] Production pool hot/cold operational key policy
 
 ### v0.35 — public PoW testnet evidence gate
 - [x] Package `0.35.0a1`
@@ -85,44 +83,57 @@ Earlier CometBFT/BFT work remains legacy/research infrastructure and is not mixe
 - [x] 4+ node convergence checks
 - [x] Same-height tip conflict detection
 - [x] Actual-duration 24h/72h/7d soak gates
-- [x] Restart/partition/reconnect/invalid-block/invalid-tx/load fault record
+- [x] Restart/partition/reconnect/invalid-block/invalid-tx/load fault records
 - [x] Higher-work reorg + post-partition convergence evidence fields
 - [x] Unique node/operator/evidence-signer gate
 - [x] Provider/region diversity gate
 - [x] Multiple miner-operator requirement
-- [x] Signed public-testnet gate
-- [x] Signed public-testnet review freeze
-- [x] Regression tests including signer-reuse rejection
+- [x] Signed public-testnet gate and review freeze
 
-### v0.35 real external work still open
-- [ ] 4+ independently operated public full nodes
-- [ ] Multiple independent miners and preferably multiple pools/solo miners
-- [ ] Real 24h → 72h → 7-day+ sustained operation
-- [ ] Real authorized competing-fork/reorg campaign
-- [ ] Real partition/reconnect campaign
-- [ ] Real invalid block/tx/fuzz/load campaigns
-- [ ] Real backup/reindex/recovery evidence
-- [ ] Real cross-machine algorithm benchmarks
-- [ ] Independent consensus/network/wallet/pool review
+### v0.36 — controlled PoW integration / real-campaign tooling
+- [x] Package/CLI advanced to `0.36.0a1`
+- [x] Append-only signed campaign log for repeated real-node observations
+- [x] Campaign-log signature/hash verification
+- [x] 24h/72h/7d campaign summaries with minimum node count, sample success ratio and height-lag gates
+- [x] Real RPC probe collection without fabricating elapsed time
+- [x] Incremental UTXO-undo rehearsal on disposable chain copies
+- [x] Undo rehearsal verifies state fingerprint rollback against expected historical state
+- [x] Persistent peer-book seed selection wired into v0.36 node startup
+- [x] Coarse per-network-bucket seed limits retained during node startup
+- [x] v0.36 node launcher delegating to existing PoW P2P node with selected peer seeds
+- [x] Signed PoW algorithm activation-proposal format
+- [x] Activation proposal binds human algorithm decision, source commit, chain ID, genesis, notice window and optional consensus/vector/library hashes
+- [x] Activation proposal explicitly does **not** activate consensus by itself
+- [x] v0.36 regression tests for campaign logs, undo rehearsal, peer selection and activation proposal
+- [x] CI pass for the v0.36 regression-code commit
 
-### v0.36 target — real campaign + controlled integration
-- [ ] Provision independently managed public PoW nodes across multiple providers/regions
-- [ ] Collect v0.35 host attestations and convergence samples from real operators
-- [ ] Automate periodic observation collection without fabricating elapsed time
-- [ ] Complete 24h/72h/7d campaign evidence
-- [ ] Produce controlled natural/forced forks and verify highest-work convergence
-- [ ] Run authorized partition/reconnect/restart/load/invalid-input drills
-- [ ] Collect real scrypt vs RandomX benchmark evidence and make a human algorithm decision
-- [ ] If RandomX is selected, implement an explicit versioned activation rule and deterministic consensus vectors
-- [ ] Integrate peer-book selection into live node startup with anti-eclipse diversity limits
-- [ ] Move from undo metadata to reviewed incremental disconnect/connect reorg mechanics
-- [ ] Harden pool payout hot/cold separation, caps, holds and operator reconciliation
-- [ ] Expand PoW explorer/wallet reorg UX
-- [ ] Prepare independent review handoff from real evidence
+### v0.36 real external work still open
+- [ ] Provision 4+ independently managed public PoW nodes across multiple providers/regions
+- [ ] Run the v0.36 campaign collector against those real nodes
+- [ ] Complete real 24h → 72h → 7-day+ observation campaigns
+- [ ] Run authorized restart/partition/reconnect/load/invalid-input drills on owned/authorized infrastructure
+- [ ] Produce real competing forks and verify highest-work convergence
+- [ ] Collect real scrypt vs RandomX benchmark evidence on independent hardware
+- [ ] Make a human algorithm decision from real benchmark/security evidence
+- [ ] If RandomX is selected, build and review an actual versioned consensus implementation; proposal tooling alone is insufficient
+- [ ] Validate incremental undo mechanics under live competing-fork/reorg conditions before replacing replay-based reorgs
+- [ ] Harden pool hot/cold payout-key operations, caps and reconciliation
+- [ ] Complete independent consensus/network/wallet/pool review
+
+### v0.37 target — public-testnet execution / review hardening
+- [ ] Multi-host deployment bundles and operator runbooks for the PoW node/pool stack
+- [ ] Persistent peer-health feedback from live sessions into the peer book
+- [ ] Deeper anti-eclipse/diversity controls using externally reviewed network/operator metadata
+- [ ] Controlled fork/reorg harness using incremental undo on disposable/live-testnet copies
+- [ ] Public explorer/wallet reorg and confirmation UX
+- [ ] Pool payout policy evidence with hot/cold separation and operator limits
+- [ ] Independent-review handoff bundle from real campaign evidence
+- [ ] Final PoW-algorithm decision gate only from real evidence
+- [ ] If justified, versioned candidate consensus activation on testnet only, never silent activation
 
 ## Mainnet Consideration
 
-Production mainnet should only be considered after long-lived independent testing, final PoW algorithm freeze, reviewed reorg/state transition logic, wallet/node/pool security reviews, high/critical remediation/retest, final economics, mining-centralization/attack-economics review, applicable legal/regulatory review and an explicit human launch/no-launch decision.
+Production mainnet should only be considered after long-lived independent testing, final PoW algorithm freeze, reviewed reorg/state-transition logic, wallet/node/pool security reviews, high/critical remediation/retest, final economics, mining-centralization/attack-economics review, applicable legal/regulatory review and an explicit human launch/no-launch decision.
 
 ## CRKBIT Status
 
