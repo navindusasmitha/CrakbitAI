@@ -187,6 +187,7 @@ services:
         --port 3333
         --vardiff-target-seconds 15
         --stale-job-seconds 120
+        --max-messages-per-second 100
     volumes:
       - ./runtime:/runtime
     ports:
