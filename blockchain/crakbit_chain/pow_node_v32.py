@@ -176,10 +176,10 @@ def create_app(
     @app.post("/pow/v2/getblocktemplate")
     @app.post("/pow/v1/getblocktemplate")
     def getblocktemplate(request: TemplateRequest) -> dict[str, Any]:
-        chain = with_chain()
+        chain = PowChain(path)
         try:
-            return chain.chain.get_block_template(request.miner_address, message=request.message)
-        except (PowV31Error, PowNetworkV32Error) as exc:
+            return chain.get_block_template(request.miner_address, message=request.message)
+        except PowV31Error as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         finally:
             chain.close()
