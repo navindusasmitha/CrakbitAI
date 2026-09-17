@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crakbit-chain"
-version = "0.35.0a1"
-description = "Crakbit Chain public PoW testnet evidence alpha with signed host attestations, convergence/soak/fault gates and review freeze tooling"
+version = "0.36.0a1"
+description = "Crakbit Chain controlled public PoW testnet integration alpha with real-time campaign evidence, peer-book startup integration, incremental-undo rehearsal, activation proposals and review handoff tooling"
 requires-python = ">=3.11"
 dependencies = [
   "cryptography>=42.0.0",
@@ -18,7 +18,7 @@ dependencies = [
 dev = ["pytest>=8.0.0", "build>=1.2.2"]
 
 [project.scripts]
-crakchain = "crakbit_chain.cli_v35:main"
+crakchain = "crakbit_chain.cli_v36_entry:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
